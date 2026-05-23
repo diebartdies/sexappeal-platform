@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SexAppeal - Professional Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="index.html" class="logo">SEXAPPEAL</a>
+            <nav style="margin-top: 20px;">
+                <a href="home.html" style="color: var(--primary-gold); margin: 0 15px; text-decoration: none;">Sanctuary</a>
+                <a href="#" id="logoutBtn" style="color: var(--accent-red); margin: 0 15px; text-decoration: none;">Logout</a>
+            </nav>
+        </header>
+
+        <main id="dashboardContent" class="hidden">
+            <h2 class="gold-text" style="margin-bottom: 40px;">Your Sanctuary Dashboard</h2>
+            
+            <div id="rateAlert" class="card hidden" style="border-color: var(--accent-red); background: rgba(139, 0, 0, 0.1);">
+                <h3 style="color: var(--accent-red);">Action Required: Rate Change</h3>
+                <p>The platform price rates have been updated. You must acknowledge this change to continue with transactions.</p>
+                <button id="ackRateBtn" style="margin-top: 15px;">Acknowledge Change</button>
+            </div>
+
+            <div class="grid">
+                <!-- Status Card -->
+                <div class="card">
+                    <h3 class="gold-text">Identity Status</h3>
+                    <p id="verificationStatus" style="margin: 15px 0; font-size: 1.2rem;">Checking...</p>
+                    <div id="revelationStatus" class="tag" style="display: inline-block;">Veiled</div>
+                </div>
+
+                <!-- Duo Card -->
+                <div class="card">
+                    <h3 class="gold-text">Duo Connection</h3>
+                    <div id="duoStatus" style="margin: 15px 0;">
+                        <p>Not currently in a Duo.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Update -->
+            <div class="card" style="margin-top: 40px;">
+                <h3 class="gold-text" style="margin-bottom: 25px;">Update Your Profile</h3>
+                <form id="updateProfileForm">
+                    <div id="updateAlert" class="alert hidden"></div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                        <div>
+                            <label>Alias / Apodo</label>
+                            <input type="text" id="upAlias">
+                            
+                            <label>Bio</label>
+                            <textarea id="upBio" style="width: 100%; padding: 12px; background: transparent; border: 1px solid var(--primary-gold); color: white; margin-bottom: 20px; font-family: inherit;" rows="4"></textarea>
+                        </div>
+                        <div>
+                                <label>Assigned Category (Calculated by App)</label>
+                                <div id="displayQuality" class="quality-badge quality-standard" style="display: inline-block; margin-bottom: 20px;">Standard</div>
+
+                                <label>Professional Assets</label>
+                                <div style="margin-bottom: 20px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px;">
+                                    <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px; cursor: pointer;"><input type="checkbox" id="upOwnApartment" style="width: auto;"> Own apartment for hosting</label>
+                                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;"><input type="checkbox" id="upFantasyWardrobe" style="width: auto;"> Sexy / fantasy wardrobe options</label>
+                                </div>
+
+                            <label>Services (comma separated)</label>
+                            <input type="text" id="upServices">
+                            
+                            <label>Attributes (comma separated)</label>
+                            <input type="text" id="upAttributes">
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div>
+                                    <label>Measurements</label>
+                                    <input type="text" id="upMeasurements">
+                                </div>
+                                <div>
+                                    <label>Height</label>
+                                    <input type="text" id="upHeight">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit">Update Profile</button>
+                </form>
+            </div>
+        </main>
+
+        <div id="loader" style="text-align: center; padding: 50px;">
+            <p>Unlocking your vault...</p>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        // Load dashboard data on start
+        window.addEventListener('DOMContentLoaded', loadDashboard);
+    </script>
+</body>
+</html>

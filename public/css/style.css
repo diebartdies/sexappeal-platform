@@ -1,0 +1,276 @@
+/* 
+  SexAppeal Platform - Prototype Styles
+  Tone: Elegant, High-End, Trustworthy
+*/
+
+:root {
+    --primary-gold: #D4AF37;
+    --dark-bg: #0D0D0D;
+    --light-text: #F5F5F5;
+    --accent-red: #8B0000;
+    --glass-bg: rgba(255, 255, 255, 0.1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Playfair Display', serif;
+    background-color: var(--dark-bg);
+    color: var(--light-text);
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+/* Typography */
+h1, h2, h3 {
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.gold-text {
+    color: var(--primary-gold);
+}
+
+/* Layout */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+header {
+    position: relative;
+    padding: 40px 0;
+    text-align: center;
+    border-bottom: 1px solid var(--primary-gold);
+    margin-bottom: 60px;
+}
+
+.logo {
+    font-size: 3rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--primary-gold);
+}
+
+/* Components */
+.card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    padding: 30px;
+    border-radius: 4px;
+    margin-bottom: 30px;
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    border-color: var(--primary-gold);
+    transform: translateY(-5px);
+}
+
+button {
+    background: var(--primary-gold);
+    color: var(--dark-bg);
+    border: none;
+    padding: 12px 30px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: background 0.3s;
+}
+
+button:hover {
+    background: #C5A028;
+}
+
+input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    background: transparent;
+    border: 1px solid var(--primary-gold);
+    color: white;
+}
+
+.form-select {
+    width: 100%;
+    padding: 12px;
+    background: transparent;
+    border: 1px solid var(--primary-gold);
+    color: white;
+    -webkit-appearance: none; /* Removes default browser styling */
+    appearance: none;
+}
+
+.form-select option {
+    /* Ensure dropdown options are readable against light OS backgrounds */
+    background: var(--dark-bg);
+    color: var(--light-text);
+}
+
+/* Filter Form */
+.filter-group {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+}
+
+.filter-control {
+    flex: 1;
+    text-align: left;
+}
+
+.filter-control label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--primary-gold);
+}
+
+/* Sections */
+.hero {
+    height: 80vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.hero h1 {
+    font-size: 4rem;
+    margin-bottom: 20px;
+}
+
+.hero p {
+    font-size: 1.5rem;
+    margin-bottom: 40px;
+    font-style: italic;
+}
+
+/* Discovery Feed */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 30px;
+    margin-top: 50px;
+}
+
+.treasure-card {
+    text-align: center;
+}
+
+.treasure-alias {
+    font-size: 1.5rem;
+    margin: 15px 0;
+}
+
+.tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.tag {
+    font-size: 0.8rem;
+    border: 1px solid var(--primary-gold);
+    padding: 2px 8px;
+    border-radius: 20px;
+    text-decoration: none;
+    color: var(--light-text);
+    transition: background-color 0.2s ease;
+}
+.tag:hover {
+    background-color: var(--glass-bg);
+}
+
+.quality-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    padding: 3px 10px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    border-radius: 4px;
+    letter-spacing: 1px;
+}
+
+.quality-premium {
+    background: linear-gradient(45deg, #D4AF37, #C5A028);
+    color: var(--dark-bg);
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+}
+.quality-gold {
+    background: var(--primary-gold);
+    color: var(--dark-bg);
+}
+.quality-standard { background: #555; color: #ddd; }
+
+/* Category Page */
+.category-card {
+    text-align: center;
+    text-decoration: none;
+    color: var(--light-text);
+}
+
+.category-card h3 {
+    color: var(--primary-gold);
+    font-size: 1.5rem;
+}
+
+/* Login Status */
+.login-status {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-size: 0.9rem;
+    color: var(--primary-gold);
+    opacity: 0.9;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+/* Utilities */
+.hidden { display: none; }
+.alert { color: var(--accent-red); margin-bottom: 10px; }
+
+/* Responsive Design for smaller screens */
+@media (max-width: 480px) {
+    .container {
+        padding: 0 15px;
+    }
+    .card {
+        padding: 20px;
+    }
+    .grid {
+        /* Switch to a single column layout on small screens to prevent overflow */
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    .hero h1 {
+        font-size: 2.8rem;
+    }
+    .logo {
+        font-size: 2.2rem;
+    }
+    .login-status {
+        position: static;
+        margin-top: 10px;
+        font-size: 0.8rem;
+    }
+    .filter-group {
+        flex-direction: column;
+    }
+}

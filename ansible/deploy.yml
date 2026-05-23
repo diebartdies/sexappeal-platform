@@ -1,0 +1,108 @@
+---
+- name: Deploy SexAppeal Platform
+  hosts: production
+  become: yes
+  vars:
+    project_path: /opt/sexappeal-platform
+    repo_url: "git@github.com:diebartdies/sexappeal-platform.git"
+
+  tasks:
+    - name: Ensure locale en_US.UTF-8 is generated
+      community.general.locale_gen:
+        name: en_US.UTF-8
+        state: present
+
+    - name: Set system locale to en_US.UTF-8
+      command: update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+      changed_when: false
+
+    - name: Set timezone to UTC
+      community.general.timezone:
+        name: UTC
+
+    - name: Install required system packages
+      apt:
+        pkg:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+          - git
+          - python3-pip
+          - ufw
+          - logrotate
+        state: latest
+        update_cache: yes
+
+    - name: Configure Firewall - Allow SSH
+      ufw:
+        rule: allow
+        port: '22'
+        proto: tcp
+
+    - name: Configure Firewall - Allow HTTP
+      ufw:
+        rule: allow
+        port: '80'
+        proto: tcp
+
+    - name: Configure Firewall - Allow HTTPS
+      ufw:
+        rule: allow
+        port: '443'
+        proto: tcp
+
+    - name: Enable Firewall
+      ufw:
+        state: enabled
+        policy: deny
+
+    - name: Create Docker log rotation config
+      copy:
+        content: |
+          /var/lib/docker/containers/*/*.log {
+            rotate 7
+            daily
+            compress
+            size 50M
+            missingok
+            delaycompress
+            copytruncate
+          }
+        dest: /etc/logrotate.d/docker-container-logs
+        mode: '0644'
+
+    - name: Ensure project directory exists
+      file:
+        path: "{{ project_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Clone or update the repository
+      git:
+        repo: "{{ repo_url }}"
+        dest: "{{ project_path }}"
+        version: main
+        force: yes
+
+    - name: Copy .env file to server
+      copy:
+        src: ../.env
+        dest: "{{ project_path }}/.env"
+        mode: '0600'
+
+    - name: Ensure Docker and Docker Compose are installed
+      shell: |
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        sh get-docker.sh
+        apt-get install -y docker-compose-plugin
+      args:
+        creates: /usr/bin/docker
+
+    - name: Build and Start Containers
+      community.docker.docker_compose_v2:
+        project_src: "{{ project_path }}"
+        state: present
+        build: always
+        pull: always

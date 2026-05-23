@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SexAppeal - Living Treasure</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="index.html" class="logo">SEXAPPEAL</a>
+            <div id="loginStatus"></div>
+        </header>
+
+        <!-- This section will be populated by JavaScript -->
+        <section id="treasureDetail">
+            <!-- Loader -->
+            <div id="loader" class="card" style="text-align: center;">
+                <h2 class="gold-text">Unveiling Treasure...</h2>
+            </div>
+
+            <!-- Content (hidden by default) -->
+            <div id="treasureContent" class="hidden"></div>
+        </section>
+    </div>
+
+    <!-- The Modal for Image Zooming -->
+    <div id="zoomModal" class="modal-overlay hidden">
+        <span class="modal-prev">&#10094;</span>
+        <span class="modal-close">&times;</span>
+        <img class="modal-content" id="zoomedImg">
+        <span class="modal-next">&#10095;</span>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

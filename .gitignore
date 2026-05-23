@@ -1,0 +1,20 @@
+# Node modules
+node_modules/
+npm-debug.log
+
+# Environment variables (NEVER PUSH THIS to GitHub)
+.env
+
+# Uploaded user photos
+public/uploads/
+
+# Local MongoDB database volumes (if you use Docker volumes locally)
+mongo-data/
+db/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/

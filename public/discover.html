@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discover Treasures - SexAppeal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="index.html" class="logo">SEXAPPEAL</a>
+            <nav style="margin-top: 20px;">
+                <a href="dashboard.html" style="color: var(--primary-gold); margin: 0 15px; text-decoration: none;">My Dashboard</a>
+                <a href="#" id="logoutBtn" style="color: var(--accent-red); margin: 0 15px; text-decoration: none;">Logout</a>
+            </nav>
+        </header>
+
+        <section id="discovery">
+            <h2 class="gold-text">Revealed Treasures</h2>
+            <div id="treasureGrid" class="grid">
+                <!-- Treasures will be loaded here -->
+                <div class="card" style="grid-column: 1 / -1; text-align: center;">
+                    Preparing the collection...
+                </div>
+            </div>
+        </section>
+
+        <!-- Premium Ads Placeholder -->
+        <section id="sponsors" style="margin-top: 100px; padding: 50px 0; border-top: 1px solid rgba(212, 175, 55, 0.2);">
+            <h3 class="gold-text" style="font-size: 0.8rem; text-align: center; margin-bottom: 30px;">Curated Partners</h3>
+            <div class="grid" style="grid-template-columns: repeat(3, 1fr); opacity: 0.7;">
+                <div class="card" style="font-style: italic; font-size: 0.9rem; text-align: center;">
+                    "Empowering Serums for the Modern Soul"
+                </div>
+                <div class="card" style="font-style: italic; font-size: 0.9rem; text-align: center;">
+                    Jardines de Babilonia - A Sanctuary for Two
+                </div>
+                <div class="card" style="font-style: italic; font-size: 0.9rem; text-align: center;">
+                    L'Elegance Boutique Intime
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        // Auto-load treasures if we are on this page
+        window.addEventListener('load', () => {
+            if (document.getElementById('treasureGrid')) {
+                loadTreasures();
+            }
+        });
+    </script>
+</body>
+</html>

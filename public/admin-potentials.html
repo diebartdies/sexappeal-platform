@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SexAppeal - Admin Potential Professionals</title>
+    <style>
+        :root {
+            --primary-gold: #D4AF37;
+            --dark-bg: #121212;
+            --card-bg: rgba(20, 20, 20, 0.95);
+            --accent-red: #8B0000;
+        }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: var(--dark-bg); 
+            color: #eee; 
+            margin: 0;
+            padding: 20px;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 10px;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        h1 { color: var(--primary-gold); margin-top: 0; border-bottom: 1px solid rgba(212, 175, 55, 0.2); padding-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; border: 1px solid #333; text-align: left; }
+        th { background: #222; color: var(--primary-gold); font-weight: normal; }
+        tr:nth-child(even) { background-color: rgba(255,255,255,0.02); }
+        .status-select { padding: 6px; background: #333; color: white; border: 1px solid #555; border-radius: 4px; outline: none; }
+        .btn { padding: 8px 16px; background: transparent; color: var(--primary-gold); border: 1px solid var(--primary-gold); border-radius: 4px; cursor: pointer; transition: all 0.3s; }
+        .btn:hover { background: rgba(212, 175, 55, 0.1); }
+        .btn:disabled { color: #666; border-color: #666; cursor: not-allowed; }
+        .filters { display: flex; gap: 15px; margin-bottom: 20px; align-items: center; }
+        .filters select { padding: 8px; background: #333; color: white; border: 1px solid #555; border-radius: 4px;}
+        a { color: #66b3ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .pagination { margin-top: 20px; display: flex; align-items: center; gap: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Manage Potential Professionals</h1>
+        
+        <div class="filters">
+            <select id="filterStatus">
+                <option value="">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="contacted">Contacted</option>
+                <option value="joined">Joined</option>
+                <option value="rejected">Rejected</option>
+            </select>
+            <button class="btn" id="btnFilter">Filter</button>
+            <a href="dashboard.html" style="margin-left: auto; color: var(--primary-gold);">Back to Dashboard</a>
+        </div>
+
+        <table id="potentialsTable">
+            <thead>
+                <tr>
+                    <th>Phone Number</th>
+                    <th>Source URL</th>
+                    <th>Status</th>
+                    <th>Discovered At</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td colspan="5" style="text-align: center;">Loading...</td></tr>
+            </tbody>
+        </table>
+
+        <div class="pagination">
+            <button class="btn" id="btnPrev">Previous</button>
+            <span id="pageInfo">Page 1</span>
+            <button class="btn" id="btnNext">Next</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.protocol === 'file:' ? 'http://localhost:5000/api/v1' : window.location.origin + '/api/v1';
+        let currentPage = 1;
+        const limit = 50;
+
+        async function loadPotentials() {
+            const status = document.getElementById('filterStatus').value;
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('You must be logged in as an admin to view this page.');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            let url = `${API_URL}/admin/potential-professionals?page=${currentPage}&limit=${limit}`;
+            if (status) url += `&status=${status}`;
+
+            try {
+                const res = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    const tbody = document.querySelector('#potentialsTable tbody');
+                    tbody.innerHTML = '';
+
+                    if (data.data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No potentials found.</td></tr>';
+                    }
+
+                    data.data.forEach(p => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${p.phone}</td>
+                            <td><a href="${p.sourceUrl}" target="_blank">${p.sourceUrl || 'Unknown'}</a></td>
+                            <td>
+                                <select class="status-select" data-id="${p._id}">
+                                    <option value="pending" ${p.status === 'pending' ? 'selected' : ''}>Pending</option>
+                                    <option value="contacted" ${p.status === 'contacted' ? 'selected' : ''}>Contacted</option>
+                                    <option value="joined" ${p.status === 'joined' ? 'selected' : ''}>Joined</option>
+                                    <option value="rejected" ${p.status === 'rejected' ? 'selected' : ''}>Rejected</option>
+                                </select>
+                            </td>
+                            <td>${new Date(p.createdAt).toLocaleString()}</td>
+                            <td><button class="btn btn-update" data-id="${p._id}">Save Status</button></td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+
+                    const totalPages = Math.ceil(data.pagination.total / limit) || 1;
+                    document.getElementById('pageInfo').textContent = `Page ${data.pagination.page} of ${totalPages}`;
+                    
+                    document.getElementById('btnPrev').disabled = data.pagination.page <= 1;
+                    document.getElementById('btnNext').disabled = data.pagination.page >= totalPages;
+
+                    // Attach update events
+                    document.querySelectorAll('.btn-update').forEach(btn => {
+                        btn.addEventListener('click', async (e) => {
+                            const id = e.target.dataset.id;
+                            const select = document.querySelector(`.status-select[data-id="${id}"]`);
+                            const btnEl = e.target;
+                            
+                            btnEl.textContent = 'Saving...';
+                            btnEl.disabled = true;
+                            await updateStatus(id, select.value);
+                            btnEl.textContent = 'Save Status';
+                            btnEl.disabled = false;
+                        });
+                    });
+                } else {
+                    document.querySelector('#potentialsTable tbody').innerHTML = `<tr><td colspan="5" style="color: var(--accent-red); text-align: center;">Error: ${data.error}</td></tr>`;
+                }
+            } catch (err) {
+                console.error(err);
+                document.querySelector('#potentialsTable tbody').innerHTML = `<tr><td colspan="5" style="color: var(--accent-red); text-align: center;">Failed to load data. See console.</td></tr>`;
+            }
+        }
+
+        async function updateStatus(id, status) {
+            const token = localStorage.getItem('token');
+            try {
+                const res = await fetch(`${API_URL}/admin/potential-professionals/${id}`, {
+                    method: 'PUT',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ status })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('Status updated successfully');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Failed to update status');
+            }
+        }
+
+        document.getElementById('btnFilter').addEventListener('click', () => {
+            currentPage = 1;
+            loadPotentials();
+        });
+
+        document.getElementById('btnPrev').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                loadPotentials();
+            }
+        });
+
+        document.getElementById('btnNext').addEventListener('click', () => {
+            currentPage++;
+            loadPotentials();
+        });
+
+        // Initialize
+        loadPotentials();
+    </script>
+</body>
+</html>

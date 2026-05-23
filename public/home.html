@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEXAPPEAL - Living Treasures</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="index.html" class="logo">SEXAPPEAL</a>
+            <nav style="margin-top: 20px;">
+                <a href="login.html" id="proEntranceBtn" style="color: var(--primary-gold); margin: 0 15px; text-decoration: none;">Professional Entrance</a>
+                <a href="#" id="logoutBtn" style="color: var(--accent-red); margin: 0 15px; text-decoration: none;">Exit Sanctuary</a>
+            </nav>
+        </header>
+
+        <section id="discovery" style="margin-top: 50px;">
+            <div style="text-align: center; margin-bottom: 40px;">
+                <h2 class="gold-text" style="font-size: 2.5rem; font-weight: 300; letter-spacing: 2px; margin-bottom: 10px;">Living Treasures</h2>
+                <p style="color: #aaa; font-size: 1.1rem;">Explore our veiled collection of elite companions.</p>
+            </div>
+            
+            <div id="treasureGrid" class="grid">
+                <!-- Treasures will be loaded here dynamically by app.js -->
+                <div class="card" style="grid-column: 1 / -1; text-align: center; color: #888;">
+                    Unveiling the collection...
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            // Check if user is a Professional to update the top nav link
+            const userStr = localStorage.getItem('user');
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    if (user.role === 'professional' || user.role === 'admin') {
+                        const proBtn = document.getElementById('proEntranceBtn');
+                        proBtn.textContent = 'My Dashboard';
+                        proBtn.href = 'dashboard.html';
+                    }
+                } catch(e) {}
+            }
+
+            // Load the treasures from the database
+            loadTreasures();
+        });
+    </script>
+</body>
+</html>

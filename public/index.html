@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SexAppeal - Living Treasures</title>
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="index.html" class="logo">SEXAPPEAL</a>
+            <div id="loginStatus"></div>
+        </header>
+
+        <section class="hero" id="landing">
+            <h1>Elegance Defined</h1>
+            <p>Discover our veiled collection of Living Treasures.</p>
+            <div class="card" style="width: 100%; max-width: 400px;">
+                <h3 class="gold-text">Entrance</h3>
+                <p style="color: #ccc; font-size: 0.95rem; margin-bottom: 20px;">You must be 18 years or older to enter this sanctuary.</p>
+
+                <button id="btn-enter" style="width: 100%; margin-bottom: 10px;">I am 18+ - Enter</button> <!-- This ID is now used by app.js -->
+                <button id="btn-exit" style="width: 100%; background-color: #222; color: #888;">Exit</button>
+                
+                <div style="margin-top: 25px; text-align: center; font-size: 0.9rem;">
+                    <p style="color: #ccc; margin-bottom: 10px; font-size: 0.85rem;">Professional Access:</p>
+                    <a href="login.html" style="color: var(--primary-gold); text-decoration: none; opacity: 0.9;">Login</a>
+                    <span style="color: #444; margin: 0 10px;">|</span>
+                    <a href="register.html" style="color: var(--primary-gold); text-decoration: none; opacity: 0.9;">Register</a>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- All javascript logic is now in app.js -->
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:6.0
+    container_name: sexappeal_mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: sexappeal_app
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - NODE_ENV=production
+      - MONGO_URI=mongodb://mongo:27017/sexappeal
+    volumes:
+      - ./public/uploads:/app/public/uploads
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:alpine
+    container_name: sexappeal_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certbot/conf/live/sexappeal.drsrv.net.ar:/etc/nginx/certs:ro
+    depends_on:
+      - app
+
+volumes:
+  mongo_data:
+    name: sexappeal_mongo_data

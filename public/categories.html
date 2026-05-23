@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SexAppeal - Discover Treasures</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="index.html" class="logo">SEXAPPEAL</a>
+            <div id="loginStatus" class="login-status"></div>
+        </header>
+
+        <section style="text-align: center;">
+            <div class="card" style="max-width: 800px; margin: 0 auto;">
+                <h2 class="gold-text">Discover Our Treasures</h2>
+                <p style="margin-bottom: 30px; opacity: 0.8;">Filter by quality and service, or browse the full collection below.</p>
+                <form id="filterForm">
+                    <div class="filter-group">
+                        <div class="filter-control">
+                            <label for="qualitySelect">Quality</label>
+                            <select id="qualitySelect" class="form-select">
+                                <option value="">All</option>
+                                <option value="Premium">Premium</option>
+                                <option value="Gold">Gold</option>
+                                <option value="Silver">Silver</option>
+                                <option value="Standard">Standard</option>
+                            </select>
+                        </div>
+                        <div class="filter-control">
+                            <label for="specialtySelect">Specialty</label>
+                            <select id="specialtySelect" class="form-select">
+                                <option>Loading...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" style="width: 100%; margin-top: 30px;">Find Treasures</button>
+                </form>
+            </div>
+        </section>
+
+        <section>
+            <div id="treasureGrid" class="grid">
+                <!-- Professionals will be loaded here by default -->
+            </div>
+        </section>
+    </div>
+    <script src="js/app.js"></script>
+</body>
+</html>

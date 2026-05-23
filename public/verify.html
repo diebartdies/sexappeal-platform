@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SexAppeal - Verification</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="index.html" class="logo">SEXAPPEAL</a>
+        </header>
+
+        <section style="display: flex; justify-content: center; padding-bottom: 100px;">
+            <div class="card" style="width: 100%; max-width: 400px; text-align: center;">
+                <h2 class="gold-text" style="margin-bottom: 30px;">Verify Your Email</h2>
+                <p style="margin-bottom: 20px;">Please enter the 6-digit code sent to your email.</p>
+                <form id="verifyForm">
+                    <div id="verifyAlert" class="alert hidden"></div>
+                    <input type="hidden" id="verifyEmail">
+                    <input type="text" placeholder="6-Digit Code" required id="verifyCode" maxlength="6" style="text-align: center; font-size: 1.5rem; letter-spacing: 5px;">
+                    <button type="submit" style="width: 100%; margin-top: 20px;">Verify</button>
+                </form>
+            </div>
+        </section>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        // Pre-fill email from URL if available
+        const urlParams = new URLSearchParams(window.location.search);
+        const email = urlParams.get('email');
+        if (email) {
+            document.getElementById('verifyEmail').value = email;
+        }
+    </script>
+</body>
+</html>
