@@ -18,3 +18,9 @@ Thumbs.db
 
 # IDE files
 .vscode/
+
+# Local Docker overrides
+docker-compose.override.yml
+
+# Puppeteer / Chrome cache to prevent GitHub large file errors
+.cache/

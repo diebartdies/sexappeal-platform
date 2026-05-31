@@ -6,11 +6,21 @@
     <title>SexAppeal - Professional Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
+    <!-- SEO & Open Graph Tags -->
+    <meta name="description" content="SexAppeal - The Architecture of Intimacy. Directorio exclusivo de acompañantes VIP y Living Treasures.">
+    <meta property="og:title" content="SexAppeal Platform">
+    <meta property="og:description" content="El santuario definitivo para conexiones de alto nivel y discreción absoluta.">
+    <meta property="og:image" content="https://sexappeal.drsrv.net.ar/SexAppeal_logo_black.png">
+    <meta property="og:url" content="https://sexappeal.drsrv.net.ar">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#D4AF37">
 </head>
 <body>
     <div class="container">
         <header>
-            <a href="index.html" class="logo">SEXAPPEAL</a>
+            <a href="index.html" class="logo" style="display: flex; align-items: center; text-decoration: none;">
+                <img src="/SexAppeal_logo_black.png" alt="SexAppeal Logo" style="height: 350px; width: auto;">
+            </a>
             <nav style="margin-top: 20px;">
                 <a href="home.html" style="color: var(--primary-gold); margin: 0 15px; text-decoration: none;">Sanctuary</a>
                 <a href="#" id="logoutBtn" style="color: var(--accent-red); margin: 0 15px; text-decoration: none;">Logout</a>
@@ -41,6 +51,21 @@
                         <p>Not currently in a Duo.</p>
                     </div>
                 </div>
+
+                <!-- Stats Card -->
+                <div class="card">
+                    <h3 class="gold-text">Your Performance</h3>
+                    <div style="margin: 15px 0; display: flex; justify-content: space-around;">
+                        <div style="text-align: center;">
+                            <h4 id="statProfileViews" style="font-size: 2rem; color: var(--primary-gold);">0</h4>
+                            <p style="font-size: 0.8rem; opacity: 0.8;">Profile Views</p>
+                        </div>
+                        <div style="text-align: center;">
+                            <h4 id="statWaClicks" style="font-size: 2rem; color: #00ff50;">0</h4>
+                            <p style="font-size: 0.8rem; opacity: 0.8;">WhatsApp Clicks</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Profile Update -->
@@ -68,7 +93,13 @@
                                 </div>
 
                             <label>Services (comma separated)</label>
-                            <input type="text" id="upServices">
+                            <select id="upServices" class="form-control" name="services" multiple size="5">
+        <option value="Massage">Massage</option>
+        <option value="Virtual Connection">Virtual Connection</option>
+        <option value="love alchemy">love alchemy</option>
+        <option value="Fantasies">Fantasies</option>
+        <option value="Content Delivery">Content Delivery</option>
+    </select>
                             
                             <label>Attributes (comma separated)</label>
                             <input type="text" id="upAttributes">

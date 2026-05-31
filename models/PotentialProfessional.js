@@ -7,6 +7,10 @@ const PotentialProfessionalSchema = new mongoose.Schema({
     unique: true,
     trim: true
   },
+  alias: {
+    type: String,
+    trim: true
+  },
   sourceUrl: {
     type: String,
     trim: true

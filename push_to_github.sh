@@ -37,9 +37,21 @@ fi
 echo "⬆️ Pushing to GitHub..."
 git push -u origin main || { 
     echo "❌ Failed to push to GitHub."
-    echo "This usually means you need to authenticate your GitHub account or resolve a merge conflict."
-    read -p "Press [Enter] to exit..."
-    exit 1
+    echo "This often happens if GitHub has changes that your local machine doesn't."
+    echo "To ensure your local content is NEVER overwritten by GitHub, we can force overwrite GitHub."
+    read -p "⚠️ Do you want to FORCE push and overwrite GitHub with your local files? (y/n): " FORCE_PUSH
+    if [[ "$FORCE_PUSH" =~ ^[Yy]$ ]]; then
+        echo "🚀 Force pushing to GitHub..."
+        git push -u origin main --force || { 
+            echo "❌ Force push failed. Please check your GitHub authentication."
+            read -p "Press [Enter] to exit..."
+            exit 1
+        }
+    else
+        echo "Aborting push to protect local content."
+        read -p "Press [Enter] to exit..."
+        exit 1
+    fi
 }
 
 echo "✅ Successfully uploaded to GitHub!"

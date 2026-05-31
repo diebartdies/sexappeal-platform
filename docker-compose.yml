@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   mongo:
-    image: mongo:6.0
+    image: mongo:4.4
     container_name: sexappeal_mongo
     restart: unless-stopped
     ports:
@@ -18,7 +18,7 @@ services:
   app:
     build: .
     container_name: sexappeal_app
-    restart: unless-stopped
+    restart: on-failure
     env_file: .env
     environment:
       - NODE_ENV=production

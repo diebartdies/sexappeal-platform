@@ -1,0 +1,103 @@
+graph TD
+    %% Define Classes for Styling
+    classDef client fill:#f9f9f9,stroke:#333,stroke-width:2px,color:#000;
+    classDef gateway fill:#e1f5fe,stroke:#36c,stroke-width:2px,color:#000;
+    classDef backend fill:#e8f5e9,stroke:#0277bd,stroke-width:2px,color:#000;
+    classDef database fill:#fff3e0,stroke:#2e7d32,stroke-width:2px,color:#000;
+    classDef external fill:#fffde7,stroke:#ef6c00,stroke-width:2px,color:#000;
+    classDef scripts fill:#f3e5f5,stroke:#558b2f,stroke-width:2px,color:#000;
+
+    %% Define Link Styling
+    linkStyle default stroke:#000,stroke-width:2px,color:#000;
+
+    %% ---------------- CLIENT LAYER ---------------- %%
+    subgraph ClientLayer ["1. Client / Frontend Layer"]
+        U[Public Users / Guests]:::client
+        P[Professionals]:::client
+        A[Administrators]:::client
+        SPA[Web Frontend<br/>HTML/CSS/Vanilla JS]:::client
+        U([👤 Public Users / Guests]):::client
+        P([👩‍💼 Professionals]):::client
+        A([🛡️ Administrators]):::client
+        SPA[🖥️ Web Frontend<br/>HTML/CSS/Vanilla JS]:::client
+    end
+
+    U --> SPA
+    P --> SPA
+    A --> SPA
+
+    %% ---------------- NETWORK LAYER ---------------- %%
+    subgraph NetworkLayer ["2. Gateway Layer"]
+        Nginx[Nginx Reverse Proxy<br/>SSL / Rate Limiting]:::gateway
+        Nginx{{🌐 Nginx Reverse Proxy<br/>SSL / Rate Limiting}}:::gateway
+    end
+
+    SPA -- "REST API (HTTPS)" --> Nginx
+
+    %% ---------------- BACKEND LAYER ---------------- %%
+    subgraph AppLayer ["3. Application Layer (Node.js / Express)"]
+        Router[Express Router<br/>server.js]:::backend
+        Auth[JWT & Role Middleware<br/>auth.js]:::backend
+        Router([🔀 Express Router<br/>server.js]):::backend
+        Auth([🔐 JWT & Role Middleware<br/>auth.js]):::backend
+        
+        subgraph Controllers ["Controllers"]
+            AuthController[Auth]:::backend
+            ProfController[Professionals]:::backend
+            AdminController[Admin]:::backend
+            OtherControllers[Feedback, Location, Payment]:::backend
+            AuthController[🛂 Auth]:::backend
+            ProfController[💼 Professionals]:::backend
+            AdminController[⚙️ Admin]:::backend
+            OtherControllers[🧩 Feedback, Location, Payment]:::backend
+        end
+        
+        Multer[Multer File Uploads]:::backend
+        Cron[Background Tasks<br/>Cleanup & Reminders]:::backend
+        Multer([📂 Multer File Uploads]):::backend
+        Cron([⏱️ Background Tasks<br/>Cleanup & Reminders]):::backend
+    end
+
+    Nginx --> Router
+    Router --> Auth
+    Auth --> Controllers
+    Router --> Multer
+
+    %% ---------------- STORAGE LAYER ---------------- %%
+    subgraph StorageLayer ["4. Data & Storage Layer"]
+        Mongo[(MongoDB Database)]:::database
+        FS[(Local File System<br/>/public/uploads)]:::database
+        Mongo[(🍃 MongoDB Database)]:::database
+        FS[(📁 Local File System<br/>/public/uploads)]:::database
+    end
+
+    Controllers -- "Mongoose ORM" --> Mongo
+    Cron -- "Read/Write" --> Mongo
+    Multer -- "Save Images" --> FS
+
+    %% ---------------- EXTERNAL SERVICES ---------------- %%
+    subgraph ExternalServices ["5. External Services"]
+        SMTP[SMTP Email Server<br/>EasyDNS]:::external
+        WA[WhatsApp App / Web]:::external
+        ThirdParty[External Directories<br/>Target Scrape Sites]:::external
+        SMTP[📧 SMTP Email Server<br/>EasyDNS]:::external
+        WA[💬 WhatsApp App / Web]:::external
+        ThirdParty[🌍 External Directories<br/>Target Scrape Sites]:::external
+    end
+
+    Controllers -- "Send Notifications" --> SMTP
+    Cron -- "Send Reminders" --> SMTP
+    SPA -- "Contact Link (wa.me)" --> WA
+
+    %% ---------------- ADMIN SCRIPTS ---------------- %%
+    subgraph OpsScripts ["6. Standalone Operational Scripts"]
+        Scraper[Puppeteer Scraper<br/>scrape_phones.js]:::scripts
+        WABot[WhatsApp Outreach Bot<br/>whatsapp_outreach.js]:::scripts
+        Scraper([🕷️ Puppeteer Scraper<br/>scrape_phones.js]):::scripts
+        WABot([🤖 WhatsApp Outreach Bot<br/>whatsapp_outreach.js]):::scripts
+    end
+
+    Scraper -- "Scrape Leads" --> ThirdParty
+    Scraper -- "Insert Leads" --> Mongo
+    WABot -- "Fetch Pending Leads" --> Mongo
+    WABot -- "Automated Messaging" --> WA

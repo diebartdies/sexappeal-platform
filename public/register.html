@@ -30,17 +30,46 @@
             margin-top: 20px;
         }
     </style>
+    <!-- SEO & Open Graph Tags -->
+    <meta name="description" content="SexAppeal - The Architecture of Intimacy. Directorio exclusivo de acompañantes VIP y Living Treasures.">
+    <meta property="og:title" content="SexAppeal Platform">
+    <meta property="og:description" content="El santuario definitivo para conexiones de alto nivel y discreción absoluta.">
+    <meta property="og:image" content="https://sexappeal.drsrv.net.ar/SexAppeal_logo_black.png">
+    <meta property="og:url" content="https://sexappeal.drsrv.net.ar">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#D4AF37">
 </head>
 <body>
     <div class="container">
         <header>
-            <a href="index.html" class="logo">SEXAPPEAL</a>
+            <a href="index.html" class="logo"><img src="/SexAppeal_logo_black.png" alt="SexAppeal Logo" style="height: 400px; width: auto;"></a>
         </header>
 
         <section style="display: flex; justify-content: center; padding-bottom: 100px;">
             <div class="card" style="width: 100%; max-width: 600px;">
                 <h2 class="gold-text" style="margin-bottom: 30px;">Registration</h2>
-                <form id="registerForm">
+                <div style="text-align: center; margin-bottom: 25px;">
+        <img src="/SexAppeal_logo_black.png" alt="SexAppeal Logo" style="height: 70px; width: auto; background-color: #000; border-radius: 8px; padding: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.5);">
+    </div>
+    <form id="registerForm">
+        <hr>
+        <h4 class="gold-text">Verification Documents</h4>
+
+        <div class="form-group">
+            <label for="regIdPhotoFront">Photo of your ID (Front) <span class="required-star">*</span></label>
+            <input type="file" id="regIdPhotoFront" name="verificationDocuments" accept="image/*" required>
+        </div>
+
+        <div class="form-group">
+            <label for="regIdPhotoBack">Photo of your ID (Back) <span class="required-star">*</span></label>
+            <input type="file" id="regIdPhotoBack" name="verificationDocuments" accept="image/*" required>
+        </div>
+
+        <div class="form-group">
+            <label for="regSelfiePhoto">Selfie holding your ID <span class="required-star">*</span></label>
+            <input type="file" id="regSelfiePhoto" name="verificationDocuments" accept="image/*" required>
+        </div>
+        <hr>
                     <div id="registerAlert" class="alert hidden"></div>
                     
                     <input type="email" placeholder="Email" required id="regEmail">
@@ -64,17 +93,29 @@
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                            <input type="text" placeholder="Province" id="regProvince">
-                            <input type="text" placeholder="City" id="regCity">
+                            <select id="regProvince" name="province" required>
+        <option value="">Loading...</option>
+    </select>
+                            <select id="regCity" name="city" required>
+        <option value="">Loading...</option>
+    </select>
                         </div>
-                        <input type="text" placeholder="Neighborhood" id="regNeighborhood">
+                        <select id="regNeighborhood" name="neighborhood">
+        <option value="">Loading...</option>
+    </select>
                         
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                             <input type="text" placeholder="Measurements (e.g. 90-60-90)" id="regMeasurements">
                             <input type="text" placeholder="Height (e.g. 170cm)" id="regHeight">
                         </div>
                         
-                        <input type="text" placeholder="Services (comma separated, e.g. Massage, Yoga)" id="regServices">
+                        <select id="regServices" name="services" multiple size="5">
+        <option value="Massage">Massage</option>
+        <option value="Virtual Connection">Virtual Connection</option>
+        <option value="love alchemy">love alchemy</option>
+        <option value="Fantasies">Fantasies</option>
+        <option value="Content Delivery">Content Delivery</option>
+    </select>
                         <input type="text" placeholder="Attributes (comma separated, e.g. love alchemy)" id="regAttributes">
                     </div>
 

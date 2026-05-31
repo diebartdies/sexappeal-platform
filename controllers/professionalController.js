@@ -1,9 +1,47 @@
 const User = require('../models/User');
 const config = require('../config/appConfig');
+const ActivityLog = require('../models/ActivityLog');
+const sendEmail = require('../sendEmail');
 
 // Simple in-memory cache setup
 const cache = new Map();
 const CACHE_TTL = 60 * 1000; // 1 minute TTL in milliseconds
+
+// Helper function to check if professional is active RIGHT NOW in Argentina timezone
+function checkIsActive(profile) {
+  if (!profile || !profile.workingDays || profile.workingDays.length === 0) return false;
+  if (!profile.workingHours || !profile.workingHours.start || !profile.workingHours.end) return false;
+
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Argentina/Buenos_Aires', weekday: 'long', hour: 'numeric', minute: 'numeric', hour12: false
+  });
+  const parts = formatter.formatToParts(now);
+  let currentDay = '', currentHour = 0, currentMinute = 0;
+  for (let p of parts) {
+    if (p.type === 'weekday') currentDay = p.value;
+    if (p.type === 'hour') currentHour = parseInt(p.value, 10);
+    if (p.type === 'minute') currentMinute = parseInt(p.value, 10);
+  }
+  if (currentHour === 24) currentHour = 0; // standard formatting safeguard
+
+  const currentTotal = currentHour * 60 + currentMinute;
+  const [startH, startM] = profile.workingHours.start.split(':').map(Number);
+  const [endH, endM] = profile.workingHours.end.split(':').map(Number);
+  const startTotal = startH * 60 + startM;
+  const endTotal = endH * 60 + endM;
+
+  if (startTotal <= endTotal) {
+    // Standard shift (e.g., 09:00 to 18:00)
+    if (!profile.workingDays.includes(currentDay)) return false;
+    return currentTotal >= startTotal && currentTotal <= endTotal;
+  } else {
+    // Overnight shift (e.g., 22:00 to 06:00) crosses midnight
+    if (currentTotal <= endTotal) return profile.workingDays.includes(new Date(now.getTime() - 86400000).toLocaleDateString('en-US', { timeZone: 'America/Argentina/Buenos_Aires', weekday: 'long' }));
+    if (currentTotal >= startTotal) return profile.workingDays.includes(currentDay);
+    return false;
+  }
+}
 
 // @desc    Discover all revealed Living Treasures (Public)
 // @route   GET /api/v1/professionals
@@ -22,7 +60,9 @@ exports.getProfessionals = async (req, res, next) => {
 
     let query = { 
       role: 'professional', 
-      isVerified: true 
+      isVerified: true,
+      'professionalProfile.subscriptionStatus': { $ne: 'suspended' },
+      'professionalProfile.isExposed': { $ne: false }
     };
 
     // Filter by Quality (formerly Tier)
@@ -37,7 +77,11 @@ exports.getProfessionals = async (req, res, next) => {
 
     // Filter by Specialty (searches the services array)
     if (req.query.specialty && req.query.specialty.trim()) {
-      query['professionalProfile.services'] = req.query.specialty.trim();
+      const specialties = req.query.specialty.trim().split(',').map(s => s.trim()).filter(Boolean);
+      if (specialties.length > 0) {
+        // Use $in to match any of the selected specialties
+        query['professionalProfile.services'] = { $in: specialties };
+      }
     }
 
     // Hierarchical Location Search
@@ -58,7 +102,7 @@ exports.getProfessionals = async (req, res, next) => {
     const total = await User.countDocuments(query);
 
     const professionals = await User.find(query)
-      .select('professionalProfile.alias professionalProfile.quality professionalProfile.bio professionalProfile.services professionalProfile.location professionalProfile.pricing professionalProfile.measurements professionalProfile.height professionalProfile.eyeColor professionalProfile.hasTattoos professionalProfile.whatsappNumber professionalProfile.photos -_id')
+      .select('professionalProfile.alias professionalProfile.quality professionalProfile.bio professionalProfile.services professionalProfile.location professionalProfile.pricing professionalProfile.measurements professionalProfile.height professionalProfile.eyeColor professionalProfile.hasTattoos professionalProfile.photos professionalProfile.workingHours professionalProfile.workingDays -_id')
       .skip(skip)
       .limit(limit);
 
@@ -72,10 +116,14 @@ exports.getProfessionals = async (req, res, next) => {
         total,
         hasMore: skip + professionals.length < total
       },
-      data: professionals.map(p => ({
-        ...(p.toObject ? p.toObject() : (p._doc || p)),
-        revelationStatus: config.experience ? config.experience.statusRevealed : 'REVEALED'
-      }))
+      data: professionals.map(p => {
+        const profObj = p.toObject ? p.toObject() : (p._doc || p);
+        return {
+          ...profObj,
+          revelationStatus: config.experience ? config.experience.statusRevealed : 'REVEALED',
+          isActiveNow: checkIsActive(profObj.professionalProfile)
+        };
+      })
     };
 
     // Store the response in cache
@@ -102,7 +150,7 @@ exports.getProfessionalByAlias = async (req, res, next) => {
       'professionalProfile.alias': req.params.alias,
       role: 'professional',
       isVerified: true
-    }).select('professionalProfile.alias professionalProfile.quality professionalProfile.bio professionalProfile.services professionalProfile.location professionalProfile.pricing professionalProfile.measurements professionalProfile.height professionalProfile.eyeColor professionalProfile.hasTattoos professionalProfile.whatsappNumber professionalProfile.photos -_id');
+    }).select('professionalProfile.alias professionalProfile.quality professionalProfile.bio professionalProfile.services professionalProfile.location professionalProfile.pricing professionalProfile.measurements professionalProfile.height professionalProfile.eyeColor professionalProfile.hasTattoos professionalProfile.whatsappNumber professionalProfile.photos professionalProfile.workingHours professionalProfile.workingDays -_id');
 
     if (!professional) {
       return res.status(404).json({
@@ -111,9 +159,26 @@ exports.getProfessionalByAlias = async (req, res, next) => {
       });
     }
 
+    // Convert to object, check for WhatsApp, and delete the actual number so it's never sent to the browser
+    const profObj = professional.toObject();
+    const hasWhatsapp = !!(profObj.professionalProfile.whatsappNumber && profObj.professionalProfile.whatsappNumber.trim() !== '');
+    delete profObj.professionalProfile.whatsappNumber;
+    profObj.professionalProfile.hasWhatsapp = hasWhatsapp;
+    profObj.isActiveNow = checkIsActive(profObj.professionalProfile);
+
+    // Track the Profile View Activity
+    try {
+      await ActivityLog.create({
+        professional: professional._id,
+        action: 'profile_view',
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent']
+      });
+    } catch(err) { console.error('Activity log error:', err.message); }
+
     res.status(200).json({
       success: true,
-      data: professional
+      data: profObj
     });
   } catch (error) {
     res.status(400).json({
@@ -123,15 +188,62 @@ exports.getProfessionalByAlias = async (req, res, next) => {
   }
 };
 
+// @desc    Redirect to Professional's WhatsApp (Anti-Scraping Protection)
+// @route   GET /api/v1/professionals/:alias/whatsapp
+// @access  Public
+exports.contactWhatsApp = async (req, res, next) => {
+  try {
+    const professional = await User.findOne({ 
+      'professionalProfile.alias': req.params.alias,
+      role: 'professional',
+      isVerified: true
+    }).select('professionalProfile.whatsappNumber professionalProfile.alias');
+
+    if (!professional || !professional.professionalProfile.whatsappNumber) {
+      return res.status(404).send('WhatsApp contact not available for this professional.');
+    }
+
+    const cleanNumber = professional.professionalProfile.whatsappNumber.replace(/\D/g, '');
+    const message = `Hello ${professional.professionalProfile.alias}, I saw your profile on SexAppeal and I'm interested in your services.`;
+    const waUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
+
+    // Track the WhatsApp Click Activity
+    try {
+      await ActivityLog.create({
+        professional: professional._id,
+        action: 'whatsapp_click',
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent']
+      });
+    } catch(err) { console.error('Activity log error:', err.message); }
+
+    res.redirect(waUrl);
+  } catch (error) {
+    res.status(400).send('Unable to redirect to WhatsApp.');
+  }
+};
+
 // @desc    Get all unique specialties (from services)
 // @route   GET /api/v1/professionals/specialties
 // @access  Public
 exports.getSpecialties = async (req, res, next) => {
   try {
-    // Bypass the database entirely and only retrieve the real, 
-    // official specialty types defined in the app configuration.
-    const services = config.services ? [...config.services] : [];
+    const query = {
+      role: 'professional',
+      isVerified: true,
+      'professionalProfile.subscriptionStatus': { $ne: 'suspended' },
+      'professionalProfile.isExposed': { $ne: false }
+    };
 
+    // If a quality filter is applied, only show specialties from that quality tier
+    if (req.query.quality && req.query.quality.trim()) {
+      query['professionalProfile.quality'] = req.query.quality.trim();
+    }
+
+    // Dynamically get all unique services from active professionals in the database.
+    // This is more reliable than a static config list.
+    const services = await User.distinct('professionalProfile.services', query);
+    
     const responsePayload = {
       success: true,
       count: services.length,
@@ -162,19 +274,33 @@ exports.getMe = async (req, res, next) => {
     }
 
     // Check transaction readiness
-    let isReadyForTransactions = user.professionalProfile.rateChangeAcknowledged;
+    let isReadyForTransactions = false;
     
-    // If it's a duo, the partner must also have acknowledged
-    if (user.professionalProfile.isDuo && user.professionalProfile.duoPartner) {
-      const partner = await User.findById(user.professionalProfile.duoPartner);
-      if (partner && !partner.professionalProfile.rateChangeAcknowledged) {
-        isReadyForTransactions = false;
+    if (user.role === 'professional' && user.professionalProfile) {
+      isReadyForTransactions = user.professionalProfile.rateChangeAcknowledged || false;
+      // If it's a duo, the partner must also have acknowledged
+      if (user.professionalProfile.isDuo && user.professionalProfile.duoPartner) {
+        const partner = await User.findById(user.professionalProfile.duoPartner);
+        if (partner && !partner.professionalProfile.rateChangeAcknowledged) {
+          isReadyForTransactions = false;
+        }
       }
+    } else if (user.role === 'admin') {
+      isReadyForTransactions = true;
     }
+
+    // Fetch performance metrics to show on the dashboard
+    let profileViews = 0;
+    let whatsappClicks = 0;
+    try {
+      profileViews = await ActivityLog.countDocuments({ professional: user._id, action: 'profile_view' });
+      whatsappClicks = await ActivityLog.countDocuments({ professional: user._id, action: 'whatsapp_click' });
+    } catch (err) { console.error('Failed to load stats:', err.message); }
 
     res.status(200).json({
       success: true,
       isReadyForTransactions,
+      stats: { profileViews, whatsappClicks },
       data: user
     });
   } catch (error) {
@@ -199,6 +325,13 @@ exports.acknowledgeRateChange = async (req, res, next) => {
     user.professionalProfile.rateChangeAcknowledged = true;
     await user.save();
 
+    await ActivityLog.create({
+      professional: user._id,
+      action: 'acknowledge_rate_change',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+
     res.status(200).json({
       success: true,
       message: 'Rate change acknowledged successfully'
@@ -216,8 +349,6 @@ exports.acknowledgeRateChange = async (req, res, next) => {
 // @access  Private/Admin
 exports.notifyRateChange = async (req, res, next) => {
   try {
-    const sendEmail = require('../sendEmail');
-    
     // Reset acknowledgment for all professionals
     await User.updateMany(
       { role: 'professional' },
@@ -261,6 +392,29 @@ exports.updateProfile = async (req, res, next) => {
     // Combine old and new photo URLs
     const allPhotos = [...existingPhotos, ...newPhotoUrls];
 
+    // Check metadata for new photos to validate they are recent (within 1 year)
+    let lastPhotoUpdate = undefined;
+    if (req.files && req.files.length > 0) {
+      const oneYearAgo = Date.now() - 365 * 24 * 60 * 60 * 1000;
+      const fs = require('fs');
+      let invalidFound = false;
+      
+      for (const file of req.files) {
+        const stats = fs.statSync(file.path);
+        // Using file stats as a proxy for EXIF metadata check (enforcing new uploads)
+        if (stats.mtimeMs < oneYearAgo) invalidFound = true;
+      }
+      
+      if (invalidFound) {
+        req.files.forEach(file => fs.unlinkSync(file.path));
+        return res.status(400).json({ success: false, error: 'One or more uploaded photos are older than a year according to metadata. Please upload recent photos.' });
+      }
+      lastPhotoUpdate = Date.now();
+    }
+
+    const rawDays = req.body.workingDays;
+    const parsedDays = rawDays ? rawDays.split(',').map(s => s.trim()).filter(s => s) : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
     // Build the professionalProfile object from the form fields
     const professionalProfile = {
       alias: req.body.alias,
@@ -271,8 +425,19 @@ exports.updateProfile = async (req, res, next) => {
       photos: allPhotos,
       whatsappNumber: req.body.whatsappNumber,
       hasOwnApartment: req.body.hasOwnApartment === 'true',
-      hasFantasyWardrobe: req.body.hasFantasyWardrobe === 'true'
+      hasFantasyWardrobe: req.body.hasFantasyWardrobe === 'true',
+      workingHours: {
+        start: req.body.workingHoursStart || '00:00',
+        end: req.body.workingHoursEnd || '23:59'
+      },
+      workingDays: parsedDays
     };
+    
+    if (req.body.isExposed !== undefined) {
+      professionalProfile.isExposed = req.body.isExposed === 'true';
+    }
+
+    if (lastPhotoUpdate) professionalProfile.lastPhotoUpdate = lastPhotoUpdate;
 
     // Safely update the nested location object if location data is provided
     if (req.body.province || req.body.city || req.body.neighborhood) {
@@ -298,14 +463,33 @@ exports.updateProfile = async (req, res, next) => {
     else if (score >= 2) professionalProfile.quality = 'Silver';
     else professionalProfile.quality = 'Standard';
 
-    const fieldsToUpdate = {
-      professionalProfile: professionalProfile
-    };
+    // Use dot notation to avoid overwriting the entire subdocument
+    const fieldsToUpdate = {};
+    Object.keys(professionalProfile).forEach(key => {
+      fieldsToUpdate[`professionalProfile.${key}`] = professionalProfile[key];
+    });
 
-    const user = await User.findByIdAndUpdate(req.user.id, fieldsToUpdate, {
+    const user = await User.findByIdAndUpdate(req.user.id, { $set: fieldsToUpdate }, {
       new: true,
       runValidators: true
     });
+
+    await ActivityLog.create({
+      professional: user._id,
+      action: 'update_profile',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+
+    // Notify admin of profile update
+    try {
+      const adminEmail = config.payment && config.payment.adminEmail ? config.payment.adminEmail : 'admin@drsrv.net.ar';
+      await sendEmail({
+        email: adminEmail,
+        subject: 'SexAppeal - Professional Profile Updated',
+        message: `The professional "${professionalProfile.alias}" (${user.email}) has updated their profile.`
+      });
+    } catch (err) { console.error('Failed to notify admin:', err.message); }
 
     res.status(200).json({
       success: true,

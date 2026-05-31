@@ -4,7 +4,11 @@ const ActivityLogSchema = new mongoose.Schema({
   professional: {
     type: mongoose.Schema.ObjectId,
     ref: 'User',
-    required: true
+    required: false
+  },
+  isGuest: {
+    type: Boolean,
+    default: false
   },
   action: {
     type: String,

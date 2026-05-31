@@ -44,7 +44,7 @@ const config = {
   },
   respectAgreement: {
     adminEmail: 'admin@drsrv.net.ar',
-    inappropriateTerms: ['offensive1', 'offensive2'], // To be expanded
+    inappropriateTerms: ['offensive1', 'offensive2', 'spam', 'scam', 'abuse', 'illegal', 'escort', 'prostitution', 'drugs'], // Expanded sample list
     violationMessage: 'Feedback must adhere to our Respect Agreement. Inappropriate terms have been flagged and reported.',
   },
   

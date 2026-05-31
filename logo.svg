@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <!-- Intense, high-contrast Gold Gradient -->
+    <linearGradient id="impactGold" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#AA7C11" />
+      <stop offset="30%" stop-color="#F9F295" />
+      <stop offset="50%" stop-color="#D4AF37" />
+      <stop offset="70%" stop-color="#FFDF73" />
+      <stop offset="100%" stop-color="#8B6508" />
+    </linearGradient>
+    <!-- Subtle Glow Filter for luxury feel -->
+    <filter id="goldGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  
+  <!-- Visually Impacting Monogram / Emblem -->
+  <g transform="translate(200, 160)" filter="url(#goldGlow)">
+    <!-- Outer luxury diamond / shield -->
+    <path d="M 0 -130 L 95 0 L 0 130 L -95 0 Z" fill="none" stroke="url(#impactGold)" stroke-width="2" opacity="0.3"/>
+    <path d="M 0 -110 L 80 0 L 0 110 L -80 0 Z" fill="none" stroke="url(#impactGold)" stroke-width="4" opacity="0.7"/>
+    
+    <!-- Interlocking 'S' and 'A' forming an abstract hourglass/feminine silhouette -->
+    <!-- The 'A' -->
+    <path d="M -45 65 L 0 -65 L 45 65" fill="none" stroke="url(#impactGold)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M -22 20 L 22 20" fill="none" stroke="url(#impactGold)" stroke-width="8" stroke-linecap="round" />
+    
+    <!-- The 'S' intersecting the A (Coral Snake pattern) -->
+    <path d="M 35 -45 C 70 -45 50 -5 -10 10 C -70 25 -50 80 15 80" fill="none" stroke="#D32F2F" stroke-width="12" stroke-linecap="round" opacity="0.9" />
+    <path d="M 35 -45 C 70 -45 50 -5 -10 10 C -70 25 -50 80 15 80" fill="none" stroke="#F9F295" stroke-width="12" stroke-dasharray="19 11" stroke-dashoffset="2" stroke-linecap="butt" opacity="0.9" />
+    <path d="M 35 -45 C 70 -45 50 -5 -10 10 C -70 25 -50 80 15 80" fill="none" stroke="#111111" stroke-width="12" stroke-dasharray="15 15" stroke-linecap="butt" opacity="0.9" />
+  </g>
+  
+  <!-- Brand Name -->
+  <text x="200" y="340" font-family="'Playfair Display', serif" font-weight="900" font-size="38" 
+        fill="url(#impactGold)" text-anchor="middle" letter-spacing="10" filter="url(#goldGlow)">SEXAPPEAL</text>
+        
+  <!-- Subtitle -->
+  <text x="200" y="375" font-family="sans-serif" font-weight="400" font-size="12" 
+        fill="#D4AF37" opacity="0.8" text-anchor="middle" letter-spacing="8">LIVING TREASURES</text>
+</svg>

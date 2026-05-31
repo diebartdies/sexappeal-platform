@@ -22,6 +22,20 @@ When purchasing a VPS, the provider must explicitly offer:
 * **VSysHost:** Based in Kyiv, Ukraine; very lenient ToS and accepts crypto.
 * **AlexHost:** Based in Moldova; highly resilient to takedown requests and privacy-focused.
 
+### Selected Hosting Provider
+*(Logged from infrastructure planning discussion)*
+**Provider:** AlexHost
+**Plan Specifications:**
+* 2 CPU Core
+* 2 GB RAM
+* 50 GB NVMe Storage
+* 6TB bandwidth
+* 1 IPv4 & /64 IPv6
+* NVMe Based System
+* Virtual IPMI - Remote Control Console
+* Frequent backups included
+* DDoS Protection Incl. (1Tbps+)
+
 ### Automated Migration Process
 Thanks to the Ansible automation in this repository, migrating to a new offshore host is seamless:
 1. Purchase a **Linux VPS (Ubuntu 22.04 or Debian)** from an offshore provider.
@@ -47,6 +61,7 @@ For a baseline of ~80 concurrent/active users running the current stack (Node.js
 
 ## Payment Processing Strategy
 *(Logged from infrastructure planning discussion)*
+
 
 Due to the nature of the directory, **mainstream payment processors (Stripe, PayPal, Square) cannot be used**. Utilizing them violates their Acceptable Use Policies (AUP) and will result in permanent account bans and 180-day fund freezes.
 

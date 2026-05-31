@@ -73,13 +73,18 @@ const UserSchema = new mongoose.Schema({
       type: Boolean,
       default: false
     },
+    workingHours: {
+      start: { type: String, default: '00:00' }, // HH:mm format
+      end: { type: String, default: '23:59' }
+    },
+    workingDays: [{
+      type: String,
+      enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+      default: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    }],
     services: [{
       type: String,
-      index: true,
-      enum: {
-        values: config.services,
-        message: '{VALUE} is not a valid specialty. Please choose from the official list.'
-      }
+      index: true
     }],
     whatsappNumber: String,
     photos: [String],
@@ -105,6 +110,10 @@ const UserSchema = new mongoose.Schema({
       type: Boolean,
       default: true // Default to true, will be set to false on rate changes
     },
+    isExposed: {
+      type: Boolean,
+      default: true // Determines if professional is shown on discovery grid
+    },
     subscriptionStatus: {
       type: String,
       enum: ['trial', 'active', 'suspended'],
@@ -129,6 +138,10 @@ const UserSchema = new mongoose.Schema({
         default: 'pending' 
       },
       billingMonth: String // Format: YYYY-MM (e.g., '2026-05')
+    }],
+    lastPhotoUpdate: {
+      type: Date,
+      default: Date.now
     }
   },
   resetPasswordToken: String,

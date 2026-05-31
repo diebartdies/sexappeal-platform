@@ -9,7 +9,21 @@ const ActivityLog = require('../models/ActivityLog');
 // @access  Public
 exports.register = async (req, res, next) => {
   try {
-    const { email, password, role, professionalProfile } = req.body;
+    // Destructure all fields from the multipart form body
+    const { 
+      email, password, role, alias, bio, hasOwnApartment, hasFantasyWardrobe, 
+      province, city, neighborhood, measurements, height, services 
+    } = req.body;
+
+    // Reconstruct the professionalProfile object
+    const professionalProfile = role === 'professional' ? {
+      alias, bio,
+      hasOwnApartment: hasOwnApartment === 'true',
+      hasFantasyWardrobe: hasFantasyWardrobe === 'true',
+      location: { province, city, neighborhood },
+      measurements, height,
+      services: services ? services.split(',').map(s => s.trim()).filter(Boolean) : []
+    } : undefined;
 
     // Check if user already exists
     let existingUser = await User.findOne({ email });
@@ -24,10 +38,6 @@ exports.register = async (req, res, next) => {
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
     // Set expiration to 10 minutes from now
     const verificationCodeExpire = new Date(Date.now() + 10 * 60 * 1000);
-
-    // Randomly assign a verification gesture for professionals
-    const gestures = ['1 finger', '2 fingers', '3 fingers', 'thumbs up'];
-    const assignedGesture = role === 'professional' ? gestures[Math.floor(Math.random() * gestures.length)] : undefined;
 
     // Calculate Category (Quality) automatically if professionalProfile is provided
     if (role === 'professional' && professionalProfile) {
@@ -46,19 +56,43 @@ exports.register = async (req, res, next) => {
       else professionalProfile.quality = 'Standard';
     }
 
+    // Get file paths from multer upload
+    const verificationDocuments = req.files ? req.files.map(file => `/uploads/photos/${file.filename}`) : [];
+
     // Create user
     const user = await User.create({
       email,
       password,
       role,
       professionalProfile: role === 'professional' ? professionalProfile : undefined,
+      verificationDocuments,
       verificationStatus: role === 'professional' ? 'pending' : 'approved',
-      verificationGesture: assignedGesture,
       isVerified: role !== 'professional',
       isEmailVerified: false,
-nos       emailVerificationCode: verificationCode,
+      emailVerificationCode: verificationCode,
       emailVerificationCodeExpire: verificationCodeExpire
     });
+
+    if (role === 'professional') {
+      const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket.remoteAddress || req.ip);
+      await ActivityLog.create({
+        professional: user._id,
+        action: 'register',
+        ipAddress: req.ip,
+        ipAddress: clientIp,
+        userAgent: req.headers['user-agent']
+      });
+
+      // Notify Admin of new registration
+      try {
+        const adminEmail = config.payment && config.payment.adminEmail ? config.payment.adminEmail : 'admin@drsrv.net.ar';
+        await sendEmail({
+          email: adminEmail,
+          subject: 'SexAppeal - New Professional Registration',
+          message: `A new professional has registered: ${email}\nRole: ${role}\nVerification Status: ${user.verificationStatus}`
+        });
+      } catch (err) { console.error('Failed to notify admin:', err.message); }
+    }
 
     // Craft a luxurious welcome message specifically for professionals
     let emailSubject = 'SexAppeal Platform - Email Verification Code';
@@ -66,27 +100,19 @@ nos       emailVerificationCode: verificationCode,
 
     if (role === 'professional') {
       emailSubject = 'Welcome to SexAppeal - Verification & Next Steps';
-      emailMessage = 'Welcome to the SexAppeal Platform, a sanctuary designed exclusively for Living Treasures like you.
+      emailMessage = `Welcome to the SexAppeal Platform, a sanctuary for Living Treasures like you.
 
 Your verification code is: ${verificationCode}
 (This code will expire in 10 minutes)
 
-OUR PROMISE TO YOU
-We built SexAppeal with one goal: to make your professional life easier, safer, and economically better. We are moving away from the cluttered, exploitative models of the past.
+NEXT STEPS: VERIFICATION PROCESS
+Thank you for submitting your registration and verification documents. Our team will now review your profile.
 
-THE 2-MONTH GRACE PERIOD & FAIR PRICING
-To prove our value to you, your first 2 months on the platform are completely free. No hidden fees, no credit cards required upfront. 
-After your 2-month trial, our subscription fee is strictly set at 50% of what legacy competitors charge. In real terms, a full month of access costs roughly half of what you would earn in a single shift or meeting. You keep more of what you earn.
+This process is handled with absolute discretion. Your documents are stored securely and are never shared or published. Please note that the approval process will take at least 48 hours. You will receive an email notification once your profile is approved.
 
-NEXT STEPS: PROFILE COMPLETION & IDENTITY VERIFICATION
-To protect our community and ensure your safety, we require a strict but entirely private identity verification. Once you log in, you will need to complete your profile request by:
-1. Supplying the Category you wish to enroll in and selecting the types of Services you will be delivering (including our new "Content Delivery" option).
-2. Securely submitting a clear photo of your valid Government ID.
-3. Securely submitting a live selfie holding your ID next to your face, while holding up ${assignedGesture} (to prove it is a live, authentic photo).
+Profile photos for your public gallery can only be uploaded after your account has been approved.
 
-Your documents are handled with absolute discretion, stored securely, and are never shared or published.
-
-Welcome to the Architecture of Intimacy.\`;
+Welcome to the Architecture of Intimacy.`;
     }
 
     try {
@@ -197,10 +223,12 @@ exports.login = async (req, res, next) => {
 
     // Log professional login activity
     if (user.role === 'professional') {
+      const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket.remoteAddress || req.ip);
       await ActivityLog.create({
         professional: user._id,
         action: 'login',
         ipAddress: req.ip,
+        ipAddress: clientIp,
         userAgent: req.headers['user-agent']
       });
     }
@@ -232,6 +260,18 @@ exports.guestLogin = async (req, res, next) => {
       isEmailVerified: true, // Bypass verification
       isAnonymous: true // Flag to identify temporary accounts
     });
+
+    try {
+      const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket.remoteAddress || req.ip);
+      await ActivityLog.create({
+        action: 'guest_login',
+        isGuest: true,
+        ipAddress: clientIp,
+        userAgent: req.headers['user-agent']
+      });
+    } catch (logErr) {
+      console.error('Failed to log guest activity:', logErr.message);
+    }
 
     sendTokenResponse(guestUser, 200, res);
   } catch (error) {

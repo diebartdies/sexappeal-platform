@@ -9,6 +9,7 @@ const multer = require('multer');
 const fs = require('fs');
 const connectDB = require('./config/database');
 const User = require('./models/User');
+const ActivityLog = require('./models/ActivityLog');
 const sendEmail = require('./sendEmail');
 
 // Connect to database
@@ -33,7 +34,14 @@ app.use(helmet({
 }));
 
 // Enable CORS
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:5000',
+    'http://127.0.0.1:5000',
+    'http://192.168.1.8:5000' // Allow access from local network IP for testing
+  ],
+  credentials: true
+}));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -69,6 +77,28 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 
+// --- Global Guest Activity Tracker ---
+// This logs every search and profile view made by non-logged-in users so you can data-mine their preferences
+app.use((req, res, next) => {
+  // Only track GET requests to the API (searches, profile views, locations)
+  if (req.path.startsWith('/api/v1/') && req.method === 'GET') {
+    // If there is no authorization header and no token cookie, it's a guest
+    if (!req.headers.authorization && !req.cookies.token) {
+      const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket.remoteAddress || req.ip);
+      
+      // We don't use 'await' here so it doesn't slow down the user's request
+      ActivityLog.create({
+        action: 'guest_browsing',
+        isGuest: true,
+        details: { path: req.path, query: req.query },
+        ipAddress: clientIp,
+        userAgent: req.headers['user-agent']
+      }).catch(err => console.error('Failed to log guest activity:', err.message));
+    }
+  }
+  next();
+});
+
 // Mount routers
 const authController = require('./controllers/authController');
 const adminController = require('./controllers/adminController');
@@ -77,9 +107,10 @@ const feedbackController = require('./controllers/feedbackController');
 const locationController = require('./controllers/locationController');
 const transactionController = require('./controllers/transactionController');
 const potentialProfessionalController = require('./controllers/potentialProfessionalController');
+const paymentController = require('./controllers/paymentController');
 const { protect, authorize } = require('./middleware/auth');
 
-app.post('/api/v1/auth/register', authController.register);
+app.post('/api/v1/auth/register', upload.array('verificationDocuments', 3), authController.register);
 app.post('/api/v1/auth/verify-email', authController.verifyEmail);
 app.post('/api/v1/auth/login', authController.login);
 app.post('/api/v1/auth/guest-login', authController.guestLogin);
@@ -97,18 +128,30 @@ app.get('/api/v1/locations/provinces/:provinceId/sublocations', locationControll
 app.get('/api/v1/professionals', professionalController.getProfessionals);
 app.get('/api/v1/professionals/specialties', professionalController.getSpecialties);
 app.get('/api/v1/professionals/:alias', professionalController.getProfessionalByAlias);
+app.get('/api/v1/professionals/:alias/whatsapp', professionalController.contactWhatsApp);
+
+// Review Routes
+const reviewsController = require('./controllers/reviewsController');
+app.get('/api/v1/professionals/:professionalId/reviews', reviewsController.getReviews);
+app.post('/api/v1/professionals/:professionalId/reviews', protect, reviewsController.addReview);
+
 
 // Professional Dashboard Routes (Private)
 app.get('/api/v1/professionals/me', protect, authorize('professional', 'admin'), professionalController.getMe);
 app.put('/api/v1/professionals/updateprofile', protect, authorize('professional'), upload.array('photos', 10), professionalController.updateProfile);
 app.put('/api/v1/professionals/acknowledge-rate', protect, authorize('professional'), professionalController.acknowledgeRateChange);
+app.post('/api/v1/professionals/upload-receipt', protect, authorize('professional'), upload.single('receipt'), paymentController.uploadReceipt);
 
 // Admin routes
 app.get('/api/v1/admin/verifications/pending', protect, authorize('admin'), adminController.getPendingVerifications);
 app.put('/api/v1/admin/verifications/:id', protect, authorize('admin'), adminController.verifyProfessional);
 app.post('/api/v1/admin/notify-rate-change', protect, authorize('admin'), professionalController.notifyRateChange);
+app.get('/api/v1/admin/logs', protect, authorize('admin'), adminController.getActivityLogs);
+app.put('/api/v1/admin/professionals/:id', protect, authorize('admin'), adminController.updateProfessionalProfile);
+app.get('/api/v1/admin/professionals', protect, authorize('admin'), adminController.getAllProfessionals);
 app.get('/api/v1/admin/potential-professionals', protect, authorize('admin'), potentialProfessionalController.getPotentialProfessionals);
 app.put('/api/v1/admin/potential-professionals/:id', protect, authorize('admin'), potentialProfessionalController.updatePotentialProfessional);
+app.post('/api/v1/admin/notifications/mail/broadcast', protect, authorize('admin'), adminController.sendBroadcastEmail);
 
 if (process.env.NODE_ENV !== 'production') {
   const testingController = require('./controllers/testingController');
@@ -194,12 +237,38 @@ setInterval(async () => {
         await sendEmail({
           email: user.email,
           subject: 'SexAppeal Platform - Monthly Subscription Fee Reminder',
-          message: `Hello ${user.professionalProfile?.alias || 'Professional'},\n\nThis is a friendly reminder that your monthly subscription fee for the SexAppeal Platform is due between the 1st and 5th of this month.\n\nPlease transfer the fee via MercadoPago (CVU: ${config.payment.mercadoPago.cvu}, Alias: ${config.payment.mercadoPago.alias}) or Bank Transfer (CBU: ${config.payment.bankTransfer.cbu}, Alias: ${config.payment.bankTransfer.alias}).\n\nAfter transferring, please send the payment receipt to ${config.payment.adminEmail} to keep your account active.\n\nThank you for being part of our platform!`
+          message: `Hello ${user.professionalProfile?.alias || 'Professional'},\n\nThis is a friendly reminder that your monthly subscription fee for the SexAppeal Platform is due between the 1st and 5th of this month.\n\nPlease transfer the fee via MercadoPago (CVU: ${config.payment.mercadoPago.cvu}, Alias: ${config.payment.mercadoPago.alias}) or Bank Transfer (CBU: ${config.payment.bankTransfer.cbu}, Alias: ${config.payment.bankTransfer.alias}).\n\nAfter transferring, please log in to your Dashboard and upload the payment receipt to keep your account active.\n\nThank you for being part of our platform!`
         });
         console.log(`[Payment Reminder] Sent monthly payment reminder email to ${user.email}`);
       }
     }
   } catch (err) {
     console.error('[Payment Reminder Error]', err.message);
+  }
+}, 24 * 60 * 60 * 1000);
+
+// Background Task: Enforce Yearly Photo Upgrades (Runs every 24 hours)
+setInterval(async () => {
+  try {
+    const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+    const inactiveUsers = await User.find({
+      role: 'professional',
+      'professionalProfile.lastPhotoUpdate': { $lt: oneYearAgo },
+      verificationStatus: 'approved'
+    });
+
+    for (const user of inactiveUsers) {
+      user.verificationStatus = 'pending';
+      user.isVerified = false;
+      await user.save();
+      await sendEmail({
+        email: user.email,
+        subject: 'SexAppeal Platform - Yearly Photo Update Required',
+        message: `Hello ${user.professionalProfile?.alias || 'Professional'},\n\nIt has been over a year since you updated your photos on the platform. To maintain our standard of quality and ensure profiles are accurate, we require all professionals to update their pictures annually.\n\nYour profile has been temporarily hidden. Please log in to your dashboard and upload new photos to reactivate your profile.\n\nThank you for understanding!`
+      });
+      console.log(`[Yearly Photo Update] Suspended ${user.email} due to outdated photos.`);
+    }
+  } catch (err) {
+    console.error('[Yearly Photo Update Error]', err.message);
   }
 }, 24 * 60 * 60 * 1000);

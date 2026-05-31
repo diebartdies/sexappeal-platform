@@ -4,7 +4,7 @@
   become: yes
   vars:
     project_path: /opt/sexappeal-platform
-    repo_url: "git@github.com:diebartdies/sexappeal-platform.git"
+    repo_url: "https://YOUR_GITHUB_TOKEN_HERE@github.com/diebartdies/sexappeal-platform.git"
 
   tasks:
     - name: Ensure locale en_US.UTF-8 is generated
@@ -19,6 +19,35 @@
     - name: Set timezone to UTC
       community.general.timezone:
         name: UTC
+
+    - name: Check if swap file exists
+      stat:
+        path: /swapfile
+      register: swap_file_check
+
+    - name: Create 2GB swap file
+      command: fallocate -l 2G /swapfile
+      when: not swap_file_check.stat.exists
+
+    - name: Set swap file permissions
+      file:
+        path: /swapfile
+        mode: '0600'
+      when: not swap_file_check.stat.exists
+
+    - name: Make swap
+      command: mkswap /swapfile
+      when: not swap_file_check.stat.exists
+
+    - name: Enable swap
+      command: swapon /swapfile
+      when: not swap_file_check.stat.exists
+
+    - name: Add swap to fstab permanently
+      lineinfile:
+        path: /etc/fstab
+        line: '/swapfile none swap sw 0 0'
+        state: present
 
     - name: Install required system packages
       apt:
@@ -92,6 +121,12 @@
         dest: "{{ project_path }}/.env"
         mode: '0600'
 
+    - name: Copy local docker-compose directly to bypass GitHub
+      copy:
+        src: ../docker-compose.yml
+        dest: "{{ project_path }}/docker-compose.yml"
+        mode: '0644'
+
     - name: Ensure Docker and Docker Compose are installed
       shell: |
         curl -fsSL https://get.docker.com -o get-docker.sh
@@ -99,6 +134,11 @@
         apt-get install -y docker-compose-plugin
       args:
         creates: /usr/bin/docker
+
+    - name: Purge broken MongoDB 6.0 container and volume
+      shell: |
+        docker rm -f sexappeal_mongo || true
+        docker volume rm sexappeal_mongo_data || true
 
     - name: Build and Start Containers
       community.docker.docker_compose_v2:

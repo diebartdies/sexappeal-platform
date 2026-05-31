@@ -23,15 +23,18 @@ async function startOutreach() {
     // Connect to the database
     await connectDB();
 
-    // Fetch all pending contacts
-    const pendingContacts = await PotentialProfessional.find({ status: 'pending' });
+    // To prevent WhatsApp bans, process contacts in small batches per run
+    const BATCH_SIZE = 10;
+    const totalPending = await PotentialProfessional.countDocuments({ status: 'pending' });
+    const pendingContacts = await PotentialProfessional.find({ status: 'pending' }).limit(BATCH_SIZE);
 
-    if (pendingContacts.length === 0) {
+    if (totalPending === 0) {
         console.log('No pending contacts found to outreach.');
         process.exit(0);
     }
 
-    console.log(`Found ${pendingContacts.length} pending contacts. Initializing WhatsApp Client...`);
+    console.log(`Found ${totalPending} total pending contacts.`);
+    console.log(`Processing a safe batch of ${pendingContacts.length} contacts to prevent WhatsApp bans. Initializing WhatsApp Client...`);
 
     // Initialize the WhatsApp Client
     const client = new Client({

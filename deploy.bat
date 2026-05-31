@@ -3,12 +3,12 @@ echo ===================================================
 echo   SexAppeal Platform - Automated Deployment
 echo ===================================================
 echo.
-echo Target IP: 192.168.1.8
+echo Target IP: 91.208.206.35
 echo GitHub: https://github.com/diebartdies/sexappeal-platform.git
 echo.
 
 :: Ask for the SSH password for the remote user defined in inventory.ini
-set /p SSH_PASS="Enter SSH password for the remote user on 192.168.1.8: "
+set /p SSH_PASS="Enter SSH password for the remote user on 91.208.206.35: "
 echo.
 
 echo Detecting Linux distribution and installing OpenSSH client and sshpass...
@@ -27,8 +27,13 @@ if %errorlevel% neq 0 (
 echo Launching Ansible via WSL...
 echo.
 
-:: This command launches WSL, installs required Ansible collections, goes to the ansible directory, and runs the playbook
-wsl bash -c "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; export LC_ALL=C.UTF-8; export ANSIBLE_HOST_KEY_CHECKING=False; ansible-galaxy collection install community.general community.docker && cd /mnt/d/SexAppeal-platform/ansible && ansible-playbook -i inventory.ini deploy.yml -e 'ansible_password=\"%SSH_PASS%\" ansible_become_password=\"%SSH_PASS%\"'"
+:: Enter the ansible folder natively so WSL automatically starts in the correct directory
+cd ansible
+
+:: This command launches WSL, installs required Ansible collections, and runs the playbook directly
+wsl bash -c "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; export LC_ALL=C.UTF-8; export ANSIBLE_HOST_KEY_CHECKING=False; ansible-galaxy collection install community.general community.docker && ansible-playbook -i inventory.ini deploy.yml -e 'ansible_password=\"%SSH_PASS%\" ansible_become_password=\"%SSH_PASS%\"'"
+
+cd ..
 
 echo.
 echo ===================================================

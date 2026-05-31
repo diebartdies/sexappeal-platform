@@ -44,11 +44,12 @@ async function runTests() {
 
     // 4. Login (Should work now)
     console.log('\n[4] Testing Login...');
+    const loginEmail = 'test_pro_auto@example.com';
     const loginRes = await axios.post(`${API_URL}/auth/login`, {
-      email: 'test_pro_auto@example.com',
+      email: loginEmail,
       password: 'password123'
     });
-    console.log('✓ Login Successful. Token received.');
+    console.log(`✓ Login Successful. Logged in as: ${loginEmail}`);
     authToken = loginRes.data.token;
 
     // 5. Access Dashboard

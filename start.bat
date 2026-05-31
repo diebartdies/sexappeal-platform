@@ -1,36 +1,15 @@
 @echo off
-echo ===================================================
-echo  STOPPING ANY PREVIOUSLY RUNNING SERVER
-echo  STOPPING ANY PREVIOUSLY RUNNING NODE.JS SERVER
-echo ===================================================
-set "PID="
-for /f "tokens=5" %%a in ('netstat -a -n -o ^| find /I "LISTENING" ^| find ":5000"') do set "PID=%%a"
-
-if defined PID (
-    echo Killing process with PID %PID% listening on port 5000...
-    taskkill /F /PID %PID%
-) else (
-    echo No previous server process found listening on port 5000.
-)
-echo Attempting to terminate all running node.exe processes...
+echo 🛑 Stopping existing development servers...
+:: Forcefully kill background Node processes to free up ports
 taskkill /F /IM node.exe /T >nul 2>&1
-echo Previous node processes terminated.
-echo.
-echo ===================================================
-echo  INSTALLING/UPDATING DEPENDENCIES (npm install)
-echo ===================================================
-call npm install
 
-echo.
-echo ===================================================
-echo  STARTING SERVER (node server.js)
-echo ===================================================
-echo.
-start "SexAppeal Server" cmd /k "node server.js"
+:: Small delay to ensure ports are fully released
+timeout /t 1 /nobreak >nul
 
-echo.
-echo Waiting 3 seconds for the server to initialize...
-timeout /t 3 /nobreak > nul
-start http://localhost:5000
-echo.
-echo Your server is running in the new window. To stop it, close that window or press Ctrl+C inside it.
+echo ===================================================
+echo 🚀 Running Frontend Migrations and Updates...
+echo ===================================================
+node migrate-frontend.js
+
+echo 🌟 Starting fresh development server in the background...
+start /B node dev.js

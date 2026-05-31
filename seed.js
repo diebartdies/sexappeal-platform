@@ -126,97 +126,53 @@ const seedData = async () => {
         }
 
         console.log('Seeding new verified professionals...');
-        await User.create({
-            email: 'pro1@example.com',
-            password: 'password123',
-            role: 'professional',
-            verificationStatus: 'approved',
-            isVerified: true,
-            isEmailVerified: true,
-            professionalProfile: {
-                alias: 'Scarlett',
-                quality: 'Gold',
-                bio: 'A sophisticated companion for your most elegant evenings.',
-                location: { province: 'Buenos Aires', city: 'CABA', neighborhood: 'Palermo' },
-                measurements: '90-60-90',
-                height: '170cm',
-                services: ['Massage', 'love alchemy'],
-                photos: [
-                    'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=1887&auto=format&fit=crop'
-                ]
-            }
-        });
-        
-        await User.create({
-            email: 'pro2@example.com',
-            password: 'password123',
-            role: 'professional',
-            verificationStatus: 'approved',
-            isVerified: true,
-            isEmailVerified: true,
-            professionalProfile: {
-                alias: 'Isabella',
-                quality: 'Standard',
-                bio: 'Passionate and fiery, perfect for a spontaneous getaway.',
-                location: { province: 'Buenos Aires', city: 'CABA', neighborhood: 'Recoleta' },
-                measurements: '95-65-95',
-                height: '165cm',
-                services: ['Virtual Connection', 'Fantasies'],
-                photos: [
-                    'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1887&auto=format&fit=crop'
-                ]
-            }
-        });
-        
-        await User.create({
-            email: 'pro3@example.com',
-            password: 'password123',
-            role: 'professional',
-            verificationStatus: 'approved',
-            isVerified: true,
-            isEmailVerified: true,
-            professionalProfile: {
-                alias: 'Chloe',
-                quality: 'Premium',
-                bio: 'An adventurous spirit with a love for art and culture. Ready to explore the city\'s hidden gems with you.',
-                location: { province: 'Buenos Aires', city: 'CABA', neighborhood: 'San Telmo' },
-                measurements: '88-62-92',
-                height: '168cm',
-                services: ['Massage', 'Virtual Connection', 'Fantasies', 'love alchemy'],
-                whatsappNumber: '5491112345678',
-                photos: [
-                    'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=1961&auto=format&fit=crop',
-                    'https://images.unsplash.com/photo-1611601322175-28e659d4d484?q=80&w=1887&auto=format&fit=crop',
-                    'https://images.unsplash.com/photo-1542206395-9feb3edaa68d?q=80&w=1964&auto=format&fit=crop',
-                    'https://images.unsplash.com/photo-1604004555489-723a93d6ce74?q=80&w=1887&auto=format&fit=crop',
-                    'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=1887&auto=format&fit=crop',
-                    'https://images.unsplash.com/photo-1589466725882-6cf1b8957b37?q=80&w=1887&auto=format&fit=crop'
-                ]
-            }
-        });
+        const photoSet = [
+            'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=1961&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1611601322175-28e659d4d484?q=80&w=1887&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1542206395-9feb3edaa68d?q=80&w=1964&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1604004555489-723a93d6ce74?q=80&w=1887&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=1887&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1589466725882-6cf1b8957b37?q=80&w=1887&auto=format&fit=crop'
+        ];
 
-        await User.create({
-            email: 'pro4_test@example.com',
-            password: 'password123',
-            role: 'professional',
-            verificationStatus: 'approved',
-            isVerified: true,
-            isEmailVerified: true,
-            professionalProfile: {
-                alias: 'Test Pro',
-                quality: 'Standard',
-                bio: 'A profile for testing categories like Massage and Wellness.',
-                location: { province: 'Buenos Aires', city: 'CABA', neighborhood: 'Palermo' },
-                measurements: '90-60-90',
-                height: '175cm',
-                services: ['Massage', 'Virtual Connection', 'love alchemy'],
-                whatsappNumber: '5491122334455',
-                photos: [
-                    'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?q=80&w=2070&auto=format&fit=crop',
-                    'https://images.unsplash.com/photo-1554151228-14d9def656e4?q=80&w=1886&auto=format&fit=crop'
-                ]
-            }
-        });
+        const locationPool = [
+            { province: 'CABA', neighborhood: 'Palermo' },
+            { province: 'CABA', neighborhood: 'Recoleta' },
+            { province: 'CABA', neighborhood: 'Belgrano' },
+            { province: 'CABA', neighborhood: 'Puerto Madero' },
+            { province: 'Buenos Aires (Province)', city: 'Mar del Plata', neighborhood: 'Centro' },
+            { province: 'Buenos Aires (Province)', city: 'La Plata', neighborhood: 'Tolosa' },
+            { province: 'Buenos Aires (Province)', city: 'Tigre', neighborhood: 'Nordelta' },
+            { province: 'Córdoba', city: 'Córdoba', neighborhood: 'Nueva Córdoba' },
+            { province: 'Córdoba', city: 'Villa Carlos Paz', neighborhood: 'Centro' },
+            { province: 'Santa Fe', city: 'Rosario', neighborhood: 'Pichincha' },
+            { province: 'Mendoza', city: 'Mendoza', neighborhood: 'Godoy Cruz' }
+        ];
+
+        const testPros = [];
+        for (let i = 1; i <= 60; i++) {
+            const loc = locationPool[i % locationPool.length];
+            testPros.push({
+                email: `pro${i}@example.com`,
+                password: 'password123',
+                role: 'professional',
+                verificationStatus: 'approved',
+                isVerified: true,
+                isEmailVerified: true,
+                professionalProfile: {
+                    alias: `Test Pro ${i}`,
+                    quality: i % 4 === 0 ? 'Premium' : (i % 3 === 0 ? 'Gold' : (i % 2 === 0 ? 'Silver' : 'Standard')),
+                    bio: `A profile for testing professional number ${i}.`,
+                    location: loc,
+                    measurements: '90-60-90',
+                    height: '175cm',
+                    services: i % 2 === 0 ? ['Massage', 'Virtual Connection'] : ['love alchemy', 'Fantasies'],
+                    whatsappNumber: `54911223344${(i % 100).toString().padStart(2, '0')}`,
+                    photos: photoSet
+                }
+            });
+        }
+        await User.create(testPros);
 
         // Seed an Admin user for the dashboard
         await User.create({
@@ -228,7 +184,7 @@ const seedData = async () => {
             isEmailVerified: true
         });
 
-        console.log('✅ Four professionals loaded successfully! You can now check the discovery feed.');
+        console.log('✅ 60 professionals loaded successfully! You can now check the discovery feed.');
         process.exit();
     } catch (err) {
         console.error('Error seeding data:', err);
