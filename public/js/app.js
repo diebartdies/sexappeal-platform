@@ -553,20 +553,6 @@ async function loadTreasures(page = 1, append = false) {
         
         let data = await res.json();
 
-        // --- START HARDCODED FALLBACK ---
-        // If the DB is empty or fails, inject dummy data so the grid is never "lost"
-        if (!data.success || !data.data || data.data.length === 0) {
-            data = {
-                success: true,
-                data: [
-                    { professionalProfile: { alias: "Mia (Demo)", quality: "Premium", photos: ["https://via.placeholder.com/300x400/D4AF37/000000?text=Mia"], services: ["Virtual Connection"] } },
-                    { professionalProfile: { alias: "Sofia (Demo)", quality: "Gold", photos: ["https://via.placeholder.com/300x400/C5A028/000000?text=Sofia"], services: ["Massage", "Love alchemy"] } },
-                    { professionalProfile: { alias: "Camila (Demo)", quality: "Silver", photos: ["https://via.placeholder.com/300x400/C0C0C0/000000?text=Camila"], services: ["On line video"] } }
-                ]
-            };
-        }
-        // --- END HARDCODED FALLBACK ---
-
         if (data.success && data.data.length > 0) {
             if (!append) {
                 grid.innerHTML = '';
