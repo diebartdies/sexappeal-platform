@@ -3,6 +3,7 @@ const User = require('./models/User');
 const Province = require('./models/Province');
 const City = require('./models/City');
 const Neighborhood = require('./models/Neighborhood');
+const ActivityLog = require('./models/ActivityLog');
 const fs = require('fs');
 const path = require('path');
 
@@ -36,6 +37,9 @@ const seedData = async () => {
         console.log('Clearing old professionals and test admin...');
         await User.deleteMany({ $or: [{ role: 'professional' }, { email: 'admin@drsrv.net.ar' }] });
         
+        console.log('Clearing old activity logs...');
+        await ActivityLog.deleteMany();
+
         console.log('Clearing old provinces...');
         await Province.deleteMany();
 
@@ -136,21 +140,41 @@ const seedData = async () => {
         ];
 
         const locationPool = [
+            // CABA
             { province: 'CABA', neighborhood: 'Palermo' },
             { province: 'CABA', neighborhood: 'Recoleta' },
             { province: 'CABA', neighborhood: 'Belgrano' },
             { province: 'CABA', neighborhood: 'Puerto Madero' },
+            { province: 'CABA', neighborhood: 'San Telmo' },
+            { province: 'CABA', neighborhood: 'Caballito' },
+            { province: 'CABA', neighborhood: 'Villa Urquiza' },
+            { province: 'CABA', neighborhood: 'Colegiales' },
+            
+            // Buenos Aires (Province)
             { province: 'Buenos Aires (Province)', city: 'Mar del Plata', neighborhood: 'Centro' },
+            { province: 'Buenos Aires (Province)', city: 'Mar del Plata', neighborhood: 'Güemes' },
             { province: 'Buenos Aires (Province)', city: 'La Plata', neighborhood: 'Tolosa' },
+            { province: 'Buenos Aires (Province)', city: 'La Plata', neighborhood: 'Casco Urbano' },
             { province: 'Buenos Aires (Province)', city: 'Tigre', neighborhood: 'Nordelta' },
-            { province: 'Córdoba', city: 'Córdoba', neighborhood: 'Nueva Córdoba' },
-            { province: 'Córdoba', city: 'Villa Carlos Paz', neighborhood: 'Centro' },
+            { province: 'Buenos Aires (Province)', city: 'Quilmes', neighborhood: 'Centro' },
+            { province: 'Buenos Aires (Province)', city: 'San Isidro', neighborhood: 'Acassuso' },
+            { province: 'Buenos Aires (Province)', city: 'Vicente López', neighborhood: 'Olivos' },
+            { province: 'Buenos Aires (Province)', city: 'Lomas de Zamora', neighborhood: 'Las Lomitas' },
+            
+            // Santa Fe
             { province: 'Santa Fe', city: 'Rosario', neighborhood: 'Pichincha' },
-            { province: 'Mendoza', city: 'Mendoza', neighborhood: 'Godoy Cruz' }
+            { province: 'Santa Fe', city: 'Rosario', neighborhood: 'Centro' },
+            { province: 'Santa Fe', city: 'Rosario', neighborhood: 'Alberdi' },
+            { province: 'Santa Fe', city: 'Santa Fe', neighborhood: 'Centro' },
+            
+            // Mendoza
+            { province: 'Mendoza', city: 'Mendoza', neighborhood: 'Centro' },
+            { province: 'Mendoza', city: 'Godoy Cruz', neighborhood: 'Centro' },
+            { province: 'Mendoza', city: 'Luján de Cuyo', neighborhood: 'Chacras de Coria' }
         ];
 
         const testPros = [];
-        for (let i = 1; i <= 60; i++) {
+        for (let i = 1; i <= 100; i++) {
             const loc = locationPool[i % locationPool.length];
             testPros.push({
                 email: `pro${i}@example.com`,
@@ -184,7 +208,33 @@ const seedData = async () => {
             isEmailVerified: true
         });
 
-        console.log('✅ 60 professionals loaded successfully! You can now check the discovery feed.');
+        console.log('Seeding dummy Traces (Activity Logs)...');
+        const profs = await User.find({ role: 'professional' }).limit(2);
+        if (profs.length >= 2) {
+            await ActivityLog.create([
+                {
+                    action: 'guest_browsing',
+                    isGuest: true,
+                    ipAddress: '190.55.123.45',
+                    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/114.0',
+                    details: { path: '/api/v1/professionals', query: { quality: 'Premium' } }
+                },
+                {
+                    action: 'guest_browsing',
+                    isGuest: true,
+                    ipAddress: '181.12.99.102',
+                    userAgent: 'iPhone; CPU iPhone OS 16_0 like Mac OS X',
+                    details: { path: `/api/v1/professionals/${profs[0].professionalProfile.alias}`, query: {} }
+                }
+            ]);
+
+            await ActivityLog.create([
+                { professional: profs[0]._id, action: 'login', ipAddress: '10.0.0.5', userAgent: 'Macintosh; Intel Mac OS X 10_15_7' },
+                { professional: profs[1]._id, action: 'update_profile', ipAddress: '10.0.0.6', userAgent: 'Windows NT 10.0; Win64; x64' }
+            ]);
+        }
+
+        console.log('✅ 100 professionals and dummy traces loaded successfully!');
         process.exit();
     } catch (err) {
         console.error('Error seeding data:', err);
