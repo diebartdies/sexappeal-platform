@@ -948,7 +948,7 @@ async function initializeFilters() {
         const urlParams = new URLSearchParams(window.location.search);
         const preselected = (urlParams.get('specialty') || '').split(',').filter(Boolean);
 
-        await renderSpecialtyCheckboxes('specialtySelect', preselected, { quality: quality, context: 'filter' });
+        await renderSpecialtyDropdown('specialtySelect', preselected, { quality: quality, context: 'filter' });
     };
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -1505,7 +1505,7 @@ async function loadDashboard() {
                 setVal('upServices', (prof.services || []).join(', '));
             }
             // Render specialties as checkboxes
-            renderSpecialtyCheckboxes('upServices', prof.services || []);
+            renderSpecialtyDropdown('upServices', prof.services || []);
             setVal('upMeasurements', prof.measurements || '');
             setVal('upHeight', prof.height || '');
             setVal('upWhatsapp', prof.whatsappNumber || '');
@@ -2585,7 +2585,7 @@ function renderEditForm(prof) {
     `;
 
     setupLocationDropdowns('adminEditProvince', 'adminEditCity', 'adminEditNeigh', false, profile.location || {});
-    renderSpecialtyCheckboxes('adminEditServices', profile.services || []);
+    renderSpecialtyDropdown('adminEditServices', profile.services || []);
 
     document.getElementById('backToListBtn').onclick = () => renderProfessionalList();
 
@@ -2791,7 +2791,7 @@ function showAlert(element, message, isError = true) {
     element.style.color = isError ? 'var(--accent-red)' : '#00ff00';
 }
 
-async function renderSpecialtyCheckboxes(containerId, preselectedServices = [], options = {}) {
+async function renderSpecialtyDropdown(containerId, preselectedServices = [], options = {}) {
     const { quality = '', context = 'form' } = options;
     let container = document.getElementById(containerId);
     if (!container) return;
@@ -2801,8 +2801,12 @@ async function renderSpecialtyCheckboxes(containerId, preselectedServices = [], 
         select.id = container.id;
         select.className = container.className || 'form-select';
         if (context === 'form') {
-            select.multiple = true;
-            select.style.height = '120px';
+            select.style.width = '100%';
+            select.style.padding = '8px';
+            select.style.background = '#222';
+            select.style.color = 'white';
+            select.style.border = '1px solid #444';
+            select.style.borderRadius = '4px';
         } else {
             select.style.width = '100%';
             select.style.padding = '12px';
@@ -2813,17 +2817,27 @@ async function renderSpecialtyCheckboxes(containerId, preselectedServices = [], 
         container.parentNode.replaceChild(select, container);
         container = select;
     } else if (container.tagName === 'SELECT') {
+        container.multiple = false;
+        container.removeAttribute('size');
+        container.style.height = 'auto';
         if (context === 'filter') {
             container.style.width = '100%';
             container.style.padding = '12px';
             container.style.background = 'transparent';
             container.style.border = '1px solid var(--primary-gold)';
             container.style.color = 'white';
+        } else if (context === 'form') {
+            container.style.width = '100%';
+            container.style.padding = '8px';
+            container.style.background = '#222';
+            container.style.color = 'white';
+            container.style.border = '1px solid #444';
+            container.style.borderRadius = '4px';
         }
     }
 
     try {
-        const specialties = ['Massage', 'Virtual Connection', 'Love alchemy', 'On line video'];
+        const specialties = ['Massage', 'Virtual Connection', 'Love alchemy', 'On line video', 'Fantasies', 'Content Delivery'];
         
         container.innerHTML = '';
         
@@ -3197,7 +3211,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (document.getElementById('registerForm')) {
         setupLocationDropdowns('regProvince', 'regCity', 'regNeighborhood', false, {});
-        renderSpecialtyCheckboxes('regServices', [], { context: 'form' });
+        renderSpecialtyDropdown('regServices', [], { context: 'form' });
         
         const regForm = document.getElementById('registerForm');
         
