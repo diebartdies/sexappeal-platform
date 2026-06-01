@@ -1322,8 +1322,7 @@ async function loadAdminGridData() {
                 `;
                 
                 card.querySelector('.edit-btn').onclick = () => {
-                    openEditProfessionalModal();
-                    setTimeout(() => renderEditForm(p), 100);
+                    openEditProfessionalModal(p);
                 };
 
                 grid.appendChild(card);
@@ -2393,7 +2392,7 @@ async function openMailBroadcastModal() {
 }
 
 // --- Admin Edit Professional Profile Modal ---
-async function openEditProfessionalModal() {
+async function openEditProfessionalModal(prof = null) {
     let modal = document.getElementById('editProfModal');
     if (!modal) {
         modal = document.createElement('div');
@@ -2403,13 +2402,17 @@ async function openEditProfessionalModal() {
             backgroundColor: 'rgba(0,0,0,0.9)', zIndex: '3000', display: 'flex',
             flexDirection: 'column', padding: '20px', overflowY: 'auto'
         });
-
         const closeBtn = document.createElement('button');
         closeBtn.textContent = t('Close');
         closeBtn.style.alignSelf = 'flex-end';
         closeBtn.style.marginBottom = '10px';
-        closeBtn.onclick = () => modal.style.display = 'none';
-
+        closeBtn.onclick = () => {
+            modal.style.display = 'none';
+            // If we close the modal, always refresh the main grid to see any potential changes
+            if (document.getElementById('adminGridContent')) {
+                loadAdminGridData();
+            }
+        };
         const container = document.createElement('div');
         container.id = 'editProfContainer';
         Object.assign(container.style, {
@@ -2423,7 +2426,14 @@ async function openEditProfessionalModal() {
     }
 
     modal.style.display = 'flex';
-    renderProfessionalList();
+    const container = document.getElementById('editProfContainer');
+    container.innerHTML = 'Loading...';
+
+    if (prof) {
+        renderEditForm(prof);
+    } else {
+        renderProfessionalList();
+    }
 }
 
 async function renderProfessionalList(aliasSearch = '') {
@@ -2516,9 +2526,7 @@ function renderEditForm(prof) {
     container.innerHTML = `
             <button id="backToListBtn" style="position: absolute; top: 20px; right: 20px; padding: 6px 12px; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold); border-radius: 4px; cursor: pointer; transition: background 0.3s ease; z-index: 10;" onmouseover="this.style.background='rgba(212, 175, 55, 0.1)'" onmouseout="this.style.background='transparent'">&larr; Back to List</button>
             <h2 class="gold-text" style="margin-bottom: 20px; padding-right: 120px;">Edit Professional: ${profile.alias || prof.email}</h2>
-        <form id="adminEditProfForm" style="display: flex; flex-direction: column; gap: 15px;">
-            <div id="adminEditAlert" class="alert hidden" style="padding: 10px; border-radius: 4px; border: 1px solid transparent;"></div>
-            
+        <form id="adminEditProfForm" style="display: flex; flex-direction: column; gap: 15px;"> <div id="adminEditAlert" class="alert hidden" style="padding: 10px; border-radius: 4px; border: 1px solid transparent;"></div>
             <label>Email</label>
             <input type="email" id="adminEditEmail" value="${prof.email}" required style="padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
             
@@ -2593,11 +2601,7 @@ function renderEditForm(prof) {
     setupLocationDropdowns('adminEditProvince', 'adminEditCity', 'adminEditNeigh', false, profile.location || {});
     renderSpecialtyCheckboxes('adminEditServices', profile.services || []);
 
-    document.getElementById('backToListBtn').onclick = () => {
-        const modal = document.getElementById('editProfModal');
-        if (modal) modal.style.display = 'none';
-        loadAdminGridData(); // Refresh the grid to show any updates
-    };
+    document.getElementById('backToListBtn').onclick = () => renderProfessionalList();
 
     // Attach photo removal logic
     document.querySelectorAll('.remove-photo-btn').forEach(btn => {
@@ -2663,7 +2667,11 @@ function renderEditForm(prof) {
 
             if (data.success) {
                 showAlert(alertEl, 'Profile updated successfully!', false);
-                setTimeout(() => { document.getElementById('backToListBtn').click(); }, 1500);
+                setTimeout(() => {
+                    const modal = document.getElementById('editProfModal');
+                    if (modal) modal.style.display = 'none';
+                    loadAdminGridData(); // Refresh the main grid
+                }, 1500);
             } else {
                 showAlert(alertEl, data.error || 'Update failed');
             }
