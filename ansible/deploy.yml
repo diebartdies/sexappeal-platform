@@ -134,12 +134,7 @@
         apt-get install -y docker-compose-plugin
       args:
         creates: /usr/bin/docker
-
-    - name: Purge broken MongoDB 6.0 container and volume
-      shell: |
-        docker rm -f sexappeal_mongo || true
-        docker volume rm sexappeal_mongo_data || true
-
+    
     - name: Build and Start Containers
       community.docker.docker_compose_v2:
         project_src: "{{ project_path }}"
