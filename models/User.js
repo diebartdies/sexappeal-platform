@@ -44,11 +44,20 @@ const UserSchema = new mongoose.Schema({
   },
   verificationGesture: {
     type: String,
-    enum: ['1 finger', '2 fingers', '3 fingers', 'thumbs up']
+    enum: ['1 finger', '2 fingers', '3 fingers', 'thumbs up', '1FU', '2FU', '3FU', 'TU', 'OS']
   },
   isAnonymous: {
     type: Boolean,
     default: false
+  },
+  adminSettings: {
+    pricing: {
+      Elite: { type: Number, default: 50000 },
+      Premium: { type: Number, default: 40000 },
+      Gold: { type: Number, default: 30000 },
+      Silver: { type: Number, default: 20000 },
+      Standard: { type: Number, default: 15000 }
+    }
   },
   professionalProfile: {
     alias: {
@@ -58,7 +67,7 @@ const UserSchema = new mongoose.Schema({
     },
     quality: {
       type: String,
-      enum: ['Standard', 'Silver', 'Gold', 'Premium'],
+      enum: ['Standard', 'Silver', 'Gold', 'Premium', 'Elite'],
       default: 'Standard'
     },
     bio: {
@@ -114,15 +123,19 @@ const UserSchema = new mongoose.Schema({
       type: Boolean,
       default: true // Determines if professional is shown on discovery grid
     },
+    paysMonthlyCharges: {
+      type: Boolean,
+      default: true // Determines if the professional is subject to monthly fees
+    },
     subscriptionStatus: {
       type: String,
       enum: ['trial', 'active', 'suspended'],
-      default: 'trial' // Starts on the 2-month grace period
+      default: 'trial' // Starts on the 1-month grace period
     },
     trialEndDate: {
       type: Date,
-      // Sets the trial end date to 60 days from account creation
-      default: () => new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)
+      // Sets the trial end date to 30 days (1 month) from account creation
+      default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     },
     paymentHistory: [{
       date: { type: Date, default: Date.now },
@@ -138,6 +151,24 @@ const UserSchema = new mongoose.Schema({
         default: 'pending' 
       },
       billingMonth: String // Format: YYYY-MM (e.g., '2026-05')
+    }],
+    invoices: [{
+      billingMonth: String, // Format: YYYY-MM (e.g., '2026-05' or '2026-05 (Pro-rated)')
+      amount: Number,
+      dueDate: Date,
+      status: { 
+        type: String, 
+        enum: ['pending', 'paid', 'late', 'cancelled'], 
+        default: 'pending' 
+      },
+      lateFeeApplied: { 
+        type: Boolean, 
+        default: false 
+      },
+      issuedAt: { 
+        type: Date, 
+        default: Date.now 
+      }
     }],
     lastPhotoUpdate: {
       type: Date,

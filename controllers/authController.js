@@ -3,6 +3,7 @@ const config = require('../config/appConfig');
 const sendEmail = require('../sendEmail');
 const crypto = require('crypto');
 const ActivityLog = require('../models/ActivityLog');
+const { OAuth2Client } = require('google-auth-library');
 
 // @desc    Register user
 // @route   POST /api/v1/auth/register
@@ -12,7 +13,7 @@ exports.register = async (req, res, next) => {
     // Destructure all fields from the multipart form body
     const { 
       email, password, role, alias, bio, hasOwnApartment, hasFantasyWardrobe, 
-      province, city, neighborhood, measurements, height, services 
+      province, city, neighborhood, measurements, height, services, verificationGesture
     } = req.body;
 
     // Reconstruct the professionalProfile object
@@ -50,7 +51,8 @@ exports.register = async (req, res, next) => {
       else if (['belgrano', 'caballito', 'san telmo'].includes(nbhd)) score += 2;
       else if (nbhd !== '') score += 1;
 
-      if (score >= 6) professionalProfile.quality = 'Premium';
+      if (score >= 8) professionalProfile.quality = 'Elite';
+      else if (score >= 6) professionalProfile.quality = 'Premium';
       else if (score >= 4) professionalProfile.quality = 'Gold';
       else if (score >= 2) professionalProfile.quality = 'Silver';
       else professionalProfile.quality = 'Standard';
@@ -67,6 +69,7 @@ exports.register = async (req, res, next) => {
       professionalProfile: role === 'professional' ? professionalProfile : undefined,
       verificationDocuments,
       verificationStatus: role === 'professional' ? 'pending' : 'approved',
+      verificationGesture: role === 'professional' ? verificationGesture : undefined,
       isVerified: role !== 'professional',
       isEmailVerified: false,
       emailVerificationCode: verificationCode,
@@ -359,6 +362,51 @@ exports.resetPassword = async (req, res, next) => {
     sendTokenResponse(user, 200, res);
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Google Sign-in / Registration
+// @route   POST /api/v1/auth/google
+// @access  Public
+exports.googleAuth = async (req, res, next) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ success: false, error: 'No Google token provided' });
+    }
+
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const { email, name, email_verified } = ticket.getPayload();
+
+    if (!email_verified) {
+      return res.status(400).json({ success: false, error: 'Google email is not verified' });
+    }
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // Automatically create a regular user (Client/Guest). 
+      // Professionals MUST use the standard form to submit verification IDs.
+      user = await User.create({
+        name,
+        email,
+        password: crypto.randomBytes(16).toString('hex'), // Secure random password
+        role: 'user',
+        isVerified: true, 
+        isEmailVerified: true,
+        verificationStatus: 'approved'
+      });
+    }
+
+    sendTokenResponse(user, 200, res);
+  } catch (error) {
+    res.status(400).json({ success: false, error: 'Google authentication failed: ' + error.message });
   }
 };
 

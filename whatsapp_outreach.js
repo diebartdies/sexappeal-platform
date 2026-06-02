@@ -14,7 +14,7 @@ const generateOutreachMessage = (contact) => {
 
 We are launching an exclusive, private directory for top-tier companions called SexAppeal. We only accept verified professionals and we charge 50% less than legacy platforms. 
 
-We are currently offering a 2-month completely free trial for founding members. Would you be interested in joining or learning more? Let me know!`;
+    We are currently offering a 1-month completely free trial for founding members. Would you be interested in joining or learning more? Let me know!`;
 };
 
 async function startOutreach() {

@@ -2,6 +2,15 @@
 const BASE_ORIGIN = window.location.protocol === 'file:' ? 'http://localhost:5000' : window.location.origin;
 const API_URL = `${BASE_ORIGIN}/api/v1`;
 
+const CATEGORY_META = {
+    'Elite': { name: '⭐ Elite', logo: '<svg viewBox="0 0 40 50" width="100%"><rect x="2" y="2" width="36" height="46" fill="none" stroke="currentColor" stroke-width="2" rx="4"/><text x="20" y="22" font-family="serif" font-size="14" fill="currentColor" text-anchor="middle" font-weight="bold">R</text><text x="20" y="36" font-family="serif" font-size="14" fill="currentColor" text-anchor="middle" font-weight="bold">R</text></svg>', desc: 'Peak Luxury & Royalty', price: '50.000 ARS' },
+    'Premium': { name: '✨ Premium', logo: '<svg viewBox="0 0 100 40" width="100%"><path d="M10,20 Q30,0 50,20 Q30,40 10,20 Z M90,20 Q70,0 50,20 Q70,40 90,20 Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="50" cy="20" r="10" fill="none" stroke="currentColor" stroke-width="2"/><text x="50" y="25" font-family="serif" font-size="14" fill="currentColor" text-anchor="middle" font-weight="bold">B</text></svg>', desc: 'Performance & Elegance', price: '40.000 ARS' },
+    'Gold': { name: '🟡 Gold', logo: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" width="100%"><circle cx="32" cy="32" r="28"/><path d="M32 4 L32 32 L10 46 M32 32 L54 46"/></svg>', desc: 'Executive Success & Status', price: '30.000 ARS' },
+    'Silver': { name: '⚪ Silver', logo: '<svg viewBox="0 0 100 40" fill="none" stroke="currentColor" stroke-width="4" width="100%"><circle cx="26" cy="20" r="12"/><circle cx="42" cy="20" r="12"/><circle cx="58" cy="20" r="12"/><circle cx="74" cy="20" r="12"/></svg>', desc: 'Modern High-Tech Style', price: '20.000 ARS' },
+    'Standard': { name: '🟤 Standard', logo: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" width="100%"><ellipse cx="32" cy="32" rx="28" ry="18" /><ellipse cx="32" cy="32" rx="18" ry="7" /><ellipse cx="32" cy="20" rx="6" ry="12" /></svg>', desc: 'Everyday Functional Reliability', price: '15.000 ARS' },
+    'Uncategorized': { name: 'Uncategorized', logo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="100%"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>', desc: 'Needs Review', price: 'N/A' }
+};
+
 // --- Internationalization (i18n) ---
 const translations = {
     'es': {
@@ -15,29 +24,219 @@ const translations = {
         'Loading...': 'Cargando...',
         'All': 'Todos',
         'Select...': 'Seleccionar...',
+        'Login': 'Iniciar Sesión',
+        'Register': 'Registrarse',
         'Logout': 'Cerrar sesión',
         'Back': 'Volver',
         'Desktop: Click & Drag to scroll | Mobile: Swipe left/right': 'Escritorio: Clic y arrastrar | Móvil: Deslizar',
         'Upload Receipt': 'Subir recibo de pago (foto o archivo)',
+        'Close': 'Cerrar',
+        'Save Changes': 'Guardar Cambios',
+        'Edit': 'Editar',
+        'Unknown': 'Desconocido',
+        'N/A': 'N/D',
         
+        // Auth & Forms
+        'Password': 'Contraseña',
+        'Confirm Password': 'Confirmar Contraseña',
+        'Forgot Password?': '¿Olvidaste tu contraseña?',
+        'Reset Password': 'Restablecer Contraseña',
+        'Email Address': 'Correo Electrónico',
+        'Has own apartment': 'Tiene departamento propio',
+        'Has fantasy wardrobe': 'Tiene vestuario de fantasía',
+        'Submitting...': 'Enviando...',
+        'Sending...': 'Enviando...',
+        'Access Denied': 'Acceso Denegado',
+        'Server connection error': 'Error de conexión con el servidor',
+        'Registration failed': 'Error en el registro',
+        'Invalid code': 'Código inválido',
+        'Error sending code': 'Error enviando código',
+        'Password reset successful!': '¡Contraseña restablecida con éxito!',
+        'Reset failed': 'Error al restablecer',
+
         // Discovery / Treasures
+        'Discover Our Treasures': 'Descubre Nuestros Tesoros',
+        'Filter by quality and service, or browse the full collection below.': 'Filtra por calidad y servicio, o explora la colección completa a continuación.',
+        'Filter by quality and service,': 'Filtra por calidad y servicio,',
+        'or browse the full collection below.': 'o explora la colección completa a continuación.',
         'Load More Treasures': 'Cargar Más Tesoros',
         'No Treasures Found': 'No se encontraron Tesoros',
         'Filter Again': 'Filtrar de Nuevo',
         'View Full Profile': 'Ver Perfil Completo',
         'Contact on WhatsApp': 'Contactar por WhatsApp',
+        'No professionals match your current selection.': 'Ningún profesional coincide con su selección actual.',
+        'No professionals have been revealed yet. Please check back later.': 'Aún no se han revelado profesionales. Vuelve más tarde.',
+        'Filters': 'Filtros',
+        'Controls / Filters': 'Controles / Filtros',
+        
+        // Treasure Details
+        '🟢 Available Right Now': '🟢 Disponible Ahora Mismo',
+        '🔴 Currently Inactive': '🔴 Actualmente Inactivo',
+        'Specialties:': 'Especialidades:',
+        'Location:': 'Ubicación:',
+        'Measurements:': 'Medidas:',
+        'Height:': 'Estatura:',
+        'Schedule:': 'Horario:',
+        'Hours:': 'Horas:',
+        'Everyday': 'Todos los días',
+        'Anytime': 'Cualquier horario',
+        'No photos available.': 'No hay fotos disponibles.',
+        'Could not find the specified treasure.': 'No se pudo encontrar el tesoro especificado.',
+        'No treasure specified.': 'Ningún tesoro especificado.',
+        'Error connecting to the vault:': 'Error al conectar con la bóveda:',
+        'Please ensure the server is running.': 'Por favor asegúrese de que el servidor esté en ejecución.',
         
         // Locations
+        'Province': 'Provincia',
         'All Provinces': 'Todas las Provincias',
         'Select Province': 'Seleccione Provincia',
+        'City / Neighborhood': 'Ciudad / Barrio',
+        'All Cities': 'Todas las Ciudades',
+        'Select City': 'Seleccione Ciudad',
         'City...': 'Ciudad...',
         'Enter City': 'Ingrese Ciudad',
+        'All Neighborhoods': 'Todos los Barrios',
+        'Select Neighborhood': 'Seleccione Barrio',
+        'Neighborhood': 'Barrio',
         'Neighborhood...': 'Barrio...',
         'Enter Neighborhood': 'Ingrese Barrio',
         
+        // Specialties
+        'Specialty': 'Especialidad',
+        'All Specialties': 'Todas las Especialidades',
+        'Massage': 'Masajes',
+        'Virtual Connection': 'Conexión Virtual',
+        'Love Alchemy': 'Alquimia de Amor',
+        'Content Media': 'Contenido Multimedia',
+        
+        // Qualities
+        'Quality': 'Calidad',
+        'All Qualities': 'Todas las Calidades',
+        '⭐ Elite': '⭐ Élite',
+        '✨ Premium': '✨ Premium',
+        '🟡 Gold': '🟡 Oro',
+        '⚪ Silver': '⚪ Plata',
+        '🟤 Standard': '🟤 Estándar',
+        'Uncategorized': 'Sin Categoría',
+        'Peak Luxury & Royalty': 'Máximo Lujo y Realeza',
+        'Performance & Elegance': 'Rendimiento y Elegancia',
+        'Executive Success & Status': 'Éxito Ejecutivo y Estatus',
+        'Modern High-Tech Style': 'Estilo Moderno y Tecnológico',
+        'Everyday Functional Reliability': 'Confiabilidad Funcional Diaria',
+        'Needs Review': 'Requiere Revisión',
+        
         // Dashboard
         '(Dashboard)': '(Panel)',
-        'Logged in as:': 'Conectado como:'
+        'Logged in as:': 'Conectado como:',
+        'Connection Requests': 'Solicitudes de Conexión',
+        'View Pending Requests': 'Ver Solicitudes Pendientes',
+        'Verification Process': 'Proceso de Verificación',
+        
+        // Dynamic Text Blocks
+        'Coming Soon:': 'Próximamente:',
+        'Users will be able to post their experiences on our new community blog!': '¡Los usuarios podrán publicar sus experiencias en nuestro nuevo blog de la comunidad!',
+        'Profile photos can only be uploaded after your account is approved.': 'Las fotos de perfil solo se pueden cargar después de que su cuenta sea aprobada.',
+        'Connected in Duo mode.': 'Conectado en modo Dúo.',
+        'Not currently in a Duo.': 'Actualmente no en un Dúo.',
+        'To ensure the safety and authenticity of our community, a strict verification process is required. Please follow these steps:': 'Para garantizar la seguridad y autenticidad de nuestra comunidad, se requiere un estricto proceso de verificación. Siga estos pasos:',
+        'Complete all required fields below to submit your registration.': 'Complete todos los campos obligatorios a continuación para enviar su registro.',
+        'Upload a clear photo of your Government ID (Front and Back).': 'Suba una foto clara de su identificación oficial (Frente y Dorso).',
+        'Upload a personal selfie holding your ID next to your face while performing this hand position:': 'Sube una selfie personal sosteniendo tu identificación junto a tu rostro mientras realizas esta posición de la mano:',
+        '1 finger up ☝️': '1 dedo arriba ☝️',
+        '2 fingers up ✌️': '2 dedos arriba ✌️',
+        '3 fingers up 🖖': '3 dedos arriba 🖖',
+        'Thumbs up 👍': 'Pulgares arriba 👍',
+        'OK sign 👌': 'Señal de OK 👌',
+        'Note: Profile photos can only be uploaded after your account is approved (which takes at least 48 hours).': 'Nota: Las fotos de perfil solo se pueden cargar después de que su cuenta sea aprobada (lo cual demora al menos 48 horas).',
+        'Submit Form': 'Enviar Formulario',
+        'Save Draft': 'Guardar Borrador',
+        
+        // Admin / Modals
+        'Edit Pricing': 'Editar Precios',
+        'Edit Category Pricing': 'Editar Precios por Categoría',
+        'Save Pricing': 'Guardar Precios',
+        'These monthly values are used by the billing engine to calculate invoices for professionals.': 'Estos valores mensuales son utilizados por el motor de facturación para calcular las facturas de los profesionales.',
+        'pending': 'pendiente',
+        'approved': 'aprobado',
+        'rejected': 'rechazado',
+        'contacted': 'contactado',
+        'Professionals Directory': 'Directorio de Profesionales',
+        'Filter': 'Filtrar',
+        'No professionals match your filters.': 'Ningún profesional coincide con tus filtros.',
+        'Admin Menu': 'Menú de Admin',
+        'Professional Profiles': 'Perfiles de Profesionales',
+        'Pending Approvals': 'Aprobaciones Pendientes',
+        'Dashboard Config': 'Configuración del Panel',
+        'Notifications': 'Notificaciones',
+        'Mail': 'Correo',
+        'Special Messages': 'Mensajes Especiales',
+        'Broadcast Messages': 'Mensajes Masivos',
+        'Traces': 'Rastros',
+        'Guest Traffic': 'Tráfico de Invitados',
+        'Treasures Steps': 'Pasos de Tesoros',
+        'System': 'Sistema',
+        'View Activity Logs': 'Ver Registros de Actividad',
+        'View Scraped Leads': 'Ver Prospectos',
+        'Pending Connection Requests': 'Solicitudes de Conexión Pendientes',
+        'Date': 'Fecha',
+        'Requester': 'Solicitante',
+        'Message': 'Mensaje',
+        'Actions': 'Acciones',
+        'Accept': 'Aceptar',
+        'Decline': 'Rechazar',
+        'No pending requests.': 'No hay solicitudes pendientes.',
+        'Activity Logs': 'Registros de Actividad',
+        'Filter Action...': 'Filtrar Acción...',
+        'Filter IP...': 'Filtrar IP...',
+        'Filter User Agent...': 'Filtrar Navegador...',
+        'Apply Filters': 'Aplicar Filtros',
+        'Clear': 'Limpiar',
+        'Professional': 'Profesional',
+        'Action': 'Acción',
+        'IP Address': 'Dirección IP',
+        'User Agent': 'Navegador',
+        'No logs found.': 'No se encontraron registros.',
+        'Scraped Phone Leads': 'Prospectos Telefónicos Extraídos',
+        'Refresh List': 'Actualizar Lista',
+        'Date Added': 'Fecha Agregado',
+        'Phone Number': 'Número de Teléfono',
+        'Source': 'Fuente',
+        'Status': 'Estado',
+        'No leads found.': 'No se encontraron prospectos.',
+        'Pending Verifications': 'Verificaciones Pendientes',
+        'Email': 'Correo Electrónico',
+        'Alias': 'Alias',
+        'Documents': 'Documentos',
+        'Submitted On': 'Enviado El',
+        'Approve': 'Aprobar',
+        'Reject': 'Rechazar',
+        'No pending verifications.': 'No hay verificaciones pendientes.',
+        'Send Broadcast Email': 'Enviar Correo Masivo',
+        'Audience': 'Audiencia',
+        'All Professionals': 'Todos los Profesionales',
+        'Approved Professionals Only': 'Solo Profesionales Aprobados',
+        'Subject': 'Asunto',
+        'Send Broadcast': 'Enviar Masivo',
+        'Select a Professional to Edit': 'Seleccione un Profesional para Editar',
+        'Search by Alias...': 'Buscar por Alias...',
+        'Search': 'Buscar',
+        'No professionals found.': 'No se encontraron profesionales.',
+        'Back to List': 'Volver a la Lista',
+        'Verification Status': 'Estado de Verificación',
+        'Quality': 'Calidad',
+        'Bio': 'Biografía',
+        'Start Time (HH:mm)': 'Hora Inicio (HH:mm)',
+        'End Time (HH:mm)': 'Hora Fin (HH:mm)',
+        'Working Days (comma separated)': 'Días Laborales (separados por comas)',
+        'Visibility / Exposure': 'Visibilidad / Exposición',
+        'Show in public directory (active)': 'Mostrar en directorio público (activo)',
+        'WhatsApp Number': 'Número de WhatsApp',
+        'Manage Photos': 'Administrar Fotos',
+        
+        // Privacy Shield
+        '100% Privacy Guarantee': 'Garantía de Privacidad 100%',
+        'Zero Trackers. Cookieless.': 'Cero Rastreadores. Sin Cookies.',
+        "Zero cookies. Zero third-party trackers. We don't harvest your data. Check your own browser's tracker-blocker to verify and compare us with other apps.": "Cero cookies. Cero rastreadores de terceros. No recopilamos sus datos. Revise el bloqueador de rastreadores de su propio navegador para verificar y compararnos con otras apps."
     }
 };
 
@@ -48,39 +247,154 @@ function t(text) {
     return translations['es'][text] || text;
 }
 
-function applyStaticTranslations() {
+let esRegexList = null;
+
+function applyStaticTranslations(rootNode = document.body) {
     if (currentLang === 'en') return;
     
+    if (!esRegexList) {
+        const keys = Object.keys(translations['es']).sort((a, b) => b.length - a.length);
+        esRegexList = keys.map(key => {
+            // Escape regex, then replace any spaces with \s+ to handle weird formatting/newlines
+            const pattern = key.split(/\s+/).map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s+');
+            let finalPattern = pattern;
+            if (/^\w/.test(key)) finalPattern = '\\b' + finalPattern;
+            if (/\w$/.test(key)) finalPattern = finalPattern + '\\b';
+            return { key, regex: new RegExp(finalPattern, 'gi') };
+        });
+    }
+    
     // Walk DOM to translate text nodes
-    const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+    const walk = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, null, false);
     let node;
     const nodesToReplace = [];
+    
     while (node = walk.nextNode()) {
-        const text = node.nodeValue.trim();
-        if (translations['es'][text]) {
-            nodesToReplace.push({ node, text: translations['es'][text] });
+        let text = node.nodeValue;
+        if (!text.trim()) continue;
+        
+        // Normalize all tabs, spaces, and newlines into a single space
+        const normalizedText = text.replace(/\s+/g, ' ').trim();
+        
+        if (translations['es'][normalizedText]) {
+            nodesToReplace.push({ node, newText: text.replace(text.trim(), translations['es'][normalizedText]) });
+        } else if (translations['es'][text.trim()]) {
+            nodesToReplace.push({ node, newText: text.replace(text.trim(), translations['es'][text.trim()]) });
+        } else {
+            let updatedText = text;
+            let changed = false;
+            for (const { key, regex } of esRegexList) {
+                const newText = updatedText.replace(regex, translations['es'][key]);
+                if (newText !== updatedText) {
+                    updatedText = newText;
+                    changed = true;
+                }
+            }
+            if (changed) {
+                nodesToReplace.push({ node, newText: updatedText });
+            }
         }
     }
+    
     nodesToReplace.forEach(item => {
-        item.node.nodeValue = item.node.nodeValue.replace(item.node.nodeValue.trim(), item.text);
+        item.node.nodeValue = item.newText;
     });
     
     // Translate input values and buttons
-    const inputs = document.querySelectorAll('input[type="button"], input[type="submit"]');
+    const inputs = rootNode.querySelectorAll ? rootNode.querySelectorAll('input[type="button"], input[type="submit"]') : [];
     inputs.forEach(input => {
-        if (input.value && translations['es'][input.value.trim()]) {
-            input.value = translations['es'][input.value.trim()];
+        if (input.value) {
+            const norm = input.value.replace(/\s+/g, ' ').trim();
+            if (translations['es'][norm]) {
+                input.value = translations['es'][norm];
+            } else if (translations['es'][input.value.trim()]) {
+                input.value = translations['es'][input.value.trim()];
+            } else {
+                let text = input.value;
+                let changed = false;
+                for (const { key, regex } of esRegexList) {
+                    const newText = text.replace(regex, translations['es'][key]);
+                    if (newText !== text) {
+                        text = newText;
+                        changed = true;
+                    }
+                }
+                if (changed) input.value = text;
+            }
         }
     });
 
     // Translate placeholders
-    const placeholders = document.querySelectorAll('input[placeholder]');
+    const placeholders = rootNode.querySelectorAll ? rootNode.querySelectorAll('input[placeholder]') : [];
     placeholders.forEach(input => {
-        if (translations['es'][input.placeholder.trim()]) {
-            input.placeholder = translations['es'][input.placeholder.trim()];
+        if (input.placeholder) {
+            const norm = input.placeholder.replace(/\s+/g, ' ').trim();
+            if (translations['es'][norm]) {
+                input.placeholder = translations['es'][norm];
+            } else if (translations['es'][input.placeholder.trim()]) {
+                input.placeholder = translations['es'][input.placeholder.trim()];
+            } else {
+                let text = input.placeholder;
+                let changed = false;
+                for (const { key, regex } of esRegexList) {
+                    const newText = text.replace(regex, translations['es'][key]);
+                    if (newText !== text) {
+                        text = newText;
+                        changed = true;
+                    }
+                }
+                if (changed) input.placeholder = text;
+            }
         }
     });
 }
+
+// --- Inject Global Dynamic Styles ---
+(function injectGlobalStyles() {
+    if (!document.getElementById('sexappeal-global-styles')) {
+        const style = document.createElement('style');
+        style.id = 'sexappeal-global-styles';
+        style.textContent = `
+            .fileteado-section {
+                transition: box-shadow 0.4s ease;
+            }
+            .fileteado-section:hover {
+                box-shadow: 0 0 25px rgba(212, 175, 55, 0.25), inset 0 0 15px rgba(212, 175, 55, 0.15);
+            }
+        `;
+        document.head.appendChild(style);
+        
+        const adminStyles = document.createElement('style');
+        adminStyles.textContent = `
+            .admin-nav-btn {
+                width: 100%; padding: 10px 15px; background: transparent; border: 1px solid transparent;
+                color: #ccc; text-align: left; border-radius: 6px; cursor: pointer;
+                transition: all 0.2s ease; font-size: 0.95rem;
+            }
+            .admin-nav-btn:hover {
+                background: rgba(255, 255, 255, 0.05); color: white;
+            }
+            .admin-nav-btn.active-nav {
+                background: rgba(212, 175, 55, 0.15); color: var(--primary-gold);
+                border: 1px solid rgba(212, 175, 55, 0.3);
+            }
+        `;
+        document.head.appendChild(adminStyles);
+    }
+})();
+
+// --- Plausible Analytics (Zero-Cookie, Privacy First) ---
+(function injectPlausible() {
+    const script = document.createElement('script');
+    script.defer = true;
+    script.setAttribute('data-domain', 'sexappeal.drsrv.net.ar');
+    // Using tagged-events extension to capture custom WhatsApp click conversions
+    script.src = 'https://analytics.drsrv.net.ar/js/script.tagged-events.js';
+    document.head.appendChild(script);
+
+    // Initialize custom event tracker array
+    window.plausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments) };
+})();
 
 let currentGalleryPhotos = [];
 let currentDiscoveryPage = 1;
@@ -91,10 +405,27 @@ function initGlobalTopBar() {
     const topBar = document.createElement('div');
     topBar.id = 'globalTopBar';
     Object.assign(topBar.style, {
-        position: 'fixed', top: '0', left: '0', width: '100%', height: '45px',
-        backgroundColor: 'rgba(10, 10, 10, 0.95)', borderBottom: '1px solid var(--primary-gold)',
+        position: 'fixed', top: '0', left: '0', width: '100%', height: '55px',
+
+        backgroundColor: 'transparent', backdropFilter: 'none', WebkitBackdropFilter: 'none',
+        borderBottom: '1px solid transparent',
         zIndex: '9999', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '0 20px', boxSizing: 'border-box', fontFamily: 'sans-serif'
+        padding: '0 20px', boxSizing: 'border-box', fontFamily: 'sans-serif',
+        transition: 'background-color 0.3s ease, border-bottom-color 0.3s ease, backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease'
+    });
+
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 20) {
+            topBar.style.backgroundColor = 'rgba(10, 10, 10, 0.95)';
+            topBar.style.backdropFilter = 'blur(15px)';
+            topBar.style.WebkitBackdropFilter = 'blur(15px)';
+            topBar.style.borderBottomColor = 'rgba(212, 175, 55, 0.8)';
+        } else {
+            topBar.style.backgroundColor = 'transparent';
+            topBar.style.backdropFilter = 'none';
+            topBar.style.WebkitBackdropFilter = 'none';
+            topBar.style.borderBottomColor = 'transparent';
+        }
     });
 
     const userInfo = document.createElement('div');
@@ -159,21 +490,56 @@ function initGlobalTopBar() {
         userInfo.appendChild(topLogoutBtn);
     }
 
-    const langToggle = document.createElement('div');
+    const rightGroup = document.createElement('div');
+    rightGroup.style.display = 'flex';
+    rightGroup.style.alignItems = 'center';
+    rightGroup.style.gap = '15px';
+
     const langBtn = document.createElement('button');
     langBtn.innerHTML = currentLang === 'en' ? '🌐 ES' : '🌐 EN';
     Object.assign(langBtn.style, {
-        background: 'transparent', border: '1px solid var(--primary-gold)', borderRadius: '4px',
-        color: 'var(--primary-gold)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold',
+        background: 'transparent', border: '1px solid white', borderRadius: '4px',
+        color: 'white', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold',
         padding: '4px 8px', transition: 'all 0.3s ease'
     });
 
-    langBtn.addEventListener('mouseover', () => langBtn.style.background = 'rgba(212, 175, 55, 0.1)');
+    langBtn.addEventListener('mouseover', () => langBtn.style.background = 'rgba(255, 255, 255, 0.1)');
     langBtn.addEventListener('mouseout', () => langBtn.style.background = 'transparent');
     langBtn.addEventListener('click', () => {
         localStorage.setItem('platform_lang', currentLang === 'en' ? 'es' : 'en');
         window.location.reload();
     });
+
+    if (!isLoggedIn) {
+        const authLinks = document.createElement('div');
+        authLinks.style.display = 'flex';
+        authLinks.style.gap = '8px';
+        authLinks.style.fontSize = '0.85rem';
+        authLinks.style.fontWeight = 'bold';
+        
+        const loginLink = document.createElement('a');
+        loginLink.href = 'login.html';
+        loginLink.textContent = t('Login');
+        loginLink.style.color = 'var(--primary-gold)';
+        loginLink.style.textDecoration = 'none';
+        
+        const registerLink = document.createElement('a');
+        registerLink.href = 'register.html';
+        registerLink.textContent = t('Register');
+        registerLink.style.color = '#ccc';
+        registerLink.style.textDecoration = 'none';
+
+        authLinks.appendChild(loginLink);
+        const sep = document.createElement('span');
+        sep.textContent = '/';
+        sep.style.color = '#666';
+        authLinks.appendChild(sep);
+        authLinks.appendChild(registerLink);
+        
+        rightGroup.appendChild(authLinks);
+    }
+
+    rightGroup.appendChild(langBtn);
 
     const leftGroup = document.createElement('div');
     leftGroup.style.display = 'flex';
@@ -186,11 +552,11 @@ function initGlobalTopBar() {
         const backBtn = document.createElement('button');
         backBtn.innerHTML = '&#8592; ' + t('Back');
         Object.assign(backBtn.style, {
-            background: 'transparent', border: '1px solid var(--primary-gold)', borderRadius: '4px',
-            color: 'var(--primary-gold)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold',
+            background: 'transparent', border: '1px solid white', borderRadius: '4px',
+            color: 'white', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold',
             padding: '4px 8px', transition: 'all 0.3s ease', marginRight: '15px'
         });
-        backBtn.addEventListener('mouseover', () => backBtn.style.background = 'rgba(212, 175, 55, 0.1)');
+        backBtn.addEventListener('mouseover', () => backBtn.style.background = 'rgba(255, 255, 255, 0.1)');
         backBtn.addEventListener('mouseout', () => backBtn.style.background = 'transparent');
         backBtn.onclick = () => window.history.back();
         leftGroup.appendChild(backBtn);
@@ -198,14 +564,13 @@ function initGlobalTopBar() {
 
     const brandLogo = document.createElement('div');
     brandLogo.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="height: 28px; width: 28px; margin-right: 10px; background-color: #000; border-radius: 4px; padding: 2px; color: var(--primary-gold);">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="height: 28px; width: 28px; margin-right: 10px; border-radius: 4px; padding: 2px;">
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
         </svg>
-        <span style="font-family: 'Playfair Display', serif; font-weight: 900; letter-spacing: 1px;">SexAppeal</span>
+        <span style="font-family: 'Playfair Display', serif; font-weight: 900; letter-spacing: 1px; color: white;">SexAppeal</span>
     `;
     brandLogo.style.display = 'flex';
     brandLogo.style.alignItems = 'center';
-    brandLogo.style.color = 'var(--primary-gold)';
     brandLogo.style.fontSize = '1.2rem';
     brandLogo.style.marginRight = '15px';
     brandLogo.style.cursor = 'pointer';
@@ -214,12 +579,118 @@ function initGlobalTopBar() {
     leftGroup.appendChild(brandLogo);
     leftGroup.appendChild(userInfo);
 
-    langToggle.appendChild(langBtn);
     topBar.appendChild(leftGroup);
-    topBar.appendChild(langToggle);
+    topBar.appendChild(rightGroup);
 
     document.body.prepend(topBar);
     document.body.style.paddingTop = '45px'; // Adjust body padding to avoid overlapping content
+}
+
+// --- Privacy Shield Badge ---
+function initPrivacyShield() {
+    if (document.getElementById('privacyShield')) return;
+
+    const shield = document.createElement('div');
+    shield.id = 'privacyShield';
+    Object.assign(shield.style, {
+        position: 'fixed', bottom: '20px', left: '20px',
+        backgroundColor: 'rgba(10, 10, 10, 0.95)', border: '1px solid var(--primary-gold)',
+        borderRadius: '8px', padding: '10px 15px', display: 'flex', alignItems: 'center',
+        gap: '12px', zIndex: '9000', boxShadow: '0 4px 15px rgba(0,0,0,0.8)',
+        cursor: 'pointer', transition: 'all 0.3s ease', maxWidth: '240px',
+        backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)'
+    });
+
+    shield.innerHTML = `
+        <div style="flex-shrink: 0;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary-gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                <polyline points="9 12 11 14 15 10"></polyline>
+            </svg>
+        </div>
+        <div style="font-family: sans-serif; font-size: 0.8rem; color: #ccc; line-height: 1.3; overflow: hidden;">
+            <strong style="color: var(--primary-gold); display: block; margin-bottom: 3px; font-size: 0.85rem;">${t('100% Privacy Guarantee')}</strong>
+            <span class="shield-text" style="display: none;">${t("Zero cookies. Zero third-party trackers. We don't harvest your data. Check your own browser's tracker-blocker to verify and compare us with other apps.")}</span>
+            <span class="shield-preview">${t('Zero Trackers. Cookieless.')}</span>
+        </div>
+    `;
+
+    const expand = () => {
+        shield.querySelector('.shield-text').style.display = 'inline';
+        shield.querySelector('.shield-preview').style.display = 'none';
+        shield.style.maxWidth = '350px';
+    };
+    const collapse = () => {
+        shield.querySelector('.shield-text').style.display = 'none';
+        shield.querySelector('.shield-preview').style.display = 'inline';
+        shield.style.maxWidth = '240px';
+    };
+
+    shield.addEventListener('mouseenter', expand);
+    shield.addEventListener('mouseleave', collapse);
+    shield.addEventListener('click', () => {
+        if (shield.querySelector('.shield-text').style.display === 'none') expand();
+        else collapse();
+    });
+
+    document.body.appendChild(shield);
+}
+
+// --- Google Auth Injection ---
+function injectGoogleLogin(container) {
+    if (!container) return;
+    
+    if (!document.getElementById('google-jssdk')) {
+        const script = document.createElement('script');
+        script.id = 'google-jssdk';
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.id = 'googleSignInWrapper';
+    wrapper.style.marginBottom = '20px';
+    wrapper.style.display = 'flex';
+    wrapper.style.justifyContent = 'center';
+    
+    container.parentNode.insertBefore(wrapper, container);
+
+    window.handleGoogleCallback = async (response) => {
+        try {
+            const res = await fetch(`${API_URL}/auth/google`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: response.credential })
+            });
+            const data = await res.json();
+            if (data.success) {
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('is18Plus', 'true');
+                if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
+                window.location.href = data.user.role === 'professional' ? 'dashboard.html' : 'categories.html';
+            } else {
+                showAlert(document.getElementById('loginAlert'), data.error || 'Google login failed');
+            }
+        } catch (err) {
+            showAlert(document.getElementById('loginAlert'), 'Server connection error');
+        }
+    };
+
+    const checkGoogle = setInterval(() => {
+        if (window.google) {
+            clearInterval(checkGoogle);
+            window.google.accounts.id.initialize({
+                client_id: 'YOUR_GOOGLE_CLIENT_ID_HERE.apps.googleusercontent.com', // MUST REPLACE THIS
+                callback: window.handleGoogleCallback
+            });
+            window.google.accounts.id.renderButton(
+                document.getElementById('googleSignInWrapper'),
+                { theme: 'outline', size: 'large', width: container.offsetWidth || 300 }
+            );
+        }
+    }, 100);
 }
 
 // --- Auth Handling ---
@@ -267,6 +738,9 @@ if (loginForm) {
     `;
     // Insert the reminder before the login form itself
     loginForm.parentNode.insertBefore(blogReminder, loginForm);
+
+        // Inject Google SSO button
+        injectGoogleLogin(loginForm);
 
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -329,8 +803,6 @@ if (registerForm) {
     if (servicesEl) {
         if (servicesEl.tagName === 'SELECT') {
             servicesVal = Array.from(servicesEl.selectedOptions).map(opt => opt.value).join(',');
-        } else if (servicesEl.tagName === 'DIV') { // Handle checkboxes
-            servicesVal = Array.from(servicesEl.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value).join(',');
         } else {
             servicesVal = servicesEl.value;
         }
@@ -345,6 +817,7 @@ if (registerForm) {
     if (idPhotoFront) formData.append('verificationDocuments', idPhotoFront);
     if (idPhotoBack) formData.append('verificationDocuments', idPhotoBack);
     if (selfiePhoto) formData.append('verificationDocuments', selfiePhoto);
+    if (e.target.dataset.gestureCode) formData.append('verificationGesture', e.target.dataset.gestureCode);
 
     try {
       const res = await fetch(`${API_URL}/auth/register`, {
@@ -562,7 +1035,7 @@ async function loadTreasures(page = 1, append = false) {
             grid.classList.remove('grid');
 
             // Group data by quality (Insertion order here guarantees display order)
-            const categories = { 'Premium': [], 'Gold': [], 'Silver': [], 'Standard': [] };
+            const categories = { 'Elite': [], 'Premium': [], 'Gold': [], 'Silver': [], 'Standard': [] };
             
             data.data.forEach(treasure => {
                 const q = treasure.professionalProfile?.quality || 'Standard';
@@ -586,13 +1059,29 @@ async function loadTreasures(page = 1, append = false) {
                 let innerGrid;
 
                 if (!catSection) {
+                    const meta = CATEGORY_META[cat];
                     catSection = document.createElement('div');
                     catSection.id = `cat-section-${cat}`;
+                    catSection.className = 'fileteado-section';
                     catSection.style.marginBottom = '30px';
-                    catSection.style.border = '1px solid var(--primary-gold)';
+                    catSection.style.border = '14px solid transparent';
+                    catSection.style.borderImage = 'url("data:image/svg+xml;utf8,<svg width=\'40\' height=\'40\' viewBox=\'0 0 40 40\' xmlns=\'http://www.w3.org/2000/svg\'><rect x=\'1\' y=\'1\' width=\'38\' height=\'38\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1\'/><path d=\'M1 12 Q 12 12 12 1\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M28 1 Q 28 12 39 12\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M39 28 Q 28 28 28 39\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M12 39 Q 12 28 1 28\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M4 6 Q 6 4 8 6 Q 6 8 4 6\' fill=\'%232e7d32\'/><path d=\'M36 6 Q 34 4 32 6 Q 34 8 36 6\' fill=\'%232e7d32\'/><path d=\'M36 34 Q 34 36 32 34 Q 34 32 36 34\' fill=\'%232e7d32\'/><path d=\'M4 34 Q 6 36 8 34 Q 6 32 4 34\' fill=\'%232e7d32\'/><circle cx=\'6\' cy=\'6\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'34\' cy=\'6\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'34\' cy=\'34\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'6\' cy=\'34\' r=\'1.5\' fill=\'%23b81d1d\'/></svg>") 12 stretch';
                     catSection.style.padding = '15px';
-                    catSection.style.borderRadius = '8px';
-                    catSection.innerHTML = `<h3 class="gold-text" style="margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px;">${cat}</h3>`;
+                    catSection.innerHTML = `
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 1px solid rgba(212, 175, 55, 0.3); padding-bottom: 10px;">
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <div style="color: var(--primary-gold); width: 40px; text-align: center;">${meta.logo}</div>
+                                <div>
+                                    <h3 class="gold-text" style="margin: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
+                                        ${t(meta.name)} <span style="font-size: 0.8rem; color: #aaa; font-weight: normal; font-family: sans-serif;">${t(meta.desc)}</span>
+                                    </h3>
+                                </div>
+                            </div>
+                            <div style="font-family: monospace; font-size: 1rem; color: #fff; background: rgba(212, 175, 55, 0.1); padding: 4px 12px; border-radius: 4px; border: 1px solid rgba(212,175,55,0.3); white-space: nowrap;">
+                                ${meta.price}
+                            </div>
+                        </div>
+                    `;
                     
                     innerGrid = document.createElement('div');
                     innerGrid.id = `cat-grid-${cat}`;
@@ -647,15 +1136,16 @@ async function loadTreasures(page = 1, append = false) {
             grid.innerHTML = `
                 <div class="card" style="grid-column: 1/-1; text-align: center;">
                     <h3 class="gold-text">${t('No Treasures Found')}</h3>
-                    <p style="margin-bottom: 20px;">${hasFilters ? 'No professionals match your current selection.' : 'No professionals have been revealed yet. Please check back later.'}</p>
+                    <p style="margin-bottom: 20px;">${hasFilters ? t('No professionals match your current selection.') : t('No professionals have been revealed yet. Please check back later.')}</p>
                     ${hasFilters ? `<button onclick="window.location.href='categories.html'">${t('Filter Again')}</button>` : ''}
                 </div>
             `;
         }
+        applyStaticTranslations(grid);
     } catch (err) {
         console.error('Vault connection error:', err);
         grid.classList.add('grid');
-        grid.innerHTML = `<div class="card alert" style="grid-column: 1/-1;">Error connecting to the vault: ${err.message}. Please ensure the server is running.</div>`;
+        grid.innerHTML = `<div class="card alert" style="grid-column: 1/-1;">${t('Error connecting to the vault:')} ${err.message}. ${t('Please ensure the server is running.')}</div>`;
     }
 }
 
@@ -853,12 +1343,13 @@ async function loadTreasureDetails() {
 
             loader.classList.add('hidden');
             content.classList.remove('hidden');
+            applyStaticTranslations(content);
         } else {
-            loader.innerHTML = `<p class="alert">Could not find the specified treasure.</p>`;
+            loader.innerHTML = `<p class="alert">${t('Could not find the specified treasure.')}</p>`;
         }
     } catch (err) {
         console.error('Error loading treasure details:', err);
-        loader.innerHTML = `<p class="alert">Error connecting to the vault: ${err.message}</p>`;
+        loader.innerHTML = `<p class="alert">${t('Error connecting to the vault:')} ${err.message}</p>`;
     }
 }
 
@@ -877,39 +1368,141 @@ async function initializeFilters() {
     const grid = document.getElementById('treasureGrid');
 
     if (parentCard && grid) {
-        parentCard.style.backgroundColor = 'rgba(10, 10, 10, 0.9)';
-        
-        // Wrap parentCard and grid in a flex container if not already wrapped
-        let wrapper = document.getElementById('discoveryLayoutWrapper');
-        if (!wrapper) {
-            wrapper = document.createElement('div');
-            wrapper.id = 'discoveryLayoutWrapper';
-            
-            // Insert wrapper right before parentCard
-            parentCard.parentNode.insertBefore(wrapper, parentCard);
-            
-            // Move parentCard and grid inside the wrapper
-            wrapper.appendChild(parentCard);
-            wrapper.appendChild(grid);
-        }
-        
-        wrapper.style.display = 'flex';
-        wrapper.style.gap = '20px';
-        wrapper.style.alignItems = 'flex-start';
-        wrapper.style.flexDirection = window.innerWidth > 768 ? 'row' : 'column';
+        // --- OFF-CANVAS SLIDE-IN FILTER & GRID CONTROLS ---
+        const filterDrawer = document.createElement('div');
+        filterDrawer.id = 'filterDrawer';
+        Object.assign(filterDrawer.style, {
+            position: 'fixed', top: '0', left: '-100%', width: '320px', maxWidth: '85vw',
+            height: '100vh', backgroundColor: 'rgba(10, 10, 10, 0.98)',
+            backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)',
+            borderRight: '1px solid var(--primary-gold)', zIndex: '10000',
+            transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            overflowY: 'auto', padding: '20px', paddingTop: '70px', boxSizing: 'border-box'
+        });
 
-        // Style the filter card as a vertical sticky frame
-        parentCard.style.width = '100%';
-        parentCard.style.maxWidth = window.innerWidth > 768 ? '250px' : 'none';
-        parentCard.style.flexShrink = '0';
-        parentCard.style.position = window.innerWidth > 768 ? 'sticky' : 'static';
-        parentCard.style.top = '70px';
+        const drawerHeader = document.createElement('div');
+        drawerHeader.style.display = 'flex';
+        drawerHeader.style.justifyContent = 'space-between';
+        drawerHeader.style.alignItems = 'center';
+        drawerHeader.style.marginBottom = '25px';
+        drawerHeader.innerHTML = `<h3 class="gold-text" style="margin:0; font-size:1.2rem;">${t('Filters')}</h3>`;
         
-        // Ensure the grid takes the remaining space
-        grid.style.flexGrow = '1';
-        grid.style.width = '100%';
-        grid.style.marginTop = '0';
+        const closeDrawerBtn = document.createElement('button');
+        closeDrawerBtn.innerHTML = '&times;';
+        Object.assign(closeDrawerBtn.style, {
+            background: 'transparent', color: 'var(--primary-gold)', border: 'none',
+            fontSize: '32px', cursor: 'pointer', padding: '0', lineHeight: '1'
+        });
+        drawerHeader.appendChild(closeDrawerBtn);
+        filterDrawer.appendChild(drawerHeader);
+
+        parentCard.style.backgroundColor = 'transparent';
+        parentCard.style.border = 'none';
+        parentCard.style.boxShadow = 'none';
+        parentCard.style.padding = '0';
+        filterDrawer.appendChild(parentCard);
+        document.body.appendChild(filterDrawer);
+
+        const overlay = document.createElement('div');
+        Object.assign(overlay.style, {
+            position: 'fixed', top: '0', left: '0', width: '100vw', height: '100vh',
+            backgroundColor: 'rgba(0,0,0,0.7)', zIndex: '9999',
+            display: 'none', opacity: '0', transition: 'opacity 0.3s ease'
+        });
+        document.body.appendChild(overlay);
+
+        const openDrawer = () => {
+            filterDrawer.style.left = '0';
+            overlay.style.display = 'block';
+            setTimeout(() => overlay.style.opacity = '1', 10);
+            document.body.style.overflow = 'hidden';
+        };
+        const closeDrawer = () => {
+            filterDrawer.style.left = '-100%';
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.style.display = 'none', 300);
+            document.body.style.overflow = '';
+        };
+        closeDrawerBtn.onclick = closeDrawer;
+        overlay.onclick = closeDrawer;
+
+        // Touch swipe to close (mobile friendly)
+        let touchStartX = 0;
+        filterDrawer.addEventListener('touchstart', e => touchStartX = e.changedTouches[0].screenX, { passive: true });
+        filterDrawer.addEventListener('touchend', e => {
+            if (touchStartX - e.changedTouches[0].screenX > 50) closeDrawer();
+        }, { passive: true });
+
+        const controlsBar = document.createElement('div');
+        Object.assign(controlsBar.style, {
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            marginBottom: '20px', padding: '10px 15px', backgroundColor: 'rgba(15,15,15,0.6)',
+            borderRadius: '8px', border: '1px solid #333', backdropFilter: 'blur(5px)'
+        });
+
+        const openFilterBtn = document.createElement('button');
+        openFilterBtn.innerHTML = `<svg style="width:16px; height:16px; margin-right:8px; vertical-align:text-top;" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg> ${t('Controls / Filters')}`;
+        Object.assign(openFilterBtn.style, {
+            background: 'transparent', border: '1px solid white', color: 'white',
+            padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.9rem',
+            display: 'flex', alignItems: 'center'
+        });
+        openFilterBtn.onclick = openDrawer;
+
+        const gridToggles = document.createElement('div');
+        gridToggles.style.display = 'flex';
+        gridToggles.style.gap = '10px';
+
+        if (!document.getElementById('gridLayoutStyles')) {
+            const gridStyle = document.createElement('style');
+            gridStyle.id = 'gridLayoutStyles';
+            gridStyle.textContent = `
+                .small-grid-mode .grid,
+                .small-grid-mode#treasureGrid.grid,
+                .small-grid-mode .grid > div > .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important; gap: 10px; }
+                .small-grid-mode .treasure-card h3 { font-size: 0.85rem !important; }
+                .small-grid-mode .treasure-img-container { margin: -10px -10px 10px -10px !important; }
+                .small-grid-mode .treasure-card { padding: 10px !important; }
+            `;
+            document.head.appendChild(gridStyle);
+        }
+
+        const btnGridLarge = document.createElement('button');
+        btnGridLarge.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>';
         
+        const btnGridSmall = document.createElement('button');
+        btnGridSmall.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="4" height="4"></rect><rect x="10" y="3" width="4" height="4"></rect><rect x="17" y="3" width="4" height="4"></rect><rect x="3" y="10" width="4" height="4"></rect><rect x="10" y="10" width="4" height="4"></rect><rect x="17" y="10" width="4" height="4"></rect><rect x="3" y="17" width="4" height="4"></rect><rect x="10" y="17" width="4" height="4"></rect><rect x="17" y="17" width="4" height="4"></rect></svg>';
+
+        [btnGridLarge, btnGridSmall].forEach(btn => {
+            Object.assign(btn.style, {
+                background: 'transparent', border: '1px solid #444', color: '#888',
+                padding: '6px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center'
+            });
+        });
+        
+        const updateGridButtons = (isSmall) => {
+            btnGridSmall.style.color = isSmall ? 'white' : '#888';
+            btnGridSmall.style.borderColor = isSmall ? 'white' : '#444';
+            btnGridLarge.style.color = !isSmall ? 'white' : '#888';
+            btnGridLarge.style.borderColor = !isSmall ? 'white' : '#444';
+        };
+        
+        const isSmallGrid = localStorage.getItem('smallGridMode') === 'true';
+        if (isSmallGrid) {
+            document.body.classList.add('small-grid-mode');
+        }
+        updateGridButtons(isSmallGrid);
+
+        btnGridLarge.onclick = () => { document.body.classList.remove('small-grid-mode'); localStorage.setItem('smallGridMode', 'false'); updateGridButtons(false); };
+        btnGridSmall.onclick = () => { document.body.classList.add('small-grid-mode'); localStorage.setItem('smallGridMode', 'true'); updateGridButtons(true); };
+
+        gridToggles.appendChild(btnGridLarge);
+        gridToggles.appendChild(btnGridSmall);
+        controlsBar.appendChild(openFilterBtn);
+        controlsBar.appendChild(gridToggles);
+
+        grid.parentNode.insertBefore(controlsBar, grid);
+
         // Form layout (Vertical)
         filterForm.style.display = 'flex';
         filterForm.style.flexDirection = 'column';
@@ -923,12 +1516,6 @@ async function initializeFilters() {
             fg.style.width = '100%';
         });
         
-        window.addEventListener('resize', () => {
-            if (wrapper) wrapper.style.flexDirection = window.innerWidth > 768 ? 'row' : 'column';
-            parentCard.style.maxWidth = window.innerWidth > 768 ? '250px' : 'none';
-            parentCard.style.position = window.innerWidth > 768 ? 'sticky' : 'static';
-        });
-        
         const formElements = filterForm.querySelectorAll('select, input, button');
         formElements.forEach(el => {
             if (el.type === 'checkbox') return;
@@ -938,11 +1525,26 @@ async function initializeFilters() {
                 el.style.marginBottom = '5px';
             }
         });
+        applyStaticTranslations(filterDrawer);
     }
 
     // Function to populate the specialty dropdown
     const populateSpecialties = async (quality = '') => {
-        const specialtyContainer = document.getElementById('specialtySelect');
+        let specialtyContainer = document.getElementById('specialtySelect');
+        
+        // Fallback to locate the legacy div-based dropdown wrapper
+        if (!specialtyContainer) {
+            const labels = Array.from(document.querySelectorAll('label'));
+            const specLabel = labels.find(l => l.textContent.trim().toLowerCase().includes('specialty') || l.textContent.trim().toLowerCase().includes('especialidad'));
+            if (specLabel) {
+                const parent = specLabel.closest('.filter-control') || specLabel.parentNode;
+                const wrapper = parent.querySelector('.custom-select-wrapper') || parent.querySelector('.checkbox-group') || parent.querySelector('div, ul');
+                if (wrapper) {
+                    wrapper.id = 'specialtySelect';
+                    specialtyContainer = wrapper;
+                }
+            }
+        }
         if (!specialtyContainer) return;
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -953,19 +1555,26 @@ async function initializeFilters() {
 
     const urlParams = new URLSearchParams(window.location.search);
     
-    if (qualitySelect && urlParams.get('quality')) {
-        qualitySelect.value = urlParams.get('quality');
+    if (qualitySelect) {
+        const firstOpt = qualitySelect.options[0];
+        if (firstOpt && (!firstOpt.value || firstOpt.value === '')) {
+            firstOpt.textContent = t('All Qualities');
+            firstOpt.dataset.origText = t('All Qualities');
+        }
+        Array.from(qualitySelect.options).forEach(opt => {
+            if (opt.value && CATEGORY_META[opt.value]) {
+                const meta = CATEGORY_META[opt.value];
+                opt.textContent = `${t(meta.name)}`;
+            }
+        });
+        if (urlParams.get('quality')) {
+            qualitySelect.value = urlParams.get('quality');
+        }
     }
-
+    
     // Populate specialties on initial page load
     await populateSpecialties(qualitySelect ? qualitySelect.value : '');
 
-    // --- START OF PROPOSED FIX ---
-    // As per user observation, ensure the parent container for specialty checkboxes is visible.
-    const specialtyCheckboxesParent = document.getElementById('specialtyCheckboxes');
-    if (specialtyCheckboxesParent) {
-        specialtyCheckboxesParent.style.display = 'block'; // Set to 'flex' if it's intended to be a flex container
-    }
     const province = urlParams.get('province');
     const city = urlParams.get('city');
     const neighborhood = urlParams.get('neighborhood');
@@ -984,11 +1593,7 @@ async function initializeFilters() {
         const specialtyContainer = document.getElementById('specialtySelect');
         let specialty = '';
         if (specialtyContainer) {
-            if (specialtyContainer.tagName === 'SELECT') {
-                specialty = specialtyContainer.value;
-            } else {
-                specialty = Array.from(specialtyContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value).join(',');
-            }
+            specialty = specialtyContainer.value;
         }
         
         const provEl = document.getElementById('provinceSelect');
@@ -1014,6 +1619,11 @@ async function initializeFilters() {
     // Add change listener to recalculate counts instantly when dropdowns change
     filterForm.addEventListener('change', () => {
         setTimeout(applyCountsToDropdowns, 300); // Small delay to let sub-dropdowns populate
+        
+        // Auto-submit the form seamlessly after options populate
+        setTimeout(() => {
+            filterForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }, 350);
     });
 }
 
@@ -1046,19 +1656,28 @@ async function applyCountsToDropdowns() {
     const profs = allProfsCache;
     if (!profs || profs.length === 0) return;
 
+    const ensureDefault = (el, textKey) => {
+        if (el && el.options && el.options.length > 0 && (!el.options[0].value || el.options[0].value === '')) {
+            el.options[0].textContent = t(textKey);
+            el.options[0].dataset.origText = t(textKey);
+        }
+    };
+
     const qualitySelect = document.getElementById('qualitySelect');
     const specialtyContainer = document.getElementById('specialtySelect');
     const provEl = document.getElementById('provinceSelect');
     const cityEl = document.getElementById('citySelect');
     const neighEl = document.getElementById('neighborhoodSelect');
 
+    ensureDefault(qualitySelect, 'All Qualities');
+    if (specialtyContainer && specialtyContainer.tagName === 'SELECT') ensureDefault(specialtyContainer, 'All Specialties');
+    ensureDefault(provEl, 'All Provinces');
+    ensureDefault(cityEl, provEl && provEl.value.trim().toLowerCase() === 'caba' ? 'All Neighborhoods' : 'All Cities');
+    ensureDefault(neighEl, 'All Neighborhoods');
+
     let specialtyFilterValue = '';
-    if (specialtyContainer) {
-        if (specialtyContainer.tagName === 'SELECT') {
-            specialtyFilterValue = specialtyContainer.value;
-        } else if (specialtyContainer.tagName === 'DIV') {
-            specialtyFilterValue = Array.from(specialtyContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value).join(',');
-        }
+    if (specialtyContainer && specialtyContainer.tagName === 'SELECT') {
+        specialtyFilterValue = specialtyContainer.value;
     }
 
     const currentFilters = {
@@ -1077,9 +1696,9 @@ async function applyCountsToDropdowns() {
             
             if (filters.quality && q !== filters.quality) return false;
             if (filters.specialty) {
-                const requiredSpecialties = filters.specialty.split(',').map(s => s.trim()).filter(Boolean);
+                const requiredSpecialties = filters.specialty.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
                 if (requiredSpecialties.length > 0) {
-                    const userServices = prof.services || [];
+                    const userServices = (prof.services || []).map(s => s.trim().toLowerCase());
                     const hasAtLeastOne = requiredSpecialties.some(reqSpec => userServices.includes(reqSpec));
                     if (!hasAtLeastOne) return false;
                 }
@@ -1150,8 +1769,6 @@ async function applyCountsToDropdowns() {
     updateSelectCounts(qualitySelect, 'quality', ['specialty']);
     if (specialtyContainer && specialtyContainer.tagName === 'SELECT') {
         updateSelectCounts(specialtyContainer, 'specialty', ['quality']);
-    } else {
-        updateCheckboxCounts(specialtyContainer, 'specialty', ['quality']);
     }
     updateSelectCounts(provEl, 'province', ['city', 'neighborhood']);
     updateSelectCounts(cityEl, 'city', ['neighborhood']);
@@ -1160,6 +1777,11 @@ async function applyCountsToDropdowns() {
 
 // Contact on WhatsApp
 function contactOnWhatsApp(alias) {
+    // Safely track the conversion in Plausible without personal data
+    if (typeof plausible === 'function') {
+        plausible('WhatsApp Click', { props: { professional: alias } });
+    }
+
     const url = `${API_URL}/professionals/${encodeURIComponent(alias)}/whatsapp`;
     window.open(url, '_blank');
 }
@@ -1167,21 +1789,22 @@ function contactOnWhatsApp(alias) {
 // --- Admin Dashboard Grid ---
 async function renderAdminGrid(container) {
     container.innerHTML = `
-        <h3 class="gold-text" style="margin-bottom: 15px;">Professionals Directory</h3>
+        <h3 class="gold-text" style="margin-bottom: 15px; font-size: 1.5rem; border-bottom: 1px solid rgba(212, 175, 55, 0.3); padding-bottom: 10px;">${t('Professionals Directory')}</h3>
         <div style="display: flex; gap: 20px; align-items: flex-start; flex-direction: row; flex-wrap: wrap;">
-                <div class="card" style="width: 100%; max-width: 250px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; position: sticky; top: 70px;">
-                <h4 class="gold-text" style="margin-bottom: 5px;">Filters</h4>
-                <select id="adminFilterProv" class="form-select" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"><option value="">All Provinces</option></select>
-                <select id="adminFilterCity" class="form-select" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"><option value="">All Cities</option></select>
-                <select id="adminFilterNeigh" class="form-select" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"><option value="">All Neighborhoods</option></select>
+            <div class="card" style="width: 100%; max-width: 250px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; position: sticky; top: 70px;">
+                <h4 class="gold-text" style="margin-bottom: 5px;">${t('Filters')}</h4>
+                <select id="adminFilterProv" class="form-select" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"><option value="">${t('All Provinces')}</option></select>
+                <select id="adminFilterCity" class="form-select" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"><option value="">${t('All Cities')}</option></select>
+                <select id="adminFilterNeigh" class="form-select" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"><option value="">${t('All Neighborhoods')}</option></select>
                 <select id="adminFilterQuality" class="form-select" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
-                    <option value="">All Qualities</option>
-                    <option value="Premium">Premium</option>
-                    <option value="Gold">Gold</option>
-                    <option value="Silver">Silver</option>
-                    <option value="Standard">Standard</option>
+                    <option value="">${t('All Qualities')}</option>
+                    <option value="Elite">${t(CATEGORY_META['Elite'].name)} - ${CATEGORY_META['Elite'].price}</option>
+                    <option value="Premium">${t(CATEGORY_META['Premium'].name)} - ${CATEGORY_META['Premium'].price}</option>
+                    <option value="Gold">${t(CATEGORY_META['Gold'].name)} - ${CATEGORY_META['Gold'].price}</option>
+                    <option value="Silver">${t(CATEGORY_META['Silver'].name)} - ${CATEGORY_META['Silver'].price}</option>
+                    <option value="Standard">${t(CATEGORY_META['Standard'].name)} - ${CATEGORY_META['Standard'].price}</option>
                 </select>
-                <button id="adminFilterBtn" style="padding: 8px 20px; width: 100%;">Filter</button>
+                <button id="adminFilterBtn" style="padding: 8px 20px; width: 100%;">${t('Filter')}</button>
             </div>
             <div id="adminGridContent" style="flex-grow: 1; min-width: 300px;">Loading...</div>
         </div>
@@ -1194,6 +1817,7 @@ async function renderAdminGrid(container) {
     };
 
     await loadAdminGridData();
+    applyStaticTranslations(container);
 }
 
 async function loadAdminGridData() {
@@ -1254,7 +1878,7 @@ async function loadAdminGridData() {
         });
 
         // Order by categories (quality)
-        const categories = { 'Premium': [], 'Gold': [], 'Silver': [], 'Standard': [], 'Uncategorized': [] };
+        const categories = { 'Elite': [], 'Premium': [], 'Gold': [], 'Silver': [], 'Standard': [], 'Uncategorized': [] };
         profs.forEach(p => {
             const q = p.professionalProfile?.quality || 'Uncategorized';
             if (categories[q]) categories[q].push(p);
@@ -1266,6 +1890,8 @@ async function loadAdminGridData() {
         for (const [cat, items] of Object.entries(categories)) {
             if (items.length === 0) continue;
 
+            const meta = CATEGORY_META[cat];
+
             // Mathematically fair shuffle (Fisher-Yates) for admin categories
             for (let i = items.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -1273,11 +1899,26 @@ async function loadAdminGridData() {
             }
 
             const catSection = document.createElement('div');
+            catSection.className = 'fileteado-section';
             catSection.style.marginBottom = '25px';
-            catSection.style.border = '1px solid var(--primary-gold)';
+            catSection.style.border = '14px solid transparent';
+            catSection.style.borderImage = 'url("data:image/svg+xml;utf8,<svg width=\'40\' height=\'40\' viewBox=\'0 0 40 40\' xmlns=\'http://www.w3.org/2000/svg\'><rect x=\'1\' y=\'1\' width=\'38\' height=\'38\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1\'/><path d=\'M1 12 Q 12 12 12 1\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M28 1 Q 28 12 39 12\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M39 28 Q 28 28 28 39\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M12 39 Q 12 28 1 28\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M4 6 Q 6 4 8 6 Q 6 8 4 6\' fill=\'%232e7d32\'/><path d=\'M36 6 Q 34 4 32 6 Q 34 8 36 6\' fill=\'%232e7d32\'/><path d=\'M36 34 Q 34 36 32 34 Q 34 32 36 34\' fill=\'%232e7d32\'/><path d=\'M4 34 Q 6 36 8 34 Q 6 32 4 34\' fill=\'%232e7d32\'/><circle cx=\'6\' cy=\'6\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'34\' cy=\'6\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'34\' cy=\'34\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'6\' cy=\'34\' r=\'1.5\' fill=\'%23b81d1d\'/></svg>") 12 stretch';
             catSection.style.padding = '15px';
-            catSection.style.borderRadius = '8px';
-            catSection.innerHTML = `<h4 style="color: var(--primary-gold); margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 5px;">${cat}</h4>`;
+            catSection.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 1px solid rgba(212, 175, 55, 0.3); padding-bottom: 10px;">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div style="color: var(--primary-gold); width: 24px; text-align: center;">${meta.logo}</div>
+                        <div>
+                            <h4 style="color: var(--primary-gold); margin: 0;">
+                                ${t(meta.name)} <span style="font-size: 0.8rem; color: #aaa; font-weight: normal; font-family: sans-serif;">${t(meta.desc)}</span>
+                            </h4>
+                        </div>
+                    </div>
+                    <div style="font-family: monospace; font-size: 0.9rem; color: #fff; background: rgba(212, 175, 55, 0.1); padding: 4px 10px; border-radius: 4px; border: 1px solid rgba(212,175,55,0.3); white-space: nowrap;">
+                        ${meta.price}
+                    </div>
+                </div>
+            `;
             
             const grid = document.createElement('div');
             grid.className = 'five-column-grid';
@@ -1321,9 +1962,10 @@ async function loadAdminGridData() {
         if (profs.length === 0) {
             content.innerHTML = '<p>No professionals match your filters.</p>';
         }
+        applyStaticTranslations(content);
 
     } catch (err) {
-        content.innerHTML = `<p style="color: var(--accent-red);">Error connecting to vault: ${err.message}</p>`;
+        content.innerHTML = `<p style="color: var(--accent-red);">${t('Error connecting to the vault:')} ${err.message}</p>`;
     }
 }
 
@@ -1349,6 +1991,16 @@ async function loadDashboard() {
             localStorage.setItem('user', JSON.stringify(user)); // Ensure local storage is synced
             const stats = data.stats || { profileViews: 0, whatsappClicks: 0 };
 
+            // Apply global dynamic pricing
+            if (data.globalPricing) {
+                const fmt = (num) => new Intl.NumberFormat('es-AR').format(num) + ' ARS';
+                CATEGORY_META['Elite'].price = fmt(data.globalPricing.Elite);
+                CATEGORY_META['Premium'].price = fmt(data.globalPricing.Premium);
+                CATEGORY_META['Gold'].price = fmt(data.globalPricing.Gold);
+                CATEGORY_META['Silver'].price = fmt(data.globalPricing.Silver);
+                CATEGORY_META['Standard'].price = fmt(data.globalPricing.Standard);
+            }
+
             // --- Admin Specific Injection ---
             if (user.role === 'admin' && content) {
                 content.innerHTML = ''; // Clear out the professional profile form
@@ -1364,47 +2016,51 @@ async function loadDashboard() {
                 adminPanel.className = 'card';
                 adminPanel.style.marginBottom = '20px';
                 adminPanel.style.border = '1px solid var(--primary-gold)';
-                adminPanel.style.width = '280px';
+                adminPanel.style.width = '320px';
                 adminPanel.style.flexShrink = '0';
                 adminPanel.style.position = 'sticky';
                 adminPanel.style.top = '70px';
+                adminPanel.style.padding = '0';
                 
                 adminPanel.innerHTML = `
-                    <h3 class="gold-text" style="margin-bottom: 15px;">Admin Menu</h3>
-                    <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
-                        <button id="btnProfProfileAdmin" style="width: 100%; padding: 10px;">Professional Profiles</button>
-                        <button id="btnPendingApprovals" style="width: 100%; padding: 10px; background: var(--primary-gold); color: var(--dark-bg);">Pending Approvals</button>
-                        <button id="btnDashboardConfig" style="width: 100%; padding: 10px;">Dashboard Config</button>
-                    </div>
-
-                    <h4 class="gold-text" style="margin-bottom: 10px;">Notifications</h4>
-                    <div style="display: flex; flex-direction: column; gap: 15px; border: 1px solid #333; padding: 15px; border-radius: 8px; background: #222; margin-bottom: 20px;">
-                        <div>
-                            <h5 style="color: white; margin-bottom: 10px; border-bottom: 1px solid #444; padding-bottom: 5px;">Mail</h5>
-                            <div style="display: flex; flex-direction: column; gap: 8px;">
-                                <button id="btnMailSpecial" style="width: 100%; padding: 8px;">Special Messages</button>
-                                <button id="btnMailBroadcast" style="width: 100%; padding: 8px;">Broadcast Messages</button>
+                    <div style="padding: 10px;">
+                        <h3 class="gold-text" style="margin-bottom: 25px; font-size: 1.5rem; text-align: center; border-bottom: 1px solid rgba(212, 175, 55, 0.3); padding-bottom: 15px;">Admin Control Panel</h3>
+                        
+                        <div class="admin-menu-section" style="margin-bottom: 25px;">
+                            <h4 style="color: #888; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; padding-left: 10px;">Core Management</h4>
+                            <div style="display: flex; flex-direction: column; gap: 5px;">
+                                <button id="btnProfProfileAdmin" class="admin-nav-btn">👥 Professional Profiles</button>
+                                <button id="btnPendingApprovals" class="admin-nav-btn active-nav">✅ Pending Approvals</button>
+                                <button id="btnDashboardConfig" class="admin-nav-btn">⚙️ Dashboard Config</button>
                             </div>
                         </div>
-                        <div>
-                            <h5 style="color: white; margin-bottom: 10px; border-bottom: 1px solid #444; padding-bottom: 5px;">Whatsapp</h5>
-                            <div style="display: flex; flex-direction: column; gap: 8px;">
-                                <button id="btnWaSpecial" style="width: 100%; padding: 8px;">Special Messages</button>
-                                <button id="btnWaBroadcast" style="width: 100%; padding: 8px;">Broadcast Messages</button>
+
+                        <div class="admin-menu-section" style="margin-bottom: 25px;">
+                            <h4 style="color: #888; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; padding-left: 10px;">Communications</h4>
+                            <div style="display: flex; flex-direction: column; gap: 5px;">
+                                <button id="btnMailSpecial" class="admin-nav-btn">📧 Mail: Special Messages</button>
+                                <button id="btnMailBroadcast" class="admin-nav-btn">📢 Mail: Broadcast Messages</button>
+                                <button id="btnWaSpecial" class="admin-nav-btn">💬 WA: Special Messages</button>
+                                <button id="btnWaBroadcast" class="admin-nav-btn">📲 WA: Broadcast Messages</button>
                             </div>
                         </div>
-                    </div>
 
-                    <h4 class="gold-text" style="margin-bottom: 10px;">Traces</h4>
-                    <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; border: 1px solid #333; padding: 15px; border-radius: 8px; background: #222;">
-                        <button id="btnGuestTraffic" style="width: 100%; padding: 10px;">Guest Traffic</button>
-                        <button id="btnTreasuresSteps" style="width: 100%; padding: 10px;">Treasures Steps</button>
-                    </div>
+                        <div class="admin-menu-section" style="margin-bottom: 25px;">
+                            <h4 style="color: #888; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; padding-left: 10px;">Analytics & Traces</h4>
+                            <div style="display: flex; flex-direction: column; gap: 5px;">
+                                <button id="btnGuestTraffic" class="admin-nav-btn">🕵️‍♂️ Guest Traffic</button>
+                                <button id="btnTreasuresSteps" class="admin-nav-btn">💎 Treasures Steps</button>
+                                <button id="btnViewLogs" class="admin-nav-btn">📊 Full Activity Logs</button>
+                            </div>
+                        </div>
 
-                    <h4 class="gold-text" style="margin-bottom: 10px;">System</h4>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        <button id="btnViewLogs" style="width: 100%; padding: 10px;">View Activity Logs</button>
-                        <button id="btnViewLeads" style="width: 100%; padding: 10px;">View Scraped Leads</button>
+                        <div class="admin-menu-section">
+                            <h4 style="color: #888; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; padding-left: 10px;">System Settings</h4>
+                            <div style="display: flex; flex-direction: column; gap: 5px;">
+                                <button id="btnEditPricing" class="admin-nav-btn" style="color: var(--primary-gold); border-color: rgba(212, 175, 55, 0.3);">💰 Edit Category Pricing</button>
+                                <button id="btnViewLeads" class="admin-nav-btn">📞 View Scraped Leads</button>
+                            </div>
+                        </div>
                     </div>
                 `;
                 
@@ -1417,6 +2073,7 @@ async function loadDashboard() {
                 adminLayout.appendChild(gridContainer);
                 content.appendChild(adminLayout);
                 
+                document.getElementById('btnEditPricing').addEventListener('click', () => openEditPricingModal(data.globalPricing));
                 document.getElementById('btnViewLogs').addEventListener('click', () => openActivityLogsModal());
                 document.getElementById('btnGuestTraffic').addEventListener('click', () => openActivityLogsModal('Guest Traffic', { isGuest: 'true' }));
                 document.getElementById('btnTreasuresSteps').addEventListener('click', () => openActivityLogsModal('Treasures Steps', { isGuest: 'false' }));
@@ -1437,6 +2094,7 @@ async function loadDashboard() {
                 
                 if (loader) loader.classList.add('hidden');
                 content.classList.remove('hidden');
+                applyStaticTranslations(content);
                 return; // Stop execution to prevent loading professional specific data
             }
 
@@ -1448,7 +2106,7 @@ async function loadDashboard() {
             if (!connSection && user.role === 'professional') {
                 connSection = document.createElement('div');
                 connSection.id = 'connectionRequestsSection';
-                connSection.className = 'card';
+                connSection.className = 'card fileteado-section';
                 connSection.style.marginBottom = '20px';
                 connSection.style.border = '1px solid var(--primary-gold)';
                 
@@ -1482,8 +2140,10 @@ async function loadDashboard() {
             // Update read-only quality display instead of dropdown
             const displayQuality = document.getElementById('displayQuality');
             if (displayQuality) {
-                displayQuality.textContent = prof.quality || 'Standard';
-                displayQuality.className = `quality-badge quality-${(prof.quality || 'Standard').toLowerCase()}`;
+                const q = prof.quality || 'Standard';
+                const meta = CATEGORY_META[q];
+                displayQuality.textContent = meta ? `${meta.name} (${meta.price})` : q;
+                displayQuality.className = `quality-badge quality-${q.toLowerCase()}`;
             }
             
             const aptEl = document.getElementById('upOwnApartment');
@@ -1504,7 +2164,7 @@ async function loadDashboard() {
             } else {
                 setVal('upServices', (prof.services || []).join(', '));
             }
-            // Render specialties as checkboxes
+            // Render specialties dropdown
             renderSpecialtyDropdown('upServices', prof.services || []);
             setVal('upMeasurements', prof.measurements || '');
             setVal('upHeight', prof.height || '');
@@ -1579,8 +2239,23 @@ async function loadDashboard() {
                 if (rateAlert) rateAlert.classList.remove('hidden');
             }
 
+            // Suspension Overlay logic
+            if (prof.subscriptionStatus === 'suspended') {
+                const suspensionAlert = document.createElement('div');
+                suspensionAlert.className = 'card alert';
+                suspensionAlert.style.marginBottom = '20px';
+                suspensionAlert.style.border = '2px solid var(--accent-red)';
+                suspensionAlert.innerHTML = `<h3 style="color: var(--accent-red); margin-top: 0;">Account Suspended</h3><p>Your profile has been removed from the public grid due to an unpaid balance past the 5-business-day grace period. A 2% late fee has been applied.</p><p>To restore your access, please upload your payment receipt below. Once verified by an admin, your profile will reappear on the directory.</p>`;
+                content.prepend(suspensionAlert);
+                
+                // Disable the update profile form so they know they are restricted
+                const upForm = document.getElementById('updateProfileForm');
+                if (upForm) { upForm.style.opacity = '0.3'; upForm.style.pointerEvents = 'none'; }
+            }
+
             if (loader) loader.classList.add('hidden');
             if (content) content.classList.remove('hidden');
+            applyStaticTranslations(content);
         } else {
             console.error('Dashboard auth error:', data.error);
             window.location.href = 'index.html';
@@ -1607,14 +2282,15 @@ if (updateProfileForm) {
         
         const upIsExposed = document.getElementById('upIsExposed');
         if (upIsExposed) formData.append('isExposed', upIsExposed.checked);
+
+        const upPaysMonthly = document.getElementById('upPaysMonthly');
+        if (upPaysMonthly) formData.append('paysMonthlyCharges', upPaysMonthly.checked);
         
         const upServicesEl = document.getElementById('upServices');
         let servicesVal = '';
         if (upServicesEl) {
             if (upServicesEl.tagName === 'SELECT') {
                 servicesVal = Array.from(upServicesEl.selectedOptions).map(opt => opt.value).join(',');
-            } else if (upServicesEl.tagName === 'DIV') {
-                servicesVal = Array.from(upServicesEl.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value).join(',');
             } else {
                 servicesVal = upServicesEl.value;
             }
@@ -1812,6 +2488,7 @@ async function openPendingConnectionsModal() {
         modal.appendChild(closeBtn);
         modal.appendChild(container);
         document.body.appendChild(modal);
+        applyStaticTranslations(modal);
     }
 
     modal.style.display = 'flex';
@@ -1862,6 +2539,7 @@ async function loadPendingConnections() {
             document.querySelectorAll('.decline-conn-btn').forEach(btn => {
                 btn.onclick = () => updateConnectionStatus(btn.getAttribute('data-id'), 'declined');
             });
+            applyStaticTranslations(tbody);
 
         } else {
             tbody.innerHTML = `<tr><td colspan="4" style="padding: 10px; color: var(--accent-red);">Error: ${data.error}</td></tr>`;
@@ -1955,6 +2633,7 @@ async function openActivityLogsModal(title = 'Activity Logs', baseFilters = {}) 
         modal.appendChild(closeBtn);
         modal.appendChild(container);
         document.body.appendChild(modal);
+        applyStaticTranslations(modal);
 
         document.getElementById('applyLogFiltersBtn').onclick = () => {
             currentLogFilters = { ...currentLogBaseFilters };
@@ -2021,6 +2700,7 @@ async function loadActivityLogs() {
                 `;
                 tbody.appendChild(tr);
             });
+            applyStaticTranslations(tbody);
         } else {
             tbody.innerHTML = `<tr><td colspan="5" style="padding: 10px; color: var(--accent-red);">Error: ${data.error}</td></tr>`;
         }
@@ -2078,6 +2758,7 @@ async function openViewLeadsModal() {
         modal.appendChild(closeBtn);
         modal.appendChild(container);
         document.body.appendChild(modal);
+        applyStaticTranslations(modal);
 
         document.getElementById('refreshLeadsBtn').onclick = loadLeads;
     }
@@ -2127,6 +2808,7 @@ async function loadLeads() {
                 `;
                 tbody.appendChild(tr);
             });
+            applyStaticTranslations(tbody);
         } else {
             tbody.innerHTML = `<tr><td colspan="4" style="padding: 10px; color: var(--accent-red);">Error: ${data.error}</td></tr>`;
         }
@@ -2182,6 +2864,7 @@ async function openPendingVerificationsModal() {
         modal.appendChild(closeBtn);
         modal.appendChild(container);
         document.body.appendChild(modal);
+        applyStaticTranslations(modal);
     }
 
     modal.style.display = 'flex';
@@ -2239,6 +2922,7 @@ async function loadPendingVerifications() {
             document.querySelectorAll('.reject-btn').forEach(btn => {
                 btn.onclick = () => updateVerificationStatus(btn.getAttribute('data-id'), 'rejected');
             });
+            applyStaticTranslations(tbody);
 
         } else {
             tbody.innerHTML = `<tr><td colspan="4" style="padding: 10px; color: var(--accent-red);">Error: ${data.error}</td></tr>`;
@@ -2326,6 +3010,7 @@ async function openMailBroadcastModal() {
         modal.appendChild(closeBtn);
         modal.appendChild(container);
         document.body.appendChild(modal);
+        applyStaticTranslations(modal);
 
         document.getElementById('mailBroadcastForm').onsubmit = async (e) => {
             e.preventDefault();
@@ -2409,6 +3094,7 @@ async function openEditProfessionalModal(prof = null) {
         modal.appendChild(closeBtn);
         modal.appendChild(container);
         document.body.appendChild(modal);
+        applyStaticTranslations(modal);
     }
 
     modal.style.display = 'flex';
@@ -2493,6 +3179,7 @@ async function renderProfessionalList(aliasSearch = '') {
                     renderEditForm(selectedProf);
                 };
             });
+            applyStaticTranslations(tbody);
         } else {
             tbody.innerHTML = `<tr><td colspan="4" style="padding: 10px; color: var(--accent-red);">Error: ${data.error}</td></tr>`;
         }
@@ -2528,10 +3215,11 @@ function renderEditForm(prof) {
 
             <label>Quality</label>
             <select id="adminEditQuality" style="padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
-                <option value="Standard" ${profile.quality === 'Standard' ? 'selected' : ''}>Standard</option>
-                <option value="Silver" ${profile.quality === 'Silver' ? 'selected' : ''}>Silver</option>
-                <option value="Gold" ${profile.quality === 'Gold' ? 'selected' : ''}>Gold</option>
-                <option value="Premium" ${profile.quality === 'Premium' ? 'selected' : ''}>Premium</option>
+                <option value="Standard" ${profile.quality === 'Standard' ? 'selected' : ''}>${t(CATEGORY_META['Standard'].name)} - ${CATEGORY_META['Standard'].price}</option>
+                <option value="Silver" ${profile.quality === 'Silver' ? 'selected' : ''}>${t(CATEGORY_META['Silver'].name)} - ${CATEGORY_META['Silver'].price}</option>
+                <option value="Gold" ${profile.quality === 'Gold' ? 'selected' : ''}>${t(CATEGORY_META['Gold'].name)} - ${CATEGORY_META['Gold'].price}</option>
+                <option value="Premium" ${profile.quality === 'Premium' ? 'selected' : ''}>${t(CATEGORY_META['Premium'].name)} - ${CATEGORY_META['Premium'].price}</option>
+                <option value="Elite" ${profile.quality === 'Elite' ? 'selected' : ''}>${t(CATEGORY_META['Elite'].name)} - ${CATEGORY_META['Elite'].price}</option>
             </select>
 
             <label>Bio</label>
@@ -2549,6 +3237,12 @@ function renderEditForm(prof) {
             <div style="display: flex; align-items: center; gap: 10px;">
                 <input type="checkbox" id="adminEditIsExposed" ${profile.isExposed !== false ? 'checked' : ''} style="width: auto;">
                 <span style="font-size: 0.9rem;">Show in public directory (active)</span>
+            </div>
+
+            <label>Billing</label>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="checkbox" id="adminEditPaysMonthly" ${profile.paysMonthlyCharges !== false ? 'checked' : ''} style="width: auto;">
+                <span style="font-size: 0.9rem;">Subject to Monthly Charges (Disable for free accounts)</span>
             </div>
 
             <label>Location</label>
@@ -2596,6 +3290,7 @@ function renderEditForm(prof) {
             btn.parentElement.remove();
         };
     });
+    applyStaticTranslations(container);
 
     document.getElementById('adminEditProfForm').onsubmit = async (e) => {
         e.preventDefault();
@@ -2615,7 +3310,7 @@ function renderEditForm(prof) {
                 bio: document.getElementById('adminEditBio').value,
                 services: document.getElementById('adminEditServices').tagName === 'SELECT'
                     ? Array.from(document.getElementById('adminEditServices').selectedOptions).map(opt => opt.value)
-                    : Array.from(document.querySelectorAll('#adminEditServices input[type="checkbox"]:checked')).map(cb => cb.value),
+                    : document.getElementById('adminEditServices').value.split(','),
                 whatsappNumber: document.getElementById('adminEditWhatsapp').value,
                 workingHours: {
                     start: document.getElementById('adminEditWStart').value,
@@ -2623,6 +3318,7 @@ function renderEditForm(prof) {
                 },
                 workingDays: document.getElementById('adminEditWDays').value.split(',').map(s => s.trim()).filter(s => s),
                 isExposed: document.getElementById('adminEditIsExposed').checked,
+                paysMonthlyCharges: document.getElementById('adminEditPaysMonthly').checked,
                 location: {
                     province: document.getElementById('adminEditProvince')?.value || '',
                     city: (document.getElementById('adminEditProvince')?.value || '').trim().toLowerCase() === 'caba' ? '' : document.getElementById('adminEditCity')?.value || '',
@@ -2667,6 +3363,113 @@ function renderEditForm(prof) {
             showAlert(alertEl, 'Server connection error');
         }
     };
+}
+
+// --- Admin Edit Pricing Modal ---
+async function openEditPricingModal(currentPricing) {
+    let modal = document.getElementById('editPricingModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'editPricingModal';
+        Object.assign(modal.style, {
+            position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.9)', zIndex: '3000', display: 'flex',
+            flexDirection: 'column', padding: '20px', overflowY: 'auto'
+        });
+
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = t('Close');
+        closeBtn.style.alignSelf = 'flex-end';
+        closeBtn.style.marginBottom = '10px';
+        closeBtn.onclick = () => modal.style.display = 'none';
+
+        const container = document.createElement('div');
+        Object.assign(container.style, {
+            backgroundColor: 'var(--dark-bg, #1a1a1a)', padding: '20px',
+            borderRadius: '8px', color: 'white', maxWidth: '600px', margin: '0 auto', width: '100%'
+        });
+
+        container.innerHTML = `
+            <h2 class="gold-text" style="margin-bottom: 20px;">Edit Category Pricing</h2>
+            <p style="font-size: 0.9rem; margin-bottom: 20px; color: #aaa;">These monthly values are used by the billing engine to calculate invoices for professionals.</p>
+            <form id="editPricingForm" style="display: flex; flex-direction: column; gap: 15px;">
+                <div id="editPricingAlert" class="alert hidden" style="padding: 10px; border-radius: 4px; border: 1px solid transparent;"></div>
+                
+                <label>⭐ Elite (ARS)</label>
+                <input type="number" id="priceElite" required style="padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
+
+                <label>✨ Premium (ARS)</label>
+                <input type="number" id="pricePremium" required style="padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
+
+                <label>🟡 Gold (ARS)</label>
+                <input type="number" id="priceGold" required style="padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
+
+                <label>⚪ Silver (ARS)</label>
+                <input type="number" id="priceSilver" required style="padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
+
+                <label>🟤 Standard (ARS)</label>
+                <input type="number" id="priceStandard" required style="padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
+
+                <button type="submit" style="margin-top: 10px; padding: 10px; background: var(--primary-gold); color: var(--dark-bg); font-weight: bold; border: none; border-radius: 4px; cursor: pointer;">Save Pricing</button>
+            </form>
+        `;
+
+        modal.appendChild(closeBtn);
+        modal.appendChild(container);
+        document.body.appendChild(modal);
+        applyStaticTranslations(modal);
+
+        document.getElementById('editPricingForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const alertEl = document.getElementById('editPricingAlert');
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+
+            const newPricing = {
+                Elite: parseInt(document.getElementById('priceElite').value, 10),
+                Premium: parseInt(document.getElementById('pricePremium').value, 10),
+                Gold: parseInt(document.getElementById('priceGold').value, 10),
+                Silver: parseInt(document.getElementById('priceSilver').value, 10),
+                Standard: parseInt(document.getElementById('priceStandard').value, 10)
+            };
+
+            const formData = new FormData();
+            formData.append('adminPricing', JSON.stringify(newPricing));
+
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`${API_URL}/professionals/updateprofile`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    credentials: 'include',
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showAlert(alertEl, 'Pricing updated successfully!', false);
+                    setTimeout(() => window.location.reload(), 1500); // Reload to reflect changes globally
+                } else {
+                    showAlert(alertEl, data.error || 'Failed to update pricing');
+                }
+            } catch (err) {
+                showAlert(alertEl, 'Server connection error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Save Pricing';
+            }
+        };
+    }
+
+    document.getElementById('priceElite').value = currentPricing.Elite || 50000;
+    document.getElementById('pricePremium').value = currentPricing.Premium || 40000;
+    document.getElementById('priceGold').value = currentPricing.Gold || 30000;
+    document.getElementById('priceSilver').value = currentPricing.Silver || 20000;
+    document.getElementById('priceStandard').value = currentPricing.Standard || 15000;
+
+    modal.style.display = 'flex';
 }
 
 // --- Photo Gallery Management ---
@@ -2794,57 +3597,91 @@ function showAlert(element, message, isError = true) {
 async function renderSpecialtyDropdown(containerId, preselectedServices = [], options = {}) {
     const { quality = '', context = 'form' } = options;
     let container = document.getElementById(containerId);
+    
+    // Aggressive fallback to find legacy checkbox groups if ID is missing or changed
+    if (!container) {
+        const labels = Array.from(document.querySelectorAll('label'));
+        const specLabel = labels.find(l => 
+            l.textContent.trim().toLowerCase().includes('specialt') || 
+            l.textContent.trim().toLowerCase().includes('especialidad') ||
+            l.textContent.trim().toLowerCase().includes('service') ||
+            l.textContent.trim().toLowerCase().includes('servicio')
+        );
+        
+        if (specLabel) {
+            const sibling = specLabel.nextElementSibling;
+            if (sibling && (sibling.tagName === 'DIV' || sibling.tagName === 'UL')) {
+                container = sibling;
+                container.id = containerId;
+            } else {
+                const parent = specLabel.closest('.filter-control') || specLabel.parentNode;
+                if (parent) {
+                    const wrapper = parent.querySelector('div.checkbox-group, div.custom-select-wrapper, ul, div');
+                    if (wrapper && wrapper !== specLabel) {
+                        container = wrapper;
+                        container.id = containerId;
+                    }
+                }
+            }
+        }
+    }
+
     if (!container) return;
 
-    if (container.tagName === 'DIV') {
+    // Forcefully morph any DIV/UL (like checkbox containers) into a standard SELECT drop-down
+    if (container.tagName !== 'SELECT') {
         const select = document.createElement('select');
         select.id = container.id;
-        select.className = container.className || 'form-select';
-        if (context === 'form') {
-            select.style.width = '100%';
-            select.style.padding = '8px';
-            select.style.background = '#222';
-            select.style.color = 'white';
-            select.style.border = '1px solid #444';
-            select.style.borderRadius = '4px';
-        } else {
-            select.style.width = '100%';
-            select.style.padding = '12px';
-            select.style.background = 'transparent';
-            select.style.border = '1px solid var(--primary-gold)';
-            select.style.color = 'white';
-        }
+        select.className = 'form-select';
+        if (container.getAttribute('name')) select.name = container.getAttribute('name');
+        else if (container.id === 'specialtySelect') select.name = 'specialty';
+        else select.name = 'services';
+        
+        select.style.width = '100%';
+        select.style.padding = context === 'form' ? '8px' : '12px';
+        select.style.background = context === 'form' ? '#222' : 'transparent';
+        select.style.border = context === 'form' ? '1px solid #444' : '1px solid var(--primary-gold)';
+        select.style.color = 'white';
+        if (context === 'form') select.style.borderRadius = '4px';
+        
+        // Ensure it is a strict drop-down menu (no multi-select box)
+        select.multiple = false;
+        
         container.parentNode.replaceChild(select, container);
         container = select;
+        
+        // Update the corresponding label's 'for' attribute
+        const labels = Array.from(document.querySelectorAll('label'));
+        const specLabel = labels.find(l => l.textContent.trim().toLowerCase().includes('specialt') || l.textContent.trim().toLowerCase().includes('especialidad'));
+        if (specLabel) specLabel.setAttribute('for', container.id);
     } else if (container.tagName === 'SELECT') {
         container.multiple = false;
         container.removeAttribute('size');
         container.style.height = 'auto';
-        if (context === 'filter') {
-            container.style.width = '100%';
-            container.style.padding = '12px';
-            container.style.background = 'transparent';
-            container.style.border = '1px solid var(--primary-gold)';
-            container.style.color = 'white';
-        } else if (context === 'form') {
-            container.style.width = '100%';
-            container.style.padding = '8px';
-            container.style.background = '#222';
-            container.style.color = 'white';
-            container.style.border = '1px solid #444';
-            container.style.borderRadius = '4px';
-        }
+        container.style.width = '100%';
+        container.style.padding = context === 'form' ? '8px' : '12px';
+        container.style.background = context === 'form' ? '#222' : 'transparent';
+        container.style.border = context === 'form' ? '1px solid #444' : '1px solid var(--primary-gold)';
+        container.style.color = 'white';
+        if (context === 'form') container.style.borderRadius = '4px';
     }
 
     try {
-        const specialties = ['Massage', 'Virtual Connection', 'Love alchemy', 'On line video', 'Fantasies', 'Content Delivery'];
+        let preselectedArr = [];
+        if (preselectedServices) {
+            if (Array.isArray(preselectedServices)) preselectedArr = preselectedServices;
+            else if (typeof preselectedServices === 'string') preselectedArr = preselectedServices.split(',');
+        }
+        preselectedArr = preselectedArr.map(s => (s || '').trim().toLowerCase()).filter(Boolean);
+
+        const specialties = ['Massage', 'Virtual Connection', 'Love Alchemy', 'Content Media'];
         
         container.innerHTML = '';
         
         if (context === 'filter') {
             const defaultOpt = document.createElement('option');
             defaultOpt.value = '';
-            defaultOpt.textContent = 'All Specialties';
+            defaultOpt.textContent = t('All Specialties');
             defaultOpt.style.background = 'var(--dark-bg)';
             defaultOpt.style.color = 'var(--light-text)';
             container.appendChild(defaultOpt);
@@ -2853,15 +3690,18 @@ async function renderSpecialtyDropdown(containerId, preselectedServices = [], op
         specialties.forEach(specialty => {
             const opt = document.createElement('option');
             opt.value = specialty;
-            opt.textContent = specialty;
+            opt.textContent = t(specialty);
             opt.style.background = 'var(--dark-bg)';
             opt.style.color = 'var(--light-text)';
-            if (preselectedServices.includes(specialty)) {
+            if (preselectedArr.includes(specialty.toLowerCase().trim())) {
                 opt.selected = true;
             }
             container.appendChild(opt);
         });
-    } catch (err) { container.innerHTML = '<p style="color: var(--accent-red);">Error loading specialties.</p>'; }
+    } catch (err) { 
+        console.error('Error loading specialties:', err);
+        container.innerHTML = '<option value="">Error loading specialties.</option>'; 
+    }
 }
 
 // Populates location dropdowns dynamically based on current API relationships
@@ -2885,9 +3725,21 @@ async function setupLocationDropdowns(provinceId, cityId, neighborhoodId, isFilt
         "Villa Riachuelo", "Villa Santa Rita", "Villa Soldati", "Villa Urquiza"
     ];
 
+    const argProvinces = [
+        "CABA", "Buenos Aires", "Catamarca", "Chaco", "Chubut", "Córdoba", "Corrientes", 
+        "Entre Ríos", "Formosa", "Jujuy", "La Pampa", "La Rioja", "Mendoza", "Misiones", 
+        "Neuquén", "Río Negro", "Salta", "San Juan", "San Luis", "Santa Cruz", "Santa Fe", 
+        "Santiago del Estero", "Tierra del Fuego", "Tucumán"
+    ];
+
     // Helper to dynamically switch a dropdown to a text input
     const morphToInput = (el, placeholderText, prefillValue) => {
-        if (!el || el.tagName === 'INPUT') return el;
+        if (!el) return null;
+        if (el.tagName === 'INPUT') {
+            el.placeholder = placeholderText;
+            if (prefillValue) el.value = prefillValue;
+            return el;
+        }
         const input = document.createElement('input');
         input.type = 'text';
         input.id = el.id;
@@ -2913,10 +3765,12 @@ async function setupLocationDropdowns(provinceId, cityId, neighborhoodId, isFilt
     const defaultText = isFilter ? t('All Provinces') : t('Select Province');
     provinceEl.innerHTML = `<option value="">${defaultText}</option>`;
     
+    let fetchedProvinces = false;
     try {
         const res = await fetch(`${API_URL}/locations/provinces?limit=100`);
         const data = await res.json();
         if (data.success && data.data) {
+            fetchedProvinces = true;
             data.data.forEach(p => {
                 const val = typeof p === 'string' ? p : (p.name || '');
                 if (!val) return;
@@ -2932,6 +3786,16 @@ async function setupLocationDropdowns(provinceId, cityId, neighborhoodId, isFilt
     } catch (e) {
         console.error('Failed to load provinces from API', e);
     }
+    
+    if (!fetchedProvinces) {
+        argProvinces.forEach(val => {
+            const opt = document.createElement('option');
+            opt.value = val;
+            opt.textContent = val;
+            if (prefillData.province === val) opt.selected = true;
+            provinceEl.appendChild(opt);
+        });
+    }
 
     const loadSublocations = async () => {
         // Re-fetch elements in case they were morphed by previous selections
@@ -2943,71 +3807,74 @@ async function setupLocationDropdowns(provinceId, cityId, neighborhoodId, isFilt
         const selectedOption = provinceEl.options[provinceEl.selectedIndex];
         const provId = selectedOption ? selectedOption.dataset.id : null;
         
-        const subDefaultText = isFilter ? t('All') : t('Select...');
-
         if (neighborhoodEl && isFilter) {
             neighborhoodEl.style.display = isCaba ? 'none' : 'block';
         }
 
-        if (!provId) {
+        if (!provinceName) {
             cityEl = morphToSelect(cityEl);
             neighborhoodEl = morphToSelect(neighborhoodEl);
-            if (cityEl) { cityEl.innerHTML = `<option value="">${subDefaultText}</option>`; cityEl.disabled = true; }
-            if (neighborhoodEl) { neighborhoodEl.innerHTML = `<option value="">${subDefaultText}</option>`; neighborhoodEl.disabled = true; }
+            if (cityEl) { cityEl.innerHTML = `<option value="">${isFilter ? t('All Cities') : t('Select City')}</option>`; cityEl.disabled = true; }
+            if (neighborhoodEl) { neighborhoodEl.innerHTML = `<option value="">${isFilter ? t('All Neighborhoods') : t('Select Neighborhood')}</option>`; neighborhoodEl.disabled = true; }
             return;
         }
 
-        try {
-            const res = await fetch(`${API_URL}/locations/provinces/${provId}/sublocations?limit=500&_=${new Date().getTime()}`);
-            const data = await res.json();
-            if (data.success && data.data) {
-                if (isCaba) {
-                    cityEl = morphToSelect(cityEl);
-                    cityEl.innerHTML = `<option value="">${isFilter ? t('All Neighborhoods') : t('Select Neighborhood')}</option>`;
-                    
-                    let nList = Array.isArray(data.data) ? data.data : (data.data.neighborhoods || []);
-                    if (nList.length === 0) nList = cabaNeighborhoods.map(name => ({ name }));
-                    
-                    nList.forEach(n => {
-                        const val = typeof n === 'string' ? n : (n.name || '');
-                        if (!val) return;
-                        const opt = document.createElement('option');
-                        opt.value = val;
-                        opt.textContent = val;
-                        if (prefillData.neighborhood === val || prefillData.city === val) opt.selected = true;
-                        cityEl.appendChild(opt);
-                    });
-                    cityEl.disabled = false;
-                    if (neighborhoodEl) neighborhoodEl.style.display = 'none';
-                } else {
-                    cityEl = morphToSelect(cityEl);
-                    cityEl.innerHTML = `<option value="">${isFilter ? t('All Cities') : t('Select City')}</option>`;
-                    
-                    let cList = Array.isArray(data.data) ? data.data : (data.data.cities || []);
-                    cList.forEach(c => {
-                        const val = typeof c === 'string' ? c : (c.name || '');
-                        if (!val) return;
-                        const opt = document.createElement('option');
-                        opt.value = val;
-                        opt.textContent = val;
-                        if (prefillData.city === val) opt.selected = true;
-                        cityEl.appendChild(opt);
-                    });
-                    cityEl.disabled = false;
-                    if (neighborhoodEl) {
-                        neighborhoodEl.style.display = 'block';
-                        morphToInput(neighborhoodEl, isFilter ? t('Neighborhood...') : t('Enter Neighborhood'), prefillData.neighborhood);
+        let loadedFromApi = false;
+        if (provId) {
+            try {
+                const res = await fetch(`${API_URL}/locations/provinces/${provId}/sublocations?limit=500&_=${new Date().getTime()}`);
+                const data = await res.json();
+                if (data.success && data.data) {
+                    loadedFromApi = true;
+                    if (isCaba) {
+                        cityEl = morphToSelect(cityEl);
+                        cityEl.innerHTML = `<option value="">${isFilter ? t('All Neighborhoods') : t('Select Neighborhood')}</option>`;
+                        
+                        let nList = Array.isArray(data.data) ? data.data : (data.data.neighborhoods || []);
+                        if (nList.length === 0) nList = cabaNeighborhoods.map(name => ({ name }));
+                        
+                        nList.forEach(n => {
+                            const val = typeof n === 'string' ? n : (n.name || '');
+                            if (!val) return;
+                            const opt = document.createElement('option');
+                            opt.value = val;
+                            opt.textContent = val;
+                            if (prefillData.neighborhood === val || prefillData.city === val) opt.selected = true;
+                            cityEl.appendChild(opt);
+                        });
+                        cityEl.disabled = false;
+                        if (neighborhoodEl) neighborhoodEl.style.display = 'none';
+                    } else {
+                        cityEl = morphToSelect(cityEl);
+                        cityEl.innerHTML = `<option value="">${isFilter ? t('All Cities') : t('Select City')}</option>`;
+                        
+                        let cList = Array.isArray(data.data) ? data.data : (data.data.cities || []);
+                        cList.forEach(c => {
+                            const val = typeof c === 'string' ? c : (c.name || '');
+                            if (!val) return;
+                            const opt = document.createElement('option');
+                            opt.value = val;
+                            opt.textContent = val;
+                            if (prefillData.city === val) opt.selected = true;
+                            cityEl.appendChild(opt);
+                        });
+                        cityEl.disabled = false;
+                        if (neighborhoodEl) {
+                            neighborhoodEl.style.display = 'block';
+                            neighborhoodEl = morphToInput(neighborhoodEl, isFilter ? t('Neighborhood...') : t('Enter Neighborhood'), prefillData.neighborhood);
+                        }
                     }
                 }
+            } catch (e) {
+                console.error('Failed to load sublocations', e);
             }
-        } catch (e) {
-            console.error('Failed to load sublocations', e);
+        }
+
+        if (!loadedFromApi) {
             if (isCaba) {
                 cityEl = morphToSelect(cityEl);
                 cityEl.innerHTML = `<option value="">${isFilter ? t('All Neighborhoods') : t('Select Neighborhood')}</option>`;
-                cabaNeighborhoods.forEach(name => {
-                    const val = typeof name === 'string' ? name : (name.name || '');
-                    if (!val) return;
+                cabaNeighborhoods.forEach(val => {
                     const opt = document.createElement('option');
                     opt.value = val;
                     opt.textContent = val;
@@ -3016,12 +3883,22 @@ async function setupLocationDropdowns(provinceId, cityId, neighborhoodId, isFilt
                 });
                 cityEl.disabled = false;
                 if (neighborhoodEl) neighborhoodEl.style.display = 'none';
+            } else {
+                cityEl = morphToInput(cityEl, isFilter ? t('City...') : t('Enter City'), prefillData.city);
+                cityEl.disabled = false;
+                if (neighborhoodEl) {
+                    neighborhoodEl.style.display = 'block';
+                    neighborhoodEl = morphToInput(neighborhoodEl, isFilter ? t('Neighborhood...') : t('Enter Neighborhood'), prefillData.neighborhood);
+                }
             }
         }
 
         // Clear prefill after first load
         if (prefillData.city) prefillData.city = '';
         if (prefillData.neighborhood) prefillData.neighborhood = '';
+        
+        if (cityEl) applyStaticTranslations(cityEl);
+        if (neighborhoodEl) applyStaticTranslations(neighborhoodEl);
         
         // Guarantee facet counts are recalculated immediately after dynamic options are loaded
         if (typeof applyCountsToDropdowns === 'function') {
@@ -3030,7 +3907,6 @@ async function setupLocationDropdowns(provinceId, cityId, neighborhoodId, isFilt
     };
 
     provinceEl.addEventListener('change', loadSublocations);
-    if (prefillData.province) await loadSublocations();
     
     // Always execute once on setup to clear any default "Loading..." text from sub-dropdowns
     await loadSublocations();
@@ -3175,6 +4051,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ------------------------------------------------
 
     initGlobalTopBar();
+    initPrivacyShield();
     applyStaticTranslations();
 
     // Auto-forward on landing page if already age-verified
@@ -3215,6 +4092,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const regForm = document.getElementById('registerForm');
         
+        const gestures = [
+            { code: '1FU', text: '1 finger up ☝️' },
+            { code: '2FU', text: '2 fingers up ✌️' },
+            { code: '3FU', text: '3 fingers up 🖖' },
+            { code: 'TU', text: 'Thumbs up 👍' },
+            { code: 'OS', text: 'OK sign 👌' }
+        ];
+        const assignedGesture = gestures[Math.floor(Math.random() * gestures.length)];
+        regForm.dataset.gestureCode = assignedGesture.code;
+
         // Add instruction text
         const instructions = document.createElement('div');
         instructions.style.backgroundColor = 'rgba(212, 175, 55, 0.1)';
@@ -3223,14 +4110,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         instructions.style.marginBottom = '20px';
         instructions.style.borderRadius = '8px';
         instructions.innerHTML = `
-            <h3 class="gold-text" style="margin-top: 0; margin-bottom: 10px;">Verification Process</h3>
-            <p style="font-size: 0.9rem; margin-bottom: 10px;">To ensure the safety and authenticity of our community, a strict verification process is required. Please follow these steps:</p>
+            <h3 class="gold-text" style="margin-top: 0; margin-bottom: 10px;">${t('Verification Process')}</h3>
+            <p style="font-size: 0.9rem; margin-bottom: 10px;">${t('To ensure the safety and authenticity of our community, a strict verification process is required. Please follow these steps:')}</p>
             <ol style="font-size: 0.9rem; margin-left: 20px; margin-bottom: 10px;">
-                <li>Complete all required fields below to submit your registration.</li>
-                <li>Check your email for your verification code and a <strong>randomly assigned hand gesture</strong> (e.g., 1, 2, 3 fingers, or thumbs up).</li>
-                <li>Log in to your dashboard and securely upload a clear photo of your Government ID, and a personal selfie holding your ID next to your face while performing the assigned gesture.</li>
+                <li>${t('Complete all required fields below to submit your registration.')}</li>
+                <li>${t('Upload a clear photo of your Government ID (Front and Back).')}</li>
+                <li>${t('Upload a personal selfie holding your ID next to your face while performing this hand position:')} <strong>${t(assignedGesture.text)}</strong></li>
             </ol>
-            <p style="font-size: 0.9rem; margin-bottom: 0; color: var(--primary-gold);"><em>Note: Profile photos can only be uploaded after your account is approved (which takes at least 48 hours).</em></p>
+            <p style="font-size: 0.9rem; margin-bottom: 0; color: var(--primary-gold);"><em>${t('Note: Profile photos can only be uploaded after your account is approved (which takes at least 48 hours).')}</em></p>
         `;
         regForm.parentNode.insertBefore(instructions, regForm);
 

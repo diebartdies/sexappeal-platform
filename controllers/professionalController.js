@@ -176,6 +176,12 @@ exports.getProfessionalByAlias = async (req, res, next) => {
       });
     } catch(err) { console.error('Activity log error:', err.message); }
 
+    // Fetch dynamic pricing
+    const adminUser = await User.findOne({ role: 'admin' });
+    const globalPricing = adminUser?.adminSettings?.pricing || {
+        Elite: 50000, Premium: 40000, Gold: 30000, Silver: 20000, Standard: 15000
+    };
+
     res.status(200).json({
       success: true,
       data: profObj
@@ -301,6 +307,7 @@ exports.getMe = async (req, res, next) => {
       success: true,
       isReadyForTransactions,
       stats: { profileViews, whatsappClicks },
+      globalPricing,
       data: user
     });
   } catch (error) {
@@ -383,6 +390,17 @@ exports.notifyRateChange = async (req, res, next) => {
 // @access  Private/Professional
 exports.updateProfile = async (req, res, next) => {
   try {
+    const currentUser = await User.findById(req.user.id);
+    
+    // Admin Pricing Override
+    if (currentUser.role === 'admin' && req.body.adminPricing) {
+        const pricing = JSON.parse(req.body.adminPricing);
+        currentUser.adminSettings = currentUser.adminSettings || {};
+        currentUser.adminSettings.pricing = pricing;
+        await currentUser.save();
+        return res.status(200).json({ success: true, data: currentUser });
+    }
+
     // Get existing photos from the form (sent as a JSON string)
     const existingPhotos = req.body.existingPhotos ? JSON.parse(req.body.existingPhotos) : [];
 
@@ -436,6 +454,9 @@ exports.updateProfile = async (req, res, next) => {
     if (req.body.isExposed !== undefined) {
       professionalProfile.isExposed = req.body.isExposed === 'true';
     }
+    if (req.body.paysMonthlyCharges !== undefined) {
+      professionalProfile.paysMonthlyCharges = req.body.paysMonthlyCharges === 'true';
+    }
 
     if (lastPhotoUpdate) professionalProfile.lastPhotoUpdate = lastPhotoUpdate;
 
@@ -458,7 +479,8 @@ exports.updateProfile = async (req, res, next) => {
     else if (['belgrano', 'caballito', 'san telmo'].includes(nbhd)) score += 2;
     else if (nbhd !== '') score += 1;
 
-    if (score >= 6) professionalProfile.quality = 'Premium';
+    if (score >= 8) professionalProfile.quality = 'Elite';
+    else if (score >= 6) professionalProfile.quality = 'Premium';
     else if (score >= 4) professionalProfile.quality = 'Gold';
     else if (score >= 2) professionalProfile.quality = 'Silver';
     else professionalProfile.quality = 'Standard';

@@ -185,7 +185,7 @@ const seedData = async () => {
                 isEmailVerified: true,
                 professionalProfile: {
                     alias: `Test Pro ${i}`,
-                    quality: i % 4 === 0 ? 'Premium' : (i % 3 === 0 ? 'Gold' : (i % 2 === 0 ? 'Silver' : 'Standard')),
+                    quality: i % 5 === 0 ? 'Elite' : (i % 4 === 0 ? 'Premium' : (i % 3 === 0 ? 'Gold' : (i % 2 === 0 ? 'Silver' : 'Standard'))),
                     bio: `A profile for testing professional number ${i}.`,
                     location: loc,
                     measurements: '90-60-90',
