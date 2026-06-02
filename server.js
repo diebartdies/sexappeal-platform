@@ -116,6 +116,7 @@ app.post('/api/v1/auth/login', authController.login);
 app.post('/api/v1/auth/guest-login', authController.guestLogin);
 app.post('/api/v1/auth/forgotpassword', authController.forgotPassword);
 app.put('/api/v1/auth/resetpassword', authController.resetPassword);
+app.post('/api/v1/auth/google', authController.googleAuth);
 
 // Feedback Route (Enforcing Respect Agreement)
 app.post('/api/v1/feedback', protect, feedbackController.submitFeedback);

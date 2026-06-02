@@ -669,7 +669,11 @@ function injectGoogleLogin(container) {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('is18Plus', 'true');
                 if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
-                window.location.href = data.user.role === 'professional' ? 'dashboard.html' : 'categories.html';
+                if (data.user.role === 'professional' && data.user.professionalProfile && data.user.professionalProfile.alias) {
+                    window.location.href = `treasure.html?alias=${encodeURIComponent(data.user.professionalProfile.alias)}`;
+                } else {
+                    window.location.href = data.user.role === 'professional' ? 'dashboard.html' : 'categories.html';
+                }
             } else {
                 showAlert(document.getElementById('loginAlert'), data.error || 'Google login failed');
             }
@@ -759,8 +763,11 @@ if (loginForm) {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('is18Plus', 'true');
                 if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
-                // Redirect professional to their dashboard
-                window.location.href = 'dashboard.html';
+                if (data.user.role === 'professional' && data.user.professionalProfile && data.user.professionalProfile.alias) {
+                    window.location.href = `treasure.html?alias=${encodeURIComponent(data.user.professionalProfile.alias)}`;
+                } else {
+                    window.location.href = 'dashboard.html';
+                }
             } else if (data.error && data.error.includes('verify your email')) {
                 window.location.href = `verify.html?email=${encodeURIComponent(email)}`;
             } else {
@@ -870,7 +877,11 @@ if (verifyForm) {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('is18Plus', 'true');
                 if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
-                window.location.href = 'dashboard.html';
+                if (data.user.role === 'professional' && data.user.professionalProfile && data.user.professionalProfile.alias) {
+                    window.location.href = `treasure.html?alias=${encodeURIComponent(data.user.professionalProfile.alias)}`;
+                } else {
+                    window.location.href = 'dashboard.html';
+                }
             } else {
                 showAlert(alert, data.error || 'Invalid code');
             }
@@ -1182,11 +1193,34 @@ async function loadTreasureDetails() {
             const prof = treasure.professionalProfile;
             const hasWhatsapp = prof.hasWhatsapp;
 
+            // Check if viewing own profile
+            let isOwner = false;
+            try {
+                const uStr = localStorage.getItem('user');
+                if (uStr) {
+                    const u = JSON.parse(uStr);
+                    if (u._id === treasure._id) isOwner = true;
+                }
+            } catch(e) {}
+
+            const editBtnHtml = isOwner ? `
+                <button onclick="window.location.href='dashboard.html'" title="${t('Edit Profile')}" style="position: absolute; top: 20px; right: 105px; background: transparent; border: none; cursor: pointer; transition: transform 0.2s ease; z-index: 10;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary-gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </button>
+            ` : '';
+
+            const photoReminderHtml = (isOwner && (!prof.photos || prof.photos.length === 0)) ? `
+                <div style="background: rgba(212, 175, 55, 0.1); border: 1px dashed var(--primary-gold); padding: 15px; margin-bottom: 20px; border-radius: 8px; text-align: center; color: var(--primary-gold);">
+                    <strong>${t('Reminder:')}</strong> ${t('This is your first time accessing your profile. Please click the yellow pen icon to load your profile photos!')}
+                </div>
+            ` : '';
+
             // Store photos for gallery navigation
             currentGalleryPhotos = prof.photos || [];
 
             content.innerHTML = `
                 <div class="card" style="position: relative;">
+                    ${editBtnHtml}
                     <button onclick="window.history.back()" onmouseover="this.style.background='rgba(212, 175, 55, 0.1)'" onmouseout="this.style.background='transparent'" style="position: absolute; top: 20px; right: 20px; padding: 6px 12px; font-size: 0.85rem; background: transparent; color: var(--primary-gold); border: 1px solid var(--primary-gold); border-radius: 4px; cursor: pointer; transition: background 0.3s ease; z-index: 10;">&#8592; ${t('Back')}</button>
                     <h2 class="gold-text" style="text-align: center; margin-bottom: 20px; padding: 0 80px;">${prof.alias || 'Unknown'}</h2>
                     
@@ -1195,6 +1229,8 @@ async function loadTreasureDetails() {
                             ${treasure.isActiveNow ? '🟢 Available Right Now' : '🔴 Currently Inactive'}
                         </span>
                     </div>
+
+                    ${photoReminderHtml}
                     
                     <div style="text-align: center; margin-bottom: 10px; font-size: 0.85rem; color: var(--primary-gold); opacity: 0.8;">
                         <em>${t('Desktop: Click & Drag to scroll | Mobile: Swipe left/right')}</em>
@@ -2186,8 +2222,26 @@ async function loadDashboard() {
             setupLocationDropdowns('upProvince', 'upCity', 'upNeighborhood', false, prof.location || {});
 
             const photoGrid = document.getElementById('photoGrid');
+            const newPhotoInput = document.getElementById('newPhotoInput');
             if (photoGrid) {
                 photoGrid.innerHTML = '';
+                photoGrid.style.display = 'flex';
+                photoGrid.style.flexWrap = 'wrap';
+                photoGrid.style.gap = '15px';
+                
+                // Add the rectangular frame
+                const frameLabel = document.createElement('label');
+                frameLabel.className = 'add-photo-frame';
+                frameLabel.style.cssText = 'width: 120px; height: 160px; border: 2px dashed var(--primary-gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--primary-gold); font-size: 2rem; background: rgba(212, 175, 55, 0.05); transition: background 0.3s ease;';
+                frameLabel.innerHTML = '<span>+</span>';
+                
+                if (newPhotoInput) {
+                    newPhotoInput.style.display = 'none';
+                    frameLabel.appendChild(newPhotoInput);
+                }
+                
+                photoGrid.appendChild(frameLabel);
+
                 (prof.photos || []).forEach(url => addPhotoToGrid(url));
                 
                 if (!isApproved) {
@@ -2196,7 +2250,6 @@ async function loadDashboard() {
                 }
             }
 
-            const newPhotoInput = document.getElementById('newPhotoInput');
             if (newPhotoInput) {
                 if (!isApproved) {
                     newPhotoInput.disabled = true;
@@ -2233,6 +2286,19 @@ async function loadDashboard() {
                 duoStatus.innerHTML = prof.isDuo ? `<p>Connected in Duo mode.</p>` : `<p>Not currently in a Duo.</p>`;
             }
 
+            // Reminder for new users
+            if (prof.photos && prof.photos.length === 0 && isApproved) {
+                const updateProfileForm = document.getElementById('updateProfileForm');
+                if (updateProfileForm && !document.getElementById('dashboardPhotoReminder')) {
+                    const remHtml = `
+                        <div id="dashboardPhotoReminder" style="background: rgba(212, 175, 55, 0.1); border: 1px dashed var(--primary-gold); padding: 15px; margin-bottom: 20px; border-radius: 8px; text-align: center; color: var(--primary-gold);">
+                            <strong>${t('Welcome!')}</strong> ${t('This is your first time accessing your dashboard. Please load your profile photos in the rectangular frame below to become visible in the directory.')}
+                        </div>
+                    `;
+                    updateProfileForm.insertAdjacentHTML('afterbegin', remHtml);
+                }
+            }
+
             // Rate Alert
             if (!data.isReadyForTransactions) {
                 const rateAlert = document.getElementById('rateAlert');
@@ -2258,7 +2324,19 @@ async function loadDashboard() {
             applyStaticTranslations(content);
         } else {
             console.error('Dashboard auth error:', data.error);
-            window.location.href = 'index.html';
+            content.innerHTML = `
+                <div class="card" style="text-align: center; padding: 40px; margin-top: 20px;">
+                    <h2 class="gold-text">${t('Access Denied')}</h2>
+                    <p style="margin-bottom: 25px;">${t('Please log in or register to access the dashboard.')}</p>
+                    <div style="display: flex; gap: 15px; justify-content: center;">
+                        <button onclick="window.location.href='login.html'">${t('Login')}</button>
+                        <button onclick="window.location.href='register.html'" style="background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold);">${t('Register')}</button>
+                    </div>
+                </div>
+            `;
+            if (loader) loader.classList.add('hidden');
+            content.classList.remove('hidden');
+            applyStaticTranslations(content);
         }
     } catch (err) {
         console.error('Dashboard rendering error:', err);
@@ -3508,7 +3586,7 @@ function addPhotoToGrid(fileOrUrl) {
     Object.assign(item.style, {
         position: 'relative',
         width: '120px',
-        height: '120px',
+            height: '160px',
         borderRadius: '8px',
         overflow: 'hidden',
         boxShadow: '0 2px 5px rgba(0,0,0,0.5)',
