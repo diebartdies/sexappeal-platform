@@ -33,6 +33,7 @@ const translations = {
         'Close': 'Cerrar',
         'Save Changes': 'Guardar Cambios',
         'Edit': 'Editar',
+        'Edit Profile': 'Editar Perfil',
         'Unknown': 'Desconocido',
         'N/A': 'N/D',
         
@@ -232,6 +233,17 @@ const translations = {
         'Show in public directory (active)': 'Mostrar en directorio público (activo)',
         'WhatsApp Number': 'Número de WhatsApp',
         'Manage Photos': 'Administrar Fotos',
+        
+        // Notifications & Welcome
+        'Notifications & Pending Items': 'Notificaciones y Elementos Pendientes',
+        'No pending actions at this time.': 'No hay acciones pendientes en este momento.',
+        'Welcome Guide & How It Works': 'Guía de Bienvenida y Cómo Funciona',
+        'Privacy Guarantee:': 'Garantía de Privacidad:',
+        'Visibility Control:': 'Control de Visibilidad:',
+        'Uploading Photos:': 'Subida de Fotos:',
+        'WhatsApp Connections:': 'Conexiones por WhatsApp:',
+        'Profile Tiers:': 'Niveles de Perfil:',
+        'Dismiss': 'Ocultar',
         
         // Privacy Shield
         '100% Privacy Guarantee': 'Garantía de Privacidad 100%',
@@ -446,8 +458,10 @@ function initGlobalTopBar() {
             }
             userDisplay = `User: <strong style="color: var(--primary-gold);">${nameToShow}</strong>`;
             
-            if (user.role === 'professional' || user.role === 'admin') {
-                 userDisplay += `<a href="dashboard.html" style="color: #ccc; margin-left: 10px; text-decoration: none; font-size: 0.8rem;">${t('(Dashboard)')}</a>`;
+            if (user.role === 'professional') {
+                 userDisplay += `<a href="dashboard.html" style="color: var(--dark-bg); background-color: var(--primary-gold); margin-left: 10px; text-decoration: none; font-size: 0.8rem; font-weight: bold; padding: 3px 8px; border-radius: 4px;">✏️ ${t('Edit Profile')}</a>`;
+            } else if (user.role === 'admin') {
+                 userDisplay += `<a href="dashboard.html" style="color: #ccc; margin-left: 10px; text-decoration: none; font-size: 0.8rem;">${t('Admin Menu')}</a>`;
             }
             isLoggedIn = true;
         } catch (e) { console.error('Failed to parse user', e); }
@@ -1082,6 +1096,15 @@ async function loadTreasures(page = 1, append = false) {
                     categories['Standard'].push(treasure);
                 }
             });
+            
+            let loggedInProfId = null;
+            try {
+                const uStr = localStorage.getItem('user');
+                if (uStr) {
+                    const u = JSON.parse(uStr);
+                    if (u.role === 'professional') loggedInProfId = u._id;
+                }
+            } catch(e) {}
 
             for (const [cat, items] of Object.entries(categories)) {
                 if (items.length === 0) continue;
@@ -1138,7 +1161,13 @@ async function loadTreasures(page = 1, append = false) {
                     const photoUrl = (prof.photos && prof.photos.length > 0) ? prof.photos[0] : 'https://via.placeholder.com/300x400?text=No+Photo';
 
                     card.className = 'card treasure-card';
+                    card.style.position = 'relative';
+                    
+                    const isOwner = loggedInProfId && treasure._id === loggedInProfId;
+                    const editBtn = isOwner ? `<div style="position: absolute; top: 10px; right: 10px; background: var(--primary-gold); color: var(--dark-bg); font-size: 0.8rem; font-weight: bold; padding: 4px 8px; border-radius: 4px; cursor: pointer; z-index: 5;" onclick="window.location.href='dashboard.html'">✏️ ${t('Edit')}</div>` : '';
+
                     card.innerHTML = `
+                        ${editBtn}
                         <div class="treasure-img-container" style="cursor: pointer;" onclick="window.location.href='treasure.html?alias=${encodeURIComponent(prof.alias || '')}'">
                             <img class="treasure-img" src="${photoUrl}" alt="${prof.alias || 'Unknown'}">
                         </div>
@@ -1230,14 +1259,14 @@ async function loadTreasureDetails() {
             } catch(e) {}
 
             const editBtnHtml = isOwner ? `
-                <button onclick="window.location.href='dashboard.html'" title="${t('Edit Profile')}" style="position: absolute; top: 20px; right: 105px; background: transparent; border: none; cursor: pointer; transition: transform 0.2s ease; z-index: 10;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary-gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                <button onclick="window.location.href='dashboard.html'" title="${t('Edit Profile')}" style="position: absolute; top: 20px; right: 105px; padding: 6px 12px; font-size: 0.85rem; background: var(--primary-gold); color: var(--dark-bg); font-weight: bold; border: none; border-radius: 4px; cursor: pointer; transition: background 0.3s ease; z-index: 10;">
+                    ✏️ ${t('Edit Profile')}
                 </button>
             ` : '';
 
             const photoReminderHtml = (isOwner && (!prof.photos || prof.photos.length === 0)) ? `
                 <div style="background: rgba(212, 175, 55, 0.1); border: 1px dashed var(--primary-gold); padding: 15px; margin-bottom: 20px; border-radius: 8px; text-align: center; color: var(--primary-gold);">
-                    <strong>${t('Reminder:')}</strong> ${t('This is your first time accessing your profile. Please click the yellow pen icon to load your profile photos!')}
+                    <strong>${t('Reminder:')}</strong> ${t('This is your first time accessing your profile. Please click the "Edit Profile" button to load your photos!')}
                 </div>
             ` : '';
 
@@ -2202,6 +2231,76 @@ async function loadDashboard() {
             const prof = user.professionalProfile || {};
             const isApproved = user.verificationStatus === 'approved';
 
+            const insertRef = document.querySelector('#dashboardContent > .grid') || content.firstChild;
+
+            // Welcome Instructions / How Site Works
+            if (user.role === 'professional' && !localStorage.getItem('hideWelcomeGuide') && !document.getElementById('welcomeGuideSection')) {
+                const welcomeSection = document.createElement('div');
+                welcomeSection.id = 'welcomeGuideSection';
+                welcomeSection.className = 'card';
+                welcomeSection.style.marginBottom = '20px';
+                welcomeSection.style.background = 'rgba(212, 175, 55, 0.05)';
+                welcomeSection.style.border = '1px solid rgba(212, 175, 55, 0.4)';
+                welcomeSection.style.position = 'relative';
+
+                welcomeSection.innerHTML = `
+                    <button id="dismissWelcomeBtn" style="position: absolute; top: 15px; right: 15px; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold); padding: 4px 8px; font-size: 0.8rem; border-radius: 4px; cursor: pointer; transition: background 0.3s;" onmouseover="this.style.background='rgba(212,175,55,0.1)'" onmouseout="this.style.background='transparent'">${t('Dismiss')}</button>
+                    <h3 class="gold-text" style="margin-bottom: 15px;">📖 ${t('Welcome Guide & How It Works')}</h3>
+                    <ul style="line-height: 1.6; color: #ccc; margin-left: 20px; font-size: 0.95rem;">
+                        <li style="margin-bottom: 10px;"><strong>${t('Privacy Guarantee:')}</strong> Our platform uses zero cookies and zero third-party trackers. Your identity and client interactions remain completely confidential.</li>
+                        <li style="margin-bottom: 10px;"><strong>${t('Visibility Control:')}</strong> You can instantly hide or show your profile on the public grid using the "Show in public directory" checkbox below.</li>
+                        <li style="margin-bottom: 10px;"><strong>${t('Uploading Photos:')}</strong> Once approved, use the dashed rectangle in the "Manage Photos" section to upload or re-arrange your gallery.</li>
+                        <li style="margin-bottom: 10px;"><strong>${t('WhatsApp Connections:')}</strong> Clients connect directly via your provided WhatsApp number. We charge zero commissions per connection.</li>
+                        <li style="margin-bottom: 10px;"><strong>${t('Profile Tiers:')}</strong> Your category (Elite, Premium, etc.) is automatically calculated based on your assets (apartment, wardrobe, location).</li>
+                    </ul>
+                `;
+                content.insertBefore(welcomeSection, insertRef);
+
+                document.getElementById('dismissWelcomeBtn').addEventListener('click', () => {
+                    localStorage.setItem('hideWelcomeGuide', 'true');
+                    welcomeSection.remove();
+                });
+            }
+
+            // Notifications & Pending Actions
+            if (user.role === 'professional' && !document.getElementById('notificationCenter')) {
+                const notifSection = document.createElement('div');
+                notifSection.id = 'notificationCenter';
+                notifSection.className = 'card fileteado-section';
+                notifSection.style.marginBottom = '20px';
+                notifSection.style.border = '1px solid var(--primary-gold)';
+
+                let alertsHtml = '';
+                
+                if (user.verificationStatus === 'pending') {
+                    alertsHtml += `<div style="background: rgba(255,165,0,0.1); border-left: 4px solid orange; padding: 10px; margin-bottom: 10px;">⏳ <strong>Pending Verification:</strong> Your identity documents are under review. Approval typically takes up to 48 hours.</div>`;
+                } else if (user.verificationStatus === 'rejected') {
+                    alertsHtml += `<div style="background: rgba(255,0,0,0.1); border-left: 4px solid var(--accent-red); padding: 10px; margin-bottom: 10px;">❌ <strong>Verification Rejected:</strong> Your profile was not approved. Please contact support.</div>`;
+                }
+
+                if (isApproved && (!prof.photos || prof.photos.length === 0)) {
+                    alertsHtml += `<div style="background: rgba(212,175,55,0.1); border-left: 4px solid var(--primary-gold); padding: 10px; margin-bottom: 10px;">📸 <strong>Action Required:</strong> Please upload at least one photo below to appear in the directory.</div>`;
+                }
+
+                if (!data.isReadyForTransactions && isApproved) {
+                    alertsHtml += `<div style="background: rgba(255,0,0,0.1); border-left: 4px solid var(--accent-red); padding: 10px; margin-bottom: 10px;">💰 <strong>Rate Update:</strong> Please acknowledge the new pricing rates in the alert above to maintain your visibility.</div>`;
+                }
+
+                if (prof.subscriptionStatus === 'suspended') {
+                    alertsHtml += `<div style="background: rgba(255,0,0,0.1); border-left: 4px solid var(--accent-red); padding: 10px; margin-bottom: 10px;">🛑 <strong>Account Suspended:</strong> Your profile is hidden due to unpaid balances. Upload your receipt.</div>`;
+                }
+
+                if (!alertsHtml) {
+                    alertsHtml = `<div style="color: #888; font-style: italic;">${t('No pending actions at this time.')}</div>`;
+                }
+
+                notifSection.innerHTML = `
+                    <h3 class="gold-text" style="margin-bottom: 15px;">🔔 ${t('Notifications & Pending Items')}</h3>
+                    ${alertsHtml}
+                `;
+                content.insertBefore(notifSection, insertRef);
+            }
+
             // Connection Requests section
             let connSection = document.getElementById('connectionRequestsSection');
             if (!connSection && user.role === 'professional') {
@@ -2217,7 +2316,7 @@ async function loadDashboard() {
                         <button id="btnViewConnections" style="width: auto; padding: 10px 20px; background: var(--primary-gold); color: var(--dark-bg);">View Pending Requests</button>
                     </div>
                 `;
-                content.insertBefore(connSection, content.firstChild);
+                content.insertBefore(connSection, insertRef);
                 
                 document.getElementById('btnViewConnections').addEventListener('click', openPendingConnectionsModal);
             }
@@ -2349,19 +2448,6 @@ async function loadDashboard() {
             const duoStatus = document.getElementById('duoStatus');
             if (duoStatus) {
                 duoStatus.innerHTML = prof.isDuo ? `<p>Connected in Duo mode.</p>` : `<p>Not currently in a Duo.</p>`;
-            }
-
-            // Reminder for new users
-            if (prof.photos && prof.photos.length === 0 && isApproved) {
-                const updateProfileForm = document.getElementById('updateProfileForm');
-                if (updateProfileForm && !document.getElementById('dashboardPhotoReminder')) {
-                    const remHtml = `
-                        <div id="dashboardPhotoReminder" style="background: rgba(212, 175, 55, 0.1); border: 1px dashed var(--primary-gold); padding: 15px; margin-bottom: 20px; border-radius: 8px; text-align: center; color: var(--primary-gold);">
-                            <strong>${t('Welcome!')}</strong> ${t('This is your first time accessing your dashboard. Please load your profile photos in the rectangular frame below to become visible in the directory.')}
-                        </div>
-                    `;
-                    updateProfileForm.insertAdjacentHTML('afterbegin', remHtml);
-                }
             }
 
             // Rate Alert
