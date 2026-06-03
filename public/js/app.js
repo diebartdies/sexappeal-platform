@@ -668,8 +668,14 @@ function injectGoogleLogin(container) {
             if (data.success) {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('is18Plus', 'true');
+                sessionStorage.setItem('valid_entry', 'true');
                 if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
-                if (data.user.role === 'professional' && data.user.professionalProfile && data.user.professionalProfile.alias) {
+                
+                const intended = sessionStorage.getItem('intended_destination');
+                if (intended) {
+                    sessionStorage.removeItem('intended_destination');
+                    window.location.href = intended;
+                } else if (data.user.role === 'professional' && data.user.professionalProfile && data.user.professionalProfile.alias) {
                     window.location.href = `treasure.html?alias=${encodeURIComponent(data.user.professionalProfile.alias)}`;
                 } else {
                     window.location.href = data.user.role === 'professional' ? 'dashboard.html' : 'categories.html';
@@ -717,7 +723,15 @@ if (btnEnter) {
     // Pure frontend age-gate bypass: Guests don't need a backend token to view public profiles
     localStorage.setItem('is18Plus', 'true');
     sessionStorage.setItem('ancestor_code', 'index.html'); // Ensure flow guardian is happy
-    window.location.href = 'categories.html';
+    sessionStorage.setItem('valid_entry', 'true');
+    
+    const intended = sessionStorage.getItem('intended_destination');
+    if (intended) {
+        sessionStorage.removeItem('intended_destination');
+        window.location.href = intended;
+    } else {
+        window.location.href = 'categories.html';
+    }
   });
 }
 
@@ -748,7 +762,7 @@ if (loginForm) {
 
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = document.getElementById('email').value;
+        const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
         const alert = document.getElementById('loginAlert');
 
@@ -762,8 +776,14 @@ if (loginForm) {
             if (data.success) {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('is18Plus', 'true');
+                sessionStorage.setItem('valid_entry', 'true');
                 if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
-                if (data.user.role === 'professional' && data.user.professionalProfile && data.user.professionalProfile.alias) {
+                
+                const intended = sessionStorage.getItem('intended_destination');
+                if (intended) {
+                    sessionStorage.removeItem('intended_destination');
+                    window.location.href = intended;
+                } else if (data.user.role === 'professional' && data.user.professionalProfile && data.user.professionalProfile.alias) {
                     window.location.href = `treasure.html?alias=${encodeURIComponent(data.user.professionalProfile.alias)}`;
                 } else {
                     window.location.href = 'dashboard.html';
@@ -793,7 +813,7 @@ if (registerForm) {
 
     // Append all form fields
     formData.append('role', 'professional');
-    formData.append('email', document.getElementById('regEmail').value);
+    formData.append('email', document.getElementById('regEmail').value.trim());
     formData.append('password', document.getElementById('regPassword').value);
     formData.append('alias', document.getElementById('regAlias').value);
     formData.append('bio', document.getElementById('regBio').value);
@@ -862,7 +882,7 @@ if (verifyForm) {
     verifyForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         // Use the input value if it exists, otherwise fall back to the URL parameter
-        const email = (emailInput && emailInput.value) ? emailInput.value : new URLSearchParams(window.location.search).get('email');
+        const email = (emailInput && emailInput.value) ? emailInput.value.trim() : new URLSearchParams(window.location.search).get('email');
         const code = document.getElementById('verifyCode') ? document.getElementById('verifyCode').value : '';
         const alert = document.getElementById('verifyAlert');
 
@@ -876,8 +896,14 @@ if (verifyForm) {
             if (data.success) {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('is18Plus', 'true');
+                sessionStorage.setItem('valid_entry', 'true');
                 if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
-                if (data.user.role === 'professional' && data.user.professionalProfile && data.user.professionalProfile.alias) {
+                
+                const intended = sessionStorage.getItem('intended_destination');
+                if (intended) {
+                    sessionStorage.removeItem('intended_destination');
+                    window.location.href = intended;
+                } else if (data.user.role === 'professional' && data.user.professionalProfile && data.user.professionalProfile.alias) {
                     window.location.href = `treasure.html?alias=${encodeURIComponent(data.user.professionalProfile.alias)}`;
                 } else {
                     window.location.href = 'dashboard.html';
@@ -896,7 +922,7 @@ const forgotPasswordForm = document.getElementById('forgotPasswordForm');
 if (forgotPasswordForm) {
     forgotPasswordForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = document.getElementById('forgotEmail').value;
+        const email = document.getElementById('forgotEmail').value.trim();
         const alert = document.getElementById('forgotAlert');
 
         try {
@@ -925,7 +951,7 @@ const resetPasswordForm = document.getElementById('resetPasswordForm');
 if (resetPasswordForm) {
     resetPasswordForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = document.getElementById('resetEmail').value;
+        const email = document.getElementById('resetEmail').value.trim();
         const code = document.getElementById('resetCode').value;
         const password = document.getElementById('resetNewPassword').value;
         const alert = document.getElementById('resetAlert');
@@ -1471,23 +1497,26 @@ async function initializeFilters() {
 
         const controlsBar = document.createElement('div');
         Object.assign(controlsBar.style, {
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            marginBottom: '20px', padding: '10px 15px', backgroundColor: 'rgba(15,15,15,0.6)',
-            borderRadius: '8px', border: '1px solid #333', backdropFilter: 'blur(5px)'
+            position: 'sticky', top: '65px', zIndex: '800',
+            display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0',
+            marginBottom: '20px', padding: '5px', backgroundColor: 'rgba(10, 10, 10, 0.85)',
+            borderRadius: '30px', border: '1px solid rgba(212, 175, 55, 0.4)', backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)', boxShadow: '0 4px 15px rgba(0,0,0,0.6)',
+            width: 'fit-content', margin: '0 auto 20px auto'
         });
 
         const openFilterBtn = document.createElement('button');
-        openFilterBtn.innerHTML = `<svg style="width:16px; height:16px; margin-right:8px; vertical-align:text-top;" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg> ${t('Controls / Filters')}`;
+        openFilterBtn.innerHTML = `<svg style="width:20px; height:20px; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>`;
         Object.assign(openFilterBtn.style, {
-            background: 'transparent', border: '1px solid white', color: 'white',
-            padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.9rem',
-            display: 'flex', alignItems: 'center'
+            background: 'transparent', border: 'none', color: 'var(--primary-gold)',
+            padding: '8px 12px', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', transition: 'color 0.3s ease'
         });
         openFilterBtn.onclick = openDrawer;
 
         const gridToggles = document.createElement('div');
         gridToggles.style.display = 'flex';
-        gridToggles.style.gap = '10px';
+        gridToggles.style.gap = '0';
 
         if (!document.getElementById('gridLayoutStyles')) {
             const gridStyle = document.createElement('style');
@@ -1552,6 +1581,7 @@ async function initializeFilters() {
             fg.style.width = '100%';
         });
         
+        
         const formElements = filterForm.querySelectorAll('select, input, button');
         formElements.forEach(el => {
             if (el.type === 'checkbox') return;
@@ -1561,6 +1591,43 @@ async function initializeFilters() {
                 el.style.marginBottom = '5px';
             }
         });
+            
+            const oldSubmit = filterForm.querySelector('button[type="submit"], input[type="submit"]');
+            if (oldSubmit) oldSubmit.remove();
+            
+            const btnContainer = document.createElement('div');
+            btnContainer.style.display = 'flex';
+            btnContainer.style.gap = '10px';
+            btnContainer.style.marginTop = '15px';
+            
+            const clearBtn = document.createElement('button');
+            clearBtn.type = 'button';
+            clearBtn.textContent = t('Clear');
+            clearBtn.style.flex = '1';
+            clearBtn.style.background = 'transparent';
+            clearBtn.style.color = '#ccc';
+            clearBtn.style.border = '1px solid #444';
+            clearBtn.style.padding = '10px';
+            clearBtn.style.borderRadius = '4px';
+            clearBtn.style.cursor = 'pointer';
+            clearBtn.onclick = () => window.location.href = 'categories.html';
+            
+            const applyBtn = document.createElement('button');
+            applyBtn.type = 'submit';
+            applyBtn.textContent = t('Apply Filters');
+            applyBtn.style.flex = '2';
+            applyBtn.style.background = 'var(--primary-gold)';
+            applyBtn.style.color = '#111';
+            applyBtn.style.border = 'none';
+            applyBtn.style.fontWeight = 'bold';
+            applyBtn.style.padding = '10px';
+            applyBtn.style.borderRadius = '4px';
+            applyBtn.style.cursor = 'pointer';
+            
+            btnContainer.appendChild(clearBtn);
+            btnContainer.appendChild(applyBtn);
+            filterForm.appendChild(btnContainer);
+            
         applyStaticTranslations(filterDrawer);
     }
 
@@ -1655,11 +1722,6 @@ async function initializeFilters() {
     // Add change listener to recalculate counts instantly when dropdowns change
     filterForm.addEventListener('change', () => {
         setTimeout(applyCountsToDropdowns, 300); // Small delay to let sub-dropdowns populate
-        
-        // Auto-submit the form seamlessly after options populate
-        setTimeout(() => {
-            filterForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-        }, 350);
     });
 }
 
@@ -1780,6 +1842,9 @@ async function applyCountsToDropdowns() {
             resetKeys.forEach(k => testFilters[k] = '');
             const count = countMatches(testFilters);
             
+            // Always display the option from the database, even if count is 0
+            opt.style.display = '';
+            opt.disabled = false;
             opt.textContent = `${opt.dataset.origText} (${count})`;
         });
     };
@@ -3848,18 +3913,21 @@ async function setupLocationDropdowns(provinceId, cityId, neighborhoodId, isFilt
         const res = await fetch(`${API_URL}/locations/provinces?limit=100`);
         const data = await res.json();
         if (data.success && data.data) {
-            fetchedProvinces = true;
-            data.data.forEach(p => {
-                const val = typeof p === 'string' ? p : (p.name || '');
-                if (!val) return;
-                const id = typeof p === 'string' ? '' : (p._id || '');
-                const opt = document.createElement('option');
-                opt.value = val;
-                if (id) opt.dataset.id = id;
-                opt.textContent = val;
-                if (prefillData.province === val) opt.selected = true;
-                provinceEl.appendChild(opt);
-            });
+            let pList = Array.isArray(data.data) ? data.data : (data.data.provinces || []);
+            if (pList.length > 0) {
+                fetchedProvinces = true;
+                pList.forEach(p => {
+                    const val = typeof p === 'string' ? p : (p.name || '');
+                    if (!val) return;
+                    const id = typeof p === 'string' ? '' : (p._id || '');
+                    const opt = document.createElement('option');
+                    opt.value = val;
+                    if (id) opt.dataset.id = id;
+                    opt.textContent = val;
+                    if (prefillData.province === val) opt.selected = true;
+                    provinceEl.appendChild(opt);
+                });
+            }
         }
     } catch (e) {
         console.error('Failed to load provinces from API', e);
@@ -4110,9 +4178,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         'home.html': ['dashboard.html', 'home.html']
     };
 
+    if (effectivePage === 'index.html' || effectivePage === 'login.html') {
+        sessionStorage.setItem('valid_entry', 'true');
+    }
+
     if (effectivePage === 'index.html') {
         sessionStorage.setItem('ancestor_code', 'index.html');
     } else {
+        // STRICT DOOR POLICY: Enforce entry via index or login
+        if (!isPublicPage) {
+            const referrer = document.referrer;
+            const isExternalReferrer = referrer && !referrer.includes(window.location.hostname);
+            
+            if (isExternalReferrer || sessionStorage.getItem('valid_entry') !== 'true') {
+                sessionStorage.setItem('intended_destination', window.location.href);
+                console.warn(`[Flow Guardian] Strict entry enforced. Redirecting to start.`);
+                window.location.replace('/index.html');
+                return;
+            }
+        }
+
         const currentAncestorCode = sessionStorage.getItem('ancestor_code');
         const allowed = allowedAncestors[effectivePage];
 
@@ -4280,7 +4365,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         let prov = p.get('province');
         
         setupLocationDropdowns('provinceSelect', 'citySelect', 'neighborhoodSelect', true, { province: prov, city: p.get('city'), neighborhood: p.get('neighborhood') });
-        await initializeFilters();
+        try {
+            await initializeFilters();
+        } catch(e) {
+            console.error('Error initializing dynamic filters:', e);
+        }
         
         setTimeout(applyCountsToDropdowns, 500); // Trigger calculation once the DOM fully loads and options exist
     }
