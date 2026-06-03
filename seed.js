@@ -4,6 +4,7 @@ const Province = require('./models/Province');
 const City = require('./models/City');
 const Neighborhood = require('./models/Neighborhood');
 const ActivityLog = require('./models/ActivityLog');
+const PotentialProfessional = require('./models/PotentialProfessional');
 const fs = require('fs');
 const path = require('path');
 
@@ -48,6 +49,9 @@ const seedData = async () => {
 
         console.log('Clearing old neighborhoods...');
         await Neighborhood.deleteMany();
+
+        console.log('Clearing old potential professionals (leads)...');
+        await PotentialProfessional.deleteMany();
 
         console.log('Seeding provinces...');
         const provincesList = [
@@ -233,6 +237,17 @@ const seedData = async () => {
                 { professional: profs[1]._id, action: 'update_profile', ipAddress: '10.0.0.6', userAgent: 'Windows NT 10.0; Win64; x64' }
             ]);
         }
+
+        console.log('Seeding dummy potential professionals (scraped leads)...');
+        const dummyLeads = [];
+        for (let i = 1; i <= 25; i++) {
+            dummyLeads.push({
+                phone: `+54 9 11 4444-55${(i % 100).toString().padStart(2, '0')}`,
+                sourceUrl: `https://example-escorts-directory.com/profile/${i}`,
+                status: i % 3 === 0 ? 'contacted' : (i % 5 === 0 ? 'rejected' : 'pending')
+            });
+        }
+        await PotentialProfessional.insertMany(dummyLeads);
 
         console.log('✅ 100 professionals and dummy traces loaded successfully!');
         process.exit();

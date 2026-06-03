@@ -397,12 +397,13 @@ function applyStaticTranslations(rootNode = document.body) {
 
 // --- Plausible Analytics (Zero-Cookie, Privacy First) ---
 (function injectPlausible() {
+    /* Temporarily disabled until analytics.drsrv.net.ar DNS is configured
     const script = document.createElement('script');
     script.defer = true;
     script.setAttribute('data-domain', 'sexappeal.drsrv.net.ar');
-    // Using tagged-events extension to capture custom WhatsApp click conversions
     script.src = 'https://analytics.drsrv.net.ar/js/script.tagged-events.js';
     document.head.appendChild(script);
+    */
 
     // Initialize custom event tracker array
     window.plausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments) };
@@ -510,7 +511,7 @@ function initGlobalTopBar() {
     rightGroup.style.gap = '15px';
 
     const langBtn = document.createElement('button');
-    langBtn.innerHTML = currentLang === 'en' ? '🌐 ES' : '🌐 EN';
+    langBtn.innerHTML = currentLang === 'en' ? '<span title="Cambiar a Español">🇦🇷 ES</span>' : '<span title="Switch to English">🇺🇸 EN</span>';
     Object.assign(langBtn.style, {
         background: 'transparent', border: '1px solid white', borderRadius: '4px',
         color: 'white', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold',
@@ -1755,27 +1756,27 @@ async function initializeFilters() {
 }
 
 let allProfsCache = null;
+let profsFetchPromise = null;
 
 async function applyCountsToDropdowns() {
     const filterForm = document.getElementById('filterForm');
     if (!filterForm) return;
 
     if (!allProfsCache) {
-        try {
-            // Fetch all active professionals to calculate dynamic facet counts
+        if (!profsFetchPromise) {
             const url = new URL(`${API_URL}/professionals`);
             url.searchParams.set('limit', 5000);
             url.searchParams.set('_', new Date().getTime()); // Prevent browser from caching old seed data
-            const res = await fetch(url);
-            let data = { success: false };
-            try { data = await res.json(); } catch(e) {}
-            if (data.success) {
-                allProfsCache = data.data;
-            } else {
-                return;
-            }
-        } catch (e) {
-            console.error('Error fetching profs for counts', e);
+            profsFetchPromise = fetch(url).then(res => res.json()).catch(e => {
+                console.error('Error fetching profs for counts', e);
+                return { success: false };
+            });
+        }
+        const data = await profsFetchPromise;
+        if (data && data.success) {
+            allProfsCache = data.data;
+        } else {
+            profsFetchPromise = null; // Reset to allow retry
             return;
         }
     }
@@ -1896,9 +1897,9 @@ async function applyCountsToDropdowns() {
         });
     };
 
-    updateSelectCounts(qualitySelect, 'quality', ['specialty']);
+    updateSelectCounts(qualitySelect, 'quality', []);
     if (specialtyContainer && specialtyContainer.tagName === 'SELECT') {
-        updateSelectCounts(specialtyContainer, 'specialty', ['quality']);
+        updateSelectCounts(specialtyContainer, 'specialty', []);
     }
     updateSelectCounts(provEl, 'province', ['city', 'neighborhood']);
     updateSelectCounts(cityEl, 'city', ['neighborhood']);
