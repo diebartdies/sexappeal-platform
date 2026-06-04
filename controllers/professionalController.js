@@ -48,16 +48,6 @@ function checkIsActive(profile) {
 // @access  Public
 exports.getProfessionals = async (req, res, next) => {
   try {
-    // Generate cache key ignoring the cache-busting '_' parameter from the frontend
-    const queryForCache = { ...req.query };
-    delete queryForCache._;
-    const cacheKey = 'getProfessionals_' + JSON.stringify(queryForCache);
-
-    const cachedData = cache.get(cacheKey);
-    if (cachedData && cachedData.expires > Date.now()) {
-      return res.status(200).json(cachedData.response);
-    }
-
     let query = { 
       role: 'professional', 
       isVerified: true,
@@ -79,8 +69,8 @@ exports.getProfessionals = async (req, res, next) => {
     if (req.query.specialty && req.query.specialty.trim()) {
       const specialties = req.query.specialty.trim().split(',').map(s => s.trim()).filter(Boolean);
       if (specialties.length > 0) {
-        // Use $in to match any of the selected specialties
-        query['professionalProfile.services'] = { $in: specialties };
+        // Case-insensitive match for each selected specialty
+        query['professionalProfile.services'] = { $in: specialties.map(s => new RegExp('^' + s + '$', 'i')) };
       }
     }
 
@@ -102,7 +92,7 @@ exports.getProfessionals = async (req, res, next) => {
     const total = await User.countDocuments(query);
 
     const professionals = await User.find(query)
-      .select('professionalProfile.alias professionalProfile.quality professionalProfile.bio professionalProfile.services professionalProfile.location professionalProfile.pricing professionalProfile.measurements professionalProfile.height professionalProfile.eyeColor professionalProfile.hasTattoos professionalProfile.photos professionalProfile.workingHours professionalProfile.workingDays -_id')
+      .select('professionalProfile.alias professionalProfile.quality professionalProfile.bio professionalProfile.services professionalProfile.location professionalProfile.pricing professionalProfile.measurements professionalProfile.height professionalProfile.eyeColor professionalProfile.hasTattoos professionalProfile.photos professionalProfile.workingHours professionalProfile.workingDays')
       .skip(skip)
       .limit(limit);
 
@@ -126,12 +116,6 @@ exports.getProfessionals = async (req, res, next) => {
       })
     };
 
-    // Store the response in cache
-    cache.set(cacheKey, {
-      response: responsePayload,
-      expires: Date.now() + CACHE_TTL
-    });
-
     res.status(200).json(responsePayload);
   } catch (error) {
     res.status(400).json({
@@ -150,7 +134,7 @@ exports.getProfessionalByAlias = async (req, res, next) => {
       'professionalProfile.alias': req.params.alias,
       role: 'professional',
       isVerified: true
-    }).select('professionalProfile.alias professionalProfile.quality professionalProfile.bio professionalProfile.services professionalProfile.location professionalProfile.pricing professionalProfile.measurements professionalProfile.height professionalProfile.eyeColor professionalProfile.hasTattoos professionalProfile.whatsappNumber professionalProfile.photos professionalProfile.workingHours professionalProfile.workingDays -_id');
+    }).select('professionalProfile.alias professionalProfile.quality professionalProfile.bio professionalProfile.services professionalProfile.location professionalProfile.pricing professionalProfile.measurements professionalProfile.height professionalProfile.eyeColor professionalProfile.hasTattoos professionalProfile.whatsappNumber professionalProfile.photos professionalProfile.workingHours professionalProfile.workingDays');
 
     if (!professional) {
       return res.status(404).json({

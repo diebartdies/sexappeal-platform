@@ -4,8 +4,8 @@ echo "==================================================="
 echo "🚨 BULLETPROOF REBUILD & RESET SCRIPT 🚨"
 echo "==================================================="
 
-echo "[0/8] Navigating to the correct project directory (/opt/sexappeal-platform)..."
-cd /opt/sexappeal-platform || { echo "Directory /opt/sexappeal-platform not found! Exiting."; exit 1; }
+echo "[0/8] Navigating to the correct project directory (/root/SexAppeal-platform)..."
+cd /root/SexAppeal-platform || { echo "Project directory not found! Exiting."; exit 1; }
 
 # 1. Ensure lsof is installed
 echo "[1/8] Checking for lsof utility..."
