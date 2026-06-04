@@ -1,0 +1,4 @@
+@echo off
+echo Running Cache Bumper...
+node bump_cache.js
+pause
