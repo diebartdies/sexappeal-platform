@@ -1159,7 +1159,10 @@ async function loadTreasures(page = 1, append = false) {
                     const card = document.createElement('div');
                     const prof = treasure.professionalProfile || {};
                     const quality = prof.quality || 'Standard';
-                    const photoUrl = (prof.photos && prof.photos.length > 0) ? prof.photos[0] : 'https://via.placeholder.com/300x400?text=No+Photo';
+                    
+                    // Ensure we grab a valid photo URL, ignoring empty strings
+                    const validPhotos = (prof.photos || []).filter(p => p && p.trim() !== '');
+                    const photoUrl = validPhotos.length > 0 ? validPhotos[0] : 'https://via.placeholder.com/300x400?text=No+Photo';
 
                     card.className = 'card treasure-card';
                     card.style.position = 'relative';
@@ -1492,6 +1495,7 @@ async function initializeFilters() {
         parentCard.style.border = 'none';
         parentCard.style.boxShadow = 'none';
         parentCard.style.padding = '0';
+        parentCard.style.display = 'block';
         filterDrawer.appendChild(parentCard);
         document.body.appendChild(filterDrawer);
 
@@ -1777,7 +1781,7 @@ async function applyCountsToDropdowns() {
             allProfsCache = data.data;
         } else {
             profsFetchPromise = null; // Reset to allow retry
-            return;
+                    allProfsCache = []; // Prevent indefinite locking, default to 0 counts
         }
     }
     

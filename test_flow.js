@@ -12,19 +12,21 @@ async function runTests() {
   try {
     // 1. Register a new professional
     console.log('\n[1] Testing Professional Registration...');
-    const regRes = await axios.post(`${API_URL}/auth/register`, {
-      email: 'test_pro_auto@example.com',
-      password: 'password123',
-      role: 'professional',
-      professionalProfile: {
-        alias: 'AutoTreasure',
-        quality: 'Standard',
-        bio: 'Automated test profile.',
-        location: { province: 'Buenos Aires', city: 'CABA', neighborhood: 'Palermo' },
-        measurements: '90-60-90',
-        height: '175cm',
-        services: ['Massage', 'love alchemy']
-      }
+    const regForm = new FormData();
+    regForm.append('email', 'test_pro_auto@example.com');
+    regForm.append('password', 'password123');
+    regForm.append('role', 'professional');
+    regForm.append('alias', 'AutoTreasure');
+    regForm.append('bio', 'Automated test profile.');
+    regForm.append('province', 'Buenos Aires');
+    regForm.append('city', 'CABA');
+    regForm.append('neighborhood', 'Palermo');
+    regForm.append('measurements', '90-60-90');
+    regForm.append('height', '175cm');
+    regForm.append('services', 'Massage,love alchemy');
+
+    const regRes = await axios.post(`${API_URL}/auth/register`, regForm, {
+        headers: regForm.getHeaders()
     });
     console.log('✓ Registration Successful:', regRes.data.message);
 

@@ -1,0 +1,4 @@
+@echo off
+echo Running Auto-Patcher...
+node patch_ui.js
+pause
