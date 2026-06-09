@@ -61,7 +61,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
 }));
 
 // --- Multer File Upload Configuration ---
-const uploadsDir = path.join(os.tmpdir(), 'sexappeal_uploads');
+const uploadsDir = path.join(__dirname, 'public', 'uploads', 'photos');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }

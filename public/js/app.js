@@ -3268,8 +3268,7 @@ if (updateProfileForm) {
                     'Authorization': `Bearer ${token}`
                 },
                 credentials: 'include',
-                body: formData,
-                keepalive: true // Ensures the save finishes even if the user closes the tab mid-save
+                body: formData
             });
             
             if (!res.ok) {
@@ -5676,4 +5675,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (document.getElementById('profDashboardContent')) loadProfDashboard();
     if (document.getElementById('treasureDetail')) loadTreasureDetails();
 
+});
 });

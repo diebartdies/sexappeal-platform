@@ -33,7 +33,7 @@ const approveAllPending = async () => {
 };
 
 // --- Node.js Image Compression Algorithm ---
-async function getCompressedBase64FromUrl(url) {
+async function getCompressedFileFromUrl(url, index) {
     try {
         const response = await fetch(url);
         const arrayBuffer = await response.arrayBuffer();
@@ -42,7 +42,12 @@ async function getCompressedBase64FromUrl(url) {
             .resize({ width: 1080, withoutEnlargement: true })
             .jpeg({ quality: 75 })
             .toBuffer();
-        return `data:image/jpeg;base64,${compressedBuffer.toString('base64')}`;
+        
+        const filename = `seed_photo_${Date.now()}_${index}.jpg`;
+        const filepath = path.join(__dirname, 'public', 'uploads', 'photos', filename);
+        fs.writeFileSync(filepath, compressedBuffer);
+        
+        return `/uploads/photos/${filename}`;
     } catch (err) {
         console.error(`Error compressing ${url}:`, err.message);
         return url; // Fallback to URL if compression fails
@@ -163,9 +168,10 @@ const seedData = async () => {
 
         console.log('Downloading and compressing sample photos (this may take a moment)...');
         const compressedPhotoSet = [];
-        for (const url of photoSet) {
-            const base64 = await getCompressedBase64FromUrl(url);
-            compressedPhotoSet.push(base64);
+        for (let i = 0; i < photoSet.length; i++) {
+            const url = photoSet[i];
+            const fileUrl = await getCompressedFileFromUrl(url, i);
+            compressedPhotoSet.push(fileUrl);
         }
 
         const locationPool = [
