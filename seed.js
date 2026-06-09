@@ -80,13 +80,6 @@ const seedData = async () => {
             'Tierra del Fuego, Antártida e Islas del Atlántico Sur', 'Tucumán', 'CABA'
         ];
 
-        console.log('Downloading and compressing sample photos (this may take a moment)...');
-        const compressedPhotoSet = [];
-        for (const url of photoSet) {
-            const base64 = await getCompressedBase64FromUrl(url);
-            compressedPhotoSet.push(base64);
-        }
-
         await Province.insertMany(provincesList.map(name => ({ name, countryCode: '054' })));
 
         console.log('Parsing cities from text file...');
@@ -167,6 +160,13 @@ const seedData = async () => {
             'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=1887&auto=format&fit=crop',
             'https://images.unsplash.com/photo-1589466725882-6cf1b8957b37?q=80&w=1887&auto=format&fit=crop'
         ];
+
+        console.log('Downloading and compressing sample photos (this may take a moment)...');
+        const compressedPhotoSet = [];
+        for (const url of photoSet) {
+            const base64 = await getCompressedBase64FromUrl(url);
+            compressedPhotoSet.push(base64);
+        }
 
         const locationPool = [
             // CABA
