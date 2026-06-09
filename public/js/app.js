@@ -4673,7 +4673,13 @@ function addPhotoToGrid(fileOrUrl) {
             let targetIndex = allItems.indexOf(this);
             if (draggedIndex < targetIndex) this.after(draggedItem);
             else this.before(draggedItem);
-                if (typeof window.saveProfessionalProfile === 'function') window.saveProfessionalProfile(true);
+            const explicitSaveBtn = document.getElementById('explicitSaveBtn');
+            if (explicitSaveBtn) {
+                explicitSaveBtn.classList.remove('hidden');
+                explicitSaveBtn.click();
+            } else if (typeof window.saveProfessionalProfile === 'function') {
+                window.saveProfessionalProfile(true);
+            }
         }
     });
 
@@ -4685,7 +4691,13 @@ function addPhotoToGrid(fileOrUrl) {
                 newFilesMap.delete(img.src);
             }
             item.remove();
-                if (typeof window.saveProfessionalProfile === 'function') window.saveProfessionalProfile(true);
+            const explicitSaveBtn = document.getElementById('explicitSaveBtn');
+            if (explicitSaveBtn) {
+                explicitSaveBtn.classList.remove('hidden');
+                explicitSaveBtn.click();
+            } else if (typeof window.saveProfessionalProfile === 'function') {
+                window.saveProfessionalProfile(true);
+            }
         }
     });
 
@@ -4705,9 +4717,15 @@ if (newPhotoInput) {
                 }
                 addPhotoToGrid(file);
             }
-                setTimeout(() => {
-                    if (typeof window.saveProfessionalProfile === 'function') window.saveProfessionalProfile(true);
-                }, 100);
+            setTimeout(() => {
+                const explicitSaveBtn = document.getElementById('explicitSaveBtn');
+                if (explicitSaveBtn) {
+                    explicitSaveBtn.classList.remove('hidden');
+                    explicitSaveBtn.click();
+                } else if (typeof window.saveProfessionalProfile === 'function') {
+                    window.saveProfessionalProfile(true);
+                }
+            }, 100);
         }
     });
 }
@@ -5230,7 +5248,8 @@ async function loadProfDashboard() {
                             if (!file.type.startsWith('image/')) continue;
                             addPhotoToGrid(file);
                         }
-                        document.getElementById('explicitSaveBtn').classList.remove('hidden');
+                    const explicitSaveBtn = document.getElementById('explicitSaveBtn');
+                    if (explicitSaveBtn) { explicitSaveBtn.classList.remove('hidden'); explicitSaveBtn.click(); }
                     }
                 });
             }
