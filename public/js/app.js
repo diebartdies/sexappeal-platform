@@ -447,6 +447,22 @@ function initGlobalTopBar() {
         }
     });
 
+    if (!document.getElementById('topBarMobileStyles')) {
+        const style = document.createElement('style');
+        style.id = 'topBarMobileStyles';
+        style.textContent = `
+            @media (max-width: 600px) {
+                #globalTopBar { padding: 0 5px !important; }
+                .brand-text { display: none !important; }
+                .brand-logo svg { margin-right: 5px !important; height: 22px !important; width: 22px !important; }
+                #globalTopBar button, #globalTopBar a { padding: 4px 6px !important; font-size: 0.75rem !important; }
+                .user-info-text { display: none !important; }
+                .left-group-back { margin-right: 5px !important; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
     const userInfo = document.createElement('div');
     userInfo.style.color = 'white';
     userInfo.style.fontSize = '0.9rem';
@@ -463,7 +479,7 @@ function initGlobalTopBar() {
             if (user.role === 'professional' && user.professionalProfile?.alias) {
                 nameToShow = user.professionalProfile.alias;
             }
-            userDisplay = `User: <strong style="color: var(--primary-gold);">${nameToShow}</strong>`;
+            userDisplay = `<span class="user-info-text">User: </span><strong style="color: var(--primary-gold);">${nameToShow}</strong>`;
             
             if (user.role === 'professional') {
                  userDisplay += `<a href="/profDashboard.html" style="color: var(--dark-bg); background-color: var(--primary-gold); margin-left: 10px; text-decoration: none; font-size: 0.8rem; font-weight: bold; padding: 3px 8px; border-radius: 4px;">✏️ ${t('Edit Profile')}</a>`;
@@ -572,6 +588,7 @@ function initGlobalTopBar() {
     
     if (currentPage !== 'index.html') {
         const backBtn = document.createElement('button');
+        backBtn.className = 'left-group-back';
         backBtn.innerHTML = '&#8592; ' + t('Back');
         Object.assign(backBtn.style, {
             background: 'transparent', border: '1px solid white', borderRadius: '4px',
@@ -585,11 +602,12 @@ function initGlobalTopBar() {
     }
 
     const brandLogo = document.createElement('div');
+    brandLogo.className = 'brand-logo';
     brandLogo.innerHTML = `
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="height: 28px; width: 28px; margin-right: 10px; border-radius: 4px; padding: 2px;">
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
         </svg>
-        <span style="font-family: 'Playfair Display', serif; font-weight: 900; letter-spacing: 1px; color: white;">SexAppeal</span>
+        <span class="brand-text" style="font-family: 'Playfair Display', serif; font-weight: 900; letter-spacing: 1px; color: white;">SexAppeal</span>
     `;
     brandLogo.style.display = 'flex';
     brandLogo.style.alignItems = 'center';
@@ -5081,8 +5099,19 @@ async function loadProfDashboard() {
             const stats = data.stats || { profileViews: 0, whatsappClicks: 0, phoneClicks: 0 };
             const isApproved = user.verificationStatus === 'approved';
 
+            // Make the form naturally wider to utilize the extra space
+            formObj.style.maxWidth = '1200px';
+            formObj.style.width = '100%';
+            formObj.style.margin = '0 auto';
+
             formObj.innerHTML = `
                 <h2 class="gold-text" style="margin-bottom: 20px;">Professional Dashboard</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 class="gold-text" style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                        Professional Dashboard <span style="font-size: 1.5rem; text-shadow: 0 0 5px rgba(212,175,55,0.5);">✏️</span>
+                    </h2>
+                    <button type="button" onclick="window.history.back()" onmouseover="this.style.background='rgba(212, 175, 55, 0.1)'" onmouseout="this.style.background='transparent'" style="padding: 6px 12px; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold); border-radius: 4px; cursor: pointer; transition: background 0.3s ease; font-weight: bold; font-size: 0.85rem;">&#8592; Back</button>
+                </div>
                 
                 <!-- 1. Statistics Top Frame -->
                 <div class="card fileteado-section" style="margin-bottom: 20px; border: 1px solid var(--primary-gold);">
@@ -5115,6 +5144,7 @@ async function loadProfDashboard() {
                     </div>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
                         <div style="flex: 1; min-width: 150px;"><label>Alias</label><input type="text" id="upAlias" value="${prof.alias || ''}" style="width: 100%; padding: 8px; background: #333; color: #888; border: 1px solid #444; border-radius: 4px;" disabled></div>
+                        <div style="flex: 1; min-width: 150px;"><label>Birth Date</label><input type="date" id="upBirthDate" value="${prof.birthDate ? new Date(prof.birthDate).toISOString().split('T')[0] : ''}" style="width: 100%; padding: 8px; background: #333; color: #888; border: 1px solid #444; border-radius: 4px; cursor: not-allowed;" disabled></div>
                         <div style="flex: 1; min-width: 150px;"><label>Height</label><input type="text" id="upHeight" value="${prof.height || ''}" style="width: 100%; padding: 8px; background: #333; color: #888; border: 1px solid #444; border-radius: 4px;" disabled></div>
                         <div style="flex: 1; min-width: 150px;"><label>Measures</label><input type="text" id="upMeasurements" value="${prof.measurements || ''}" style="width: 100%; padding: 8px; background: #333; color: #888; border: 1px solid #444; border-radius: 4px;" disabled></div>
                     </div>
@@ -5422,18 +5452,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         'home.html': ['dashboard.html', 'home.html']
     };
 
-    if (publicPages.includes(effectivePage) || is18Plus === 'true' || hasToken) {
+    if (publicPages.includes(effectivePage) || hasToken) {
         sessionStorage.setItem('valid_entry', 'true');
     }
 
     if (effectivePage === 'index.html') {
         sessionStorage.setItem('ancestor_code', 'index.html');
     } else {
+        const referrer = document.referrer;
+        const isFromOurSite = referrer && referrer.includes(window.location.hostname);
+
         // STRICT DOOR POLICY: Enforce entry via index or login
         if (!isPublicPage) {
-            const referrer = document.referrer;
-            const isExternalReferrer = referrer && !referrer.includes(window.location.hostname);
+            const hasActiveSession = sessionStorage.getItem('valid_entry') === 'true';
             
+            // If they are a guest opening a brand new tab / direct link, force them to index.html
+            if (!hasActiveSession && !hasToken && !isFromOurSite) {
+                sessionStorage.setItem('intended_destination', window.location.href);
+                console.warn(`[Flow Guardian] Direct access blocked for guest. Redirecting to start.`);
+                window.location.replace('/index.html');
+                return;
+            } else if (!hasActiveSession) {
+                sessionStorage.setItem('valid_entry', 'true');
+            }
+
             if (sessionStorage.getItem('valid_entry') !== 'true') {
                 sessionStorage.setItem('intended_destination', window.location.href);
                 console.warn(`[Flow Guardian] Strict entry enforced. Redirecting to start.`);
@@ -5445,8 +5487,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const currentAncestorCode = sessionStorage.getItem('ancestor_code');
         const allowed = allowedAncestors[effectivePage];
 
-        // If they are logged in or age-verified but opening a new tab/bookmark directly to internal pages, seed the flow naturally
-        if (!currentAncestorCode && (is18Plus === 'true' || hasToken) && (effectivePage === 'categories.html' || effectivePage === 'treasure.html' || effectivePage === 'dashboard.html')) {
+        // Let logged-in users OR guests who naturally navigated from our site seed the flow
+        if (!currentAncestorCode && (hasToken || isFromOurSite) && (effectivePage === 'categories.html' || effectivePage === 'treasure.html' || effectivePage === 'dashboard.html' || effectivePage === 'profDashboard.html')) {
             sessionStorage.setItem('ancestor_code', 'index.html');
         } else if (allowed && (!currentAncestorCode || !allowed.includes(currentAncestorCode))) {
             console.warn(`[Flow Guardian] Access denied. Invalid ancestor code for ${effectivePage}. Redirecting to start.`);
@@ -5486,8 +5528,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const token = localStorage.getItem('token');
         
-        // Guests won't have a token, but they should still auto-forward if verified
-        if (is18Plus === 'true') {
+        // Only auto-forward if they are an actively logged-in user with a token.
+        // Guests must click the +18 Enter button on every new session to legally re-verify.
+        if (hasToken) {
             const intended = sessionStorage.getItem('intended_destination');
             if (intended) {
                 sessionStorage.removeItem('intended_destination');
