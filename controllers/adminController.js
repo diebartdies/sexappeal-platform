@@ -23,11 +23,23 @@ exports.getAllProfessionals = async (req, res, next) => {
 
     const total = await User.countDocuments(query);
 
+    const professionalsData = professionals.map(p => {
+        const obj = p.toObject();
+        if (obj.professionalProfile && obj.professionalProfile.photos) {
+            obj.professionalProfile.photos = obj.professionalProfile.photos.map(photo => {
+                if (typeof photo === 'string') return photo;
+                if (photo.url) return photo.url;
+                return `/api/v1/professionals/photo/${obj._id}/${photo._id}`;
+            });
+        }
+        return obj;
+    });
+
     res.status(200).json({
       success: true,
       count: professionals.length,
       pagination: { page: parseInt(page, 10), limit: parseInt(limit, 10), total },
-      data: professionals
+      data: professionalsData
     });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
@@ -52,11 +64,23 @@ exports.getPendingVerifications = async (req, res, next) => {
 
     const total = await User.countDocuments(query);
 
+    const pendingData = pending.map(p => {
+        const obj = p.toObject();
+        if (obj.professionalProfile && obj.professionalProfile.photos) {
+            obj.professionalProfile.photos = obj.professionalProfile.photos.map(photo => {
+                if (typeof photo === 'string') return photo;
+                if (photo.url) return photo.url;
+                return `/api/v1/professionals/photo/${obj._id}/${photo._id}`;
+            });
+        }
+        return obj;
+    });
+
     res.status(200).json({
       success: true,
       count: pending.length,
       pagination: { page: parseInt(page, 10), limit: parseInt(limit, 10), total },
-      data: pending
+      data: pendingData
     });
   } catch (error) {
     res.status(400).json({
@@ -93,11 +117,13 @@ exports.sendBroadcastEmail = async (req, res, next) => {
       }).catch(err => console.error(`Failed to send email to ${p.email}:`, err));
     });
 
+    const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket ? req.socket.remoteAddress : req.ip);
     await ActivityLog.create({
       professional: req.user.id, // Log against the admin who triggered it
       action: 'admin_broadcast_email',
-      ipAddress: req.ip,
+      ipAddress: clientIp,
       userAgent: req.headers['user-agent'],
+      isGuest: false,
       details: { adminId: req.user.id, count: professionals.length, subject, audience }
     });
 
@@ -121,7 +147,9 @@ exports.getActivityLogs = async (req, res, next) => {
     if (action) query.action = { $regex: action, $options: 'i' };
     if (ipAddress) query.ipAddress = { $regex: ipAddress, $options: 'i' };
     if (userAgent) query.userAgent = { $regex: userAgent, $options: 'i' };
-    if (isGuest !== undefined) query.isGuest = isGuest === 'true';
+    if (isGuest !== undefined) {
+        query.isGuest = isGuest === 'true' ? true : { $ne: true };
+    }
 
     const skip = (page - 1) * limit;
 
@@ -175,11 +203,13 @@ exports.verifyProfessional = async (req, res, next) => {
     user.isVerified = status === 'approved';
     await user.save();
 
+    const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket ? req.socket.remoteAddress : req.ip);
     await ActivityLog.create({
       professional: user._id,
       action: status === 'approved' ? 'admin_approve_verification' : 'admin_reject_verification',
-      ipAddress: req.ip,
+      ipAddress: clientIp,
       userAgent: req.headers['user-agent'],
+      isGuest: false,
       details: { adminId: req.user.id }
     });
 
@@ -197,6 +227,54 @@ exports.verifyProfessional = async (req, res, next) => {
       success: false,
       error: error.message
     });
+  }
+};
+
+// @desc    Get pending payments
+// @route   GET /api/v1/admin/payments/pending
+// @access  Private/Admin
+exports.getPendingPayments = async (req, res, next) => {
+  try {
+    const pending = await User.find({
+      role: 'professional',
+      'professionalProfile.paymentReceiptUrl': { $exists: true, $ne: null },
+      'professionalProfile.paymentProcessed': { $ne: true }
+    }).select('email professionalProfile.alias professionalProfile.firstName professionalProfile.lastName professionalProfile.paymentReceiptUrl createdAt');
+
+    res.status(200).json({
+      success: true,
+      count: pending.length,
+      data: pending
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Acknowledge payment
+// @route   PUT /api/v1/admin/payments/:id/acknowledge
+// @access  Private/Admin
+exports.acknowledgePayment = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+
+    if (!user || user.role !== 'professional') {
+      return res.status(404).json({ success: false, error: 'Professional not found' });
+    }
+
+    user.professionalProfile.paymentProcessed = true;
+    user.professionalProfile.subscriptionStatus = 'active';
+
+    if (user.professionalProfile.invoices) {
+      user.professionalProfile.invoices.forEach(inv => {
+        if (inv.status === 'pending') inv.status = 'paid';
+      });
+    }
+
+    await user.save();
+    res.status(200).json({ success: true, data: user });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
   }
 };
 
@@ -222,6 +300,18 @@ exports.updateProfessionalProfile = async (req, res, next) => {
     }
 
     if (req.body.professionalProfile) {
+      if (req.body.professionalProfile.photos) {
+          const remainingUrls = req.body.professionalProfile.photos;
+          const keptPhotos = (user.professionalProfile.photos || []).filter(p => {
+              if (typeof p === 'string') return remainingUrls.includes(p);
+              if (p.url) return remainingUrls.includes(p.url);
+              const blobUrl = `/api/v1/professionals/photo/${user._id}/${p._id}`;
+              return remainingUrls.includes(blobUrl);
+          });
+          user.professionalProfile.photos = keptPhotos;
+          delete req.body.professionalProfile.photos;
+      }
+
       user.professionalProfile = {
         ...user.professionalProfile.toObject(),
         ...req.body.professionalProfile
@@ -230,17 +320,28 @@ exports.updateProfessionalProfile = async (req, res, next) => {
 
     await user.save();
 
+    const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket ? req.socket.remoteAddress : req.ip);
     await ActivityLog.create({
       professional: user._id,
       action: 'admin_edit_profile',
-      ipAddress: req.ip,
+      ipAddress: clientIp,
       userAgent: req.headers['user-agent'],
+      isGuest: false,
       details: { adminId: req.user.id }
     });
 
+    const responseUser = user.toObject();
+    if (responseUser.professionalProfile && responseUser.professionalProfile.photos) {
+        responseUser.professionalProfile.photos = responseUser.professionalProfile.photos.map(photo => {
+            if (typeof photo === 'string') return photo;
+            if (photo.url) return photo.url;
+            return `/api/v1/professionals/photo/${responseUser._id}/${photo._id}`;
+        });
+    }
+
     res.status(200).json({
       success: true,
-      data: user
+      data: responseUser
     });
   } catch (error) {
     res.status(400).json({

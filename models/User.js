@@ -12,7 +12,7 @@ const UserSchema = new mongoose.Schema({
     required: [true, 'Please add an email'],
     unique: true,
     match: [
-      /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
+      /.+@.+\..+/,
       'Please add a valid email'
     ]
   },
@@ -70,6 +70,15 @@ const UserSchema = new mongoose.Schema({
       enum: ['Standard', 'Silver', 'Gold', 'Premium', 'Elite'],
       default: 'Standard'
     },
+    firstName: String,
+    surname: String,
+    middleName: String,
+    idNumber: String,
+    birthDate: Date,
+    age: Number,
+    mobilePhone: String,
+    instagram: String,
+    facebook: String,
     bio: {
       type: String,
       maxlength: [500, 'Bio cannot be more than 500 characters']
@@ -100,7 +109,14 @@ const UserSchema = new mongoose.Schema({
     location: {
       province: String,
       city: String,
-      neighborhood: String
+      neighborhood: String,
+      street: String,
+      number: { type: String, match: [/^\d*$/, 'Only numbers allowed'] },
+      floor: { type: String, match: [/^\d*$/, 'Only numbers allowed'] },
+      apartment: String,
+      postalCode: String,
+      country: String,
+      zipCode: String
     },
     pricing: mongoose.Schema.Types.Mixed,
     measurements: String,
@@ -136,6 +152,11 @@ const UserSchema = new mongoose.Schema({
       type: Date,
       // Sets the trial end date to 30 days (1 month) from account creation
       default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    },
+    paymentReceiptUrl: String,
+    paymentProcessed: {
+      type: Boolean,
+      default: true
     },
     paymentHistory: [{
       date: { type: Date, default: Date.now },
@@ -173,6 +194,11 @@ const UserSchema = new mongoose.Schema({
     lastPhotoUpdate: {
       type: Date,
       default: Date.now
+    },
+    vacation: {
+      startDate: Date,
+      endDate: Date,
+      requestedAt: Date
     }
   },
   resetPasswordToken: String,

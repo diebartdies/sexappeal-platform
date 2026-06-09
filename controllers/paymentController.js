@@ -14,7 +14,13 @@ exports.uploadReceipt = async (req, res, next) => {
     // The file is automatically saved by the Multer middleware
     const receiptUrl = `/uploads/photos/${req.file.filename}`;
 
-    const user = await User.findById(req.user.id);
+    const user = await User.findByIdAndUpdate(req.user.id, {
+        $set: {
+            'professionalProfile.paymentReceiptUrl': receiptUrl,
+            'professionalProfile.paymentProcessed': false
+        }
+    }, { new: true });
+    
     if (!user) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }

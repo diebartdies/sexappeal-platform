@@ -2,8 +2,10 @@ const User = require('../models/User');
 const config = require('../config/appConfig');
 const sendEmail = require('../sendEmail');
 const crypto = require('crypto');
+const fs = require('fs');
 const ActivityLog = require('../models/ActivityLog');
 const { OAuth2Client } = require('google-auth-library');
+const Specialty = require('../models/Specialty');
 
 // @desc    Register user
 // @route   POST /api/v1/auth/register
@@ -11,17 +13,28 @@ const { OAuth2Client } = require('google-auth-library');
 exports.register = async (req, res, next) => {
   try {
     // Destructure all fields from the multipart form body
-    const { 
+    let { 
       email, password, role, alias, bio, hasOwnApartment, hasFantasyWardrobe, 
-      province, city, neighborhood, measurements, height, services, verificationGesture
+      province, city, neighborhood, measurements, height, services, verificationGesture,
+      firstName, surname, middleName, idNumber, birthDate, mobilePhone, street, number, floor, apartment, postalCode
     } = req.body;
+
+    // Normalize email to prevent case-sensitive duplicate accounts
+    if (email) email = email.toLowerCase().trim();
+
+    let age;
+    if (birthDate) {
+        const dob = new Date(birthDate);
+        age = Math.abs(new Date(Date.now() - dob.getTime()).getUTCFullYear() - 1970);
+    }
 
     // Reconstruct the professionalProfile object
     const professionalProfile = role === 'professional' ? {
+      firstName, surname, middleName, idNumber, birthDate: birthDate ? new Date(birthDate) : undefined, age, mobilePhone,
       alias, bio,
       hasOwnApartment: hasOwnApartment === 'true',
       hasFantasyWardrobe: hasFantasyWardrobe === 'true',
-      location: { province, city, neighborhood },
+      location: { province, city, neighborhood, street, number, floor, apartment, postalCode },
       measurements, height,
       services: services ? services.split(',').map(s => s.trim()).filter(Boolean) : []
     } : undefined;
@@ -33,6 +46,20 @@ exports.register = async (req, res, next) => {
         success: false,
         error: 'This email is already registered. If you forgot your password, please use the recovery option.'
       });
+    }
+
+    // Check if Alias is already taken (case-insensitive)
+    if (role === 'professional' && alias) {
+      let existingAlias = await User.findOne({ 
+        role: 'professional',
+        'professionalProfile.alias': { $regex: new RegExp('^' + alias.trim() + '$', 'i') } 
+      });
+      if (existingAlias) {
+        return res.status(400).json({
+          success: false,
+          error: 'This alias is already in use by another professional. Please choose a different one.'
+        });
+      }
     }
 
     // Generate a 6-digit verification code
@@ -58,8 +85,15 @@ exports.register = async (req, res, next) => {
       else professionalProfile.quality = 'Standard';
     }
 
-    // Get file paths from multer upload
-    const verificationDocuments = req.files ? req.files.map(file => `/uploads/photos/${file.filename}`) : [];
+    // Convert uploaded files to Base64 strings to store directly in the database
+    const verificationDocuments = [];
+    if (req.files) {
+      for (const file of req.files) {
+        const base64Data = fs.readFileSync(file.path, 'base64');
+        verificationDocuments.push(`data:${file.mimetype};base64,${base64Data}`);
+        if (fs.existsSync(file.path)) fs.unlinkSync(file.path); // Remove external file
+      }
+    }
 
     // Create user
     const user = await User.create({
@@ -75,6 +109,15 @@ exports.register = async (req, res, next) => {
       emailVerificationCode: verificationCode,
       emailVerificationCodeExpire: verificationCodeExpire
     });
+
+    // Sync the new Specialties many-to-many junction table
+    if (role === 'professional' && professionalProfile && professionalProfile.services && professionalProfile.services.length > 0) {
+      const specialtyDocs = professionalProfile.services.map(s => ({
+        user: user._id,
+        specialty: s
+      }));
+      await Specialty.insertMany(specialtyDocs).catch(err => console.error('Failed to sync specialties table:', err.message));
+    }
 
     if (role === 'professional') {
       const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket.remoteAddress || req.ip);
@@ -154,7 +197,8 @@ Welcome to the Architecture of Intimacy.`;
 // @access  Public
 exports.verifyEmail = async (req, res, next) => {
   try {
-    const { email, code } = req.body;
+    let { email, code } = req.body;
+    if (email) email = email.toLowerCase().trim();
 
     if (!email || !code) {
       return res.status(400).json({ success: false, error: 'Please provide email and code' });
@@ -187,7 +231,8 @@ exports.verifyEmail = async (req, res, next) => {
 // @access  Public
 exports.login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
+    if (email) email = email.toLowerCase().trim();
 
     // Validate email & password
     if (!email || !password) {
@@ -288,7 +333,8 @@ exports.guestLogin = async (req, res, next) => {
 // @access  Public
 exports.forgotPassword = async (req, res, next) => {
   try {
-    const { email } = req.body;
+    let { email } = req.body;
+    if (email) email = email.toLowerCase().trim();
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -334,7 +380,8 @@ exports.forgotPassword = async (req, res, next) => {
 // @access  Public
 exports.resetPassword = async (req, res, next) => {
   try {
-    const { email, code, password } = req.body;
+    let { email, code, password } = req.body;
+    if (email) email = email.toLowerCase().trim();
 
     if (!email || !code || !password) {
       return res.status(400).json({ success: false, error: 'Please provide email, code, and new password' });
@@ -382,7 +429,8 @@ exports.googleAuth = async (req, res, next) => {
       audience: process.env.GOOGLE_CLIENT_ID,
     });
 
-    const { email, name, email_verified } = ticket.getPayload();
+    let { email, name, email_verified } = ticket.getPayload();
+    if (email) email = email.toLowerCase().trim();
 
     if (!email_verified) {
       return res.status(400).json({ success: false, error: 'Google email is not verified' });

@@ -12,22 +12,17 @@
 // Select the database to use.
 use('sexappeal'); // Adjust if your database name is different
 
-// 1. Find 4 random professionals who currently have the "Standard" quality
-const professionalsToUpgrade = db.getCollection('users').aggregate([
-  { $match: { role: 'professional', 'professionalProfile.quality': 'Standard' } },
-  { $sample: { size: 4 } }
-]).toArray();
+// Approve "test pro 12" account
+const aliasToApprove = 'Test Pro 12';
 
-// 2. Extract their unique IDs
-const idsToUpgrade = professionalsToUpgrade.map(p => p._id);
+const updateResult = db.getCollection('users').updateOne(
+  { 'professionalProfile.alias': { $regex: new RegExp(`^${aliasToApprove}$`, 'i') }, role: 'professional' },
+  { $set: { verificationStatus: 'approved', isVerified: true } }
+);
 
-// 3. Perform the bulk update to change their quality to "Elite"
-if (idsToUpgrade.length > 0) {
-  const updateResult = db.getCollection('users').updateMany(
-    { _id: { $in: idsToUpgrade } },
-    { $set: { 'professionalProfile.quality': 'Elite' } }
-  );
-  console.log(`Success! Upgraded ${updateResult.modifiedCount} professionals to the Elite category.`);
+console.log(`Matched: ${updateResult.matchedCount}, Modified: ${updateResult.modifiedCount}`);
+if (updateResult.modifiedCount > 0) {
+  console.log(`Successfully approved professional with alias: "${aliasToApprove}".`);
 } else {
-  console.log("No professionals found in the Standard category to upgrade.");
+  console.log(`Could not approve. Professional with alias "${aliasToApprove}" not found or already approved.`);
 }

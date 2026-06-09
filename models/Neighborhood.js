@@ -14,3 +14,17 @@ const NeighborhoodSchema = new mongoose.Schema({
 });
 
 module.exports = mongoose.model('Neighborhood', NeighborhoodSchema);
+
+
+
+
+
+
+
+
+
+
+
+
+
+

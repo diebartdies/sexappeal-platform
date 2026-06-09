@@ -1,5 +1,19 @@
 # Vitacora - SexAppeal Platform
 
+## [2026-06-06] - Security, Caching, and UI Updates
+
+### Fixed
+- **Dashboard Load Error (`404 Professional not found`)**: Updated the `/api/v1/professionals/me` route in `server.js` to correctly query the `User` database instead of the legacy `Professional` collection, restoring access to the dashboard for both professionals and admins.
+- **Aggressive Browser Caching**: Added a cache-buster query parameter (`?_=${new Date().getTime()}`) to the `/professionals/me` fetch request in `app.js` to prevent browsers from returning stale `404` errors after the backend fix.
+- **Duplicate Account Prevention**: Implemented email normalization (trimming and lowercasing) across all authentication routes (`register`, `login`, `verifyEmail`, `forgotPassword`, `resetPassword`, `googleAuth`) in `authController.js` to prevent case-sensitive duplicate registrations.
+- **Alias Conflict Protection**: Added strict, case-insensitive checks during professional registration (`authController.js`) to prevent new users from claiming an alias already in use by another active professional.
+
+### Changed
+- **Floating Control Menu**: Refactored the UI controls (Filters & Grid Layout toggles) in `app.js` to use `position: fixed`. It is now permanently anchored and centered at the bottom of the screen (`bottom: 30px`), remaining visible and accessible regardless of scroll position.
+- **Transparent Control UI**: Removed the dark background, glass-blur effect, borders, and box-shadows from the floating control menu, resulting in a cleaner, fully transparent floating interface.
+- **Target Webpages Expansion**: Updated the universal scraping script (`scrape_phones.js`) to include `gemidos.tv` and `empireescorts.com` for lead generation. Extended the alias filter to ignore the word "empire".
+- **Category Pricing Visibility**: Removed category prices from the main dashboard, professional discovery grids, and admin control panels for a cleaner aesthetic.
+
 ## [2026-05-25] - UI/UX Overhaul & Admin Dashboard Enhancements
 
 ### Added

@@ -16,6 +16,7 @@ const translations = {
     'es': {
         // Landing Page
         'I am 18+ - Enter': 'Soy mayor de 18 - Entrar',
+        'I AM +18 - ENTER': 'SOY MAYOR DE 18 - ENTRAR',
         'Entering...': 'Entrando...',
         'Uploading...': 'Subiendo...',
         'Exit': 'Salir',
@@ -34,6 +35,9 @@ const translations = {
         'Save Changes': 'Guardar Cambios',
         'Edit': 'Editar',
         'Edit Profile': 'Editar Perfil',
+        'Phone Call': 'Llamada Telefónica',
+        'Welcome to SexAppeal!': '¡Bienvenida a SexAppeal!',
+        'You are now approved and ready to upload your personal photos. Note: The first photo will be treated as your profile Thumbnail. You can drag and drop photos below to change their order at any time.': 'Ya estás aprobada y lista para subir tus fotos personales. Nota: La primera foto será tu miniatura de perfil. Puedes arrastrar y soltar las fotos a continuación para cambiar su orden en cualquier momento.',
         'Unknown': 'Desconocido',
         'N/A': 'N/D',
         
@@ -67,6 +71,7 @@ const translations = {
         'Contact on WhatsApp': 'Contactar por WhatsApp',
         'No professionals match your current selection.': 'Ningún profesional coincide con su selección actual.',
         'No professionals have been revealed yet. Please check back later.': 'Aún no se han revelado profesionales. Vuelve más tarde.',
+        'No more treasures to show.': 'No hay más tesoros para mostrar.',
         'Filters': 'Filtros',
         'Controls / Filters': 'Controles / Filtros',
         
@@ -108,7 +113,8 @@ const translations = {
         'Massage': 'Masajes',
         'Virtual Connection': 'Conexión Virtual',
         'Love Alchemy': 'Alquimia de Amor',
-        'Content Media': 'Contenido Multimedia',
+        'Media Content': 'Contenido Multimedia',
+        'Streaming Kisses': 'Besos en Streaming',
         
         // Qualities
         'Quality': 'Calidad',
@@ -460,9 +466,9 @@ function initGlobalTopBar() {
             userDisplay = `User: <strong style="color: var(--primary-gold);">${nameToShow}</strong>`;
             
             if (user.role === 'professional') {
-                 userDisplay += `<a href="dashboard.html" style="color: var(--dark-bg); background-color: var(--primary-gold); margin-left: 10px; text-decoration: none; font-size: 0.8rem; font-weight: bold; padding: 3px 8px; border-radius: 4px;">✏️ ${t('Edit Profile')}</a>`;
+                 userDisplay += `<a href="/profDashboard.html" style="color: var(--dark-bg); background-color: var(--primary-gold); margin-left: 10px; text-decoration: none; font-size: 0.8rem; font-weight: bold; padding: 3px 8px; border-radius: 4px;">✏️ ${t('Edit Profile')}</a>`;
             } else if (user.role === 'admin') {
-                 userDisplay += `<a href="dashboard.html" style="color: #ccc; margin-left: 10px; text-decoration: none; font-size: 0.8rem;">${t('Admin Menu')}</a>`;
+                 userDisplay += `<a href="/dashboard.html" style="color: #ccc; margin-left: 10px; text-decoration: none; font-size: 0.8rem;">${t('Admin Menu')}</a>`;
             }
             isLoggedIn = true;
         } catch (e) { console.error('Failed to parse user', e); }
@@ -511,7 +517,8 @@ function initGlobalTopBar() {
     rightGroup.style.gap = '15px';
 
     const langBtn = document.createElement('button');
-    langBtn.innerHTML = currentLang === 'en' ? '<span title="Cambiar a Español">🇦🇷 ES</span>' : '<span title="Switch to English">🇺🇸 EN</span>';
+    langBtn.innerHTML = currentLang === 'en' ? '<span title="Cambiar a Español">🇪🇸 ES</span>' : '<span title="Switch to English">🇺🇸 EN</span>';
+    langBtn.innerHTML = currentLang === 'en' ? '<span title="Cambiar a Español" style="display: flex; align-items: center;"><img src="https://flagcdn.com/w40/ar.png" width="24" alt="Argentina" style="border-radius: 2px;"></span>' : '<span title="Switch to English" style="display: flex; align-items: center;"><img src="https://flagcdn.com/w40/us.png" width="24" alt="USA" style="border-radius: 2px;"></span>';
     Object.assign(langBtn.style, {
         background: 'transparent', border: '1px solid white', borderRadius: '4px',
         color: 'white', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold',
@@ -686,14 +693,24 @@ function injectGoogleLogin(container) {
                 sessionStorage.setItem('valid_entry', 'true');
                 if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
                 
-                const intended = sessionStorage.getItem('intended_destination');
+                let intended = sessionStorage.getItem('intended_destination');
+                sessionStorage.removeItem('intended_destination');
+
+                // Prevent regular users from being forced into the dashboard by a stale intended_destination
+                if (intended && intended.includes('dashboard.html') && data.user.role === 'user') {
+                    intended = null;
+                }
+
                 if (intended) {
-                    sessionStorage.removeItem('intended_destination');
                     window.location.href = intended;
-                } else if (data.user.role === 'professional' && data.user.professionalProfile && data.user.professionalProfile.alias) {
-                    window.location.href = `treasure.html?alias=${encodeURIComponent(data.user.professionalProfile.alias)}`;
+                } else if (data.user.role === 'professional') {
+                    window.location.href = '/perfil/' + encodeURIComponent(data.user.professionalProfile?.alias || '');
+                    window.location.href = '/perfil/' + encodeURIComponent(data.user.professionalProfile?.alias || '');
+                    window.location.href = '/perfil/' + encodeURIComponent(data.user.professionalProfile?.alias || '');
+                } else if (data.user.role === 'admin') {
+                    window.location.href = '/dashboard.html';
                 } else {
-                    window.location.href = data.user.role === 'professional' ? 'dashboard.html' : 'categories.html';
+                    window.location.href = '/categories.html';
                 }
             } else {
                 showAlert(document.getElementById('loginAlert'), data.error || 'Google login failed');
@@ -720,49 +737,81 @@ function injectGoogleLogin(container) {
 
 // --- Auth Handling ---
 
-// Initialize buttons safely after DOM loads (Fixes missing element errors if script is in <head>)
-// The DOMContentLoaded wrapper is removed for this block because the <script> tag in index.html
-// is at the end of the <body>, guaranteeing the button elements exist when this code runs.
-// Guest Login (Landing Page Enter Button) - Check for both possible IDs
-const btnEnter = document.getElementById('btn-enter') || document.getElementById('btn-18-plus');
-if (btnEnter) {
-  btnEnter.addEventListener('click', (e) => {
-    e.preventDefault(); // Prevents default form submission or link following
-    if (window.location.protocol === 'file:') {
-      alert(`ERROR: You must open the site via a local server (e.g., ${BASE_ORIGIN}). The buttons will not work if you double-click the HTML file!`);
-      return;
+// Aggressive Click Interceptor for the Landing Page
+// Runs in the "Capture" phase to override ANY inline onclick attributes (e.g. onclick="window.location...")
+// that might be redirecting the page before the JS age-gate token is safely saved.
+document.addEventListener('click', (e) => {
+    const path = window.location.pathname;
+    if (path.endsWith('/') || path.endsWith('index.html')) {
+        let btn = e.target.closest('button, a, [class*="btn"], [id*="btn"], [onclick]');
+        
+        // Fallback: Catch clicks on custom text wrappers like <div>I AM +18 - ENTER</div>
+        if (!btn && e.target.textContent) {
+            const t = e.target.textContent.toLowerCase();
+            if (t.includes('18') || t.includes('enter') || t.includes('entrar')) {
+                btn = e.target;
+            }
+        }
+
+        if (!btn) return;
+
+        const text = (btn.textContent || '').toLowerCase();
+        const href = (btn.getAttribute('href') || '').toLowerCase();
+        const onclickAttr = (btn.getAttribute('onclick') || '').toLowerCase();
+        
+        // Explicitly ignore Login and Register links so they continue to work natively
+        if (href.includes('login') || href.includes('register') || text.includes('login') || text.includes('register') || text.includes('iniciar') || text.includes('registrarse')) {
+            return;
+        }
+
+        const isEnterBtn = btn.id === 'btn-enter' || btn.id === 'btn-18-plus' || btn.id === 'btn-18' ||
+                           text.includes('18') || text.includes('enter') || text.includes('entrar') || text.includes('i am +18') ||
+                           href.includes('categories.html') || onclickAttr.includes('categories.html') || onclickAttr.includes('location.href');
+                           
+        if (isEnterBtn) {
+            e.preventDefault();
+            e.stopImmediatePropagation(); // Crucial: Stops any inline HTML onclick from firing
+
+            if (window.location.protocol === 'file:') {
+                alert(`ERROR: You must open the site via a local server (e.g., ${BASE_ORIGIN}). The buttons will not work if you double-click the HTML file!`);
+                return;
+            }
+
+            // Only alter text if the button isn't exclusively an image/SVG
+            if (!btn.innerHTML.includes('<img') && !btn.innerHTML.includes('<svg')) {
+                btn.textContent = t('Entering...');
+            }
+            btn.style.pointerEvents = 'none';
+            btn.style.opacity = '0.7';
+
+            localStorage.setItem('is18Plus', 'true');
+            sessionStorage.setItem('ancestor_code', 'index.html');
+            sessionStorage.setItem('valid_entry', 'true');
+
+            const intended = sessionStorage.getItem('intended_destination');
+            if (intended) {
+                sessionStorage.removeItem('intended_destination');
+                window.location.href = intended;
+            } else {
+                const targetUrl = (btn.getAttribute('href') && btn.getAttribute('href') !== '#' && !href.startsWith('javascript')) ? btn.getAttribute('href') : 'categories.html';
+                window.location.href = targetUrl;
+            }
+        }
+        
+        const isExitBtn = btn.id === 'btn-exit' || text.includes('exit') || text.includes('salir') || href.includes('google.com');
+        if (isExitBtn) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            window.location.href = 'https://www.google.com';
+        }
     }
-    btnEnter.textContent = t('Entering...');
-    btnEnter.disabled = true;
+}, true); // <-- The "true" makes it a Capture Phase listener
 
-    // Pure frontend age-gate bypass: Guests don't need a backend token to view public profiles
-    localStorage.setItem('is18Plus', 'true');
-    sessionStorage.setItem('ancestor_code', 'index.html'); // Ensure flow guardian is happy
-    sessionStorage.setItem('valid_entry', 'true');
-    
-    const intended = sessionStorage.getItem('intended_destination');
-    if (intended) {
-        sessionStorage.removeItem('intended_destination');
-        window.location.href = intended;
-    } else {
-        window.location.href = 'categories.html';
-    }
-  });
-}
-
-// Exit button on landing page
-const btnExit = document.getElementById('btn-exit');
-if (btnExit) {
-  btnExit.addEventListener('click', (e) => {
-    e.preventDefault(); // Prevents default form submission or link following
-    window.location.href = 'https://www.google.com';
-  });
-}
-
-// Login
-const loginForm = document.getElementById('loginForm');
-if (loginForm) {
-    // Create and inject the blog reminder message
+document.addEventListener('DOMContentLoaded', () => {
+    // Login
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        // Create and inject the blog reminder message
     const blogReminder = document.createElement('div');
     blogReminder.innerHTML = `
         <p style="text-align: center; color: var(--primary-gold); background-color: rgba(212, 175, 55, 0.1); padding: 10px; border-radius: 4px; border: 1px solid var(--primary-gold); margin-bottom: 20px;">
@@ -794,14 +843,22 @@ if (loginForm) {
                 sessionStorage.setItem('valid_entry', 'true');
                 if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
                 
-                const intended = sessionStorage.getItem('intended_destination');
+                let intended = sessionStorage.getItem('intended_destination');
+                sessionStorage.removeItem('intended_destination');
+
+                // Prevent regular users from being forced into the dashboard by a stale intended_destination
+                if (intended && intended.includes('dashboard.html') && data.user.role === 'user') {
+                    intended = null;
+                }
+
                 if (intended) {
-                    sessionStorage.removeItem('intended_destination');
                     window.location.href = intended;
-                } else if (data.user.role === 'professional' && data.user.professionalProfile && data.user.professionalProfile.alias) {
-                    window.location.href = `treasure.html?alias=${encodeURIComponent(data.user.professionalProfile.alias)}`;
+                } else if (data.user.role === 'professional') {
+                    window.location.href = '/profDashboard.html';
+                } else if (data.user.role === 'admin') {
+                    window.location.href = '/dashboard.html';
                 } else {
-                    window.location.href = 'dashboard.html';
+                    window.location.href = '/categories.html';
                 }
             } else if (data.error && data.error.includes('verify your email')) {
                 window.location.href = `verify.html?email=${encodeURIComponent(email)}`;
@@ -811,8 +868,9 @@ if (loginForm) {
         } catch (err) {
             showAlert(alert, 'Server connection error');
         }
-    });
-}
+        });
+    }
+});
 
 // Register
 const registerForm = document.getElementById('registerForm');
@@ -839,6 +897,19 @@ if (registerForm) {
     formData.append('neighborhood', document.getElementById('regNeighborhood').value);
     formData.append('measurements', document.getElementById('regMeasurements').value);
     formData.append('height', document.getElementById('regHeight').value);
+    
+    formData.append('firstName', document.getElementById('regFirstName')?.value || '');
+    formData.append('lastName', document.getElementById('regLastName')?.value || '');
+    formData.append('birthDate', document.getElementById('regBirthDate')?.value || '');
+    formData.append('street', document.getElementById('regStreet')?.value || '');
+    formData.append('number', document.getElementById('regStreetNumber')?.value || '');
+    formData.append('floor', document.getElementById('regFloor')?.value || '');
+    formData.append('apartment', document.getElementById('regApartment')?.value || '');
+    formData.append('postalCode', document.getElementById('regPostCode')?.value || '');
+    formData.append('mobilePhone', document.getElementById('regMobilePhone')?.value || '');
+    formData.append('instagram', document.getElementById('regInstagram')?.value || '');
+    formData.append('facebook', document.getElementById('regFacebook')?.value || '');
+    formData.append('quality', document.getElementById('regQuality')?.value || 'Standard');
 
     const servicesEl = document.getElementById('regServices');
     let servicesVal = '';
@@ -914,14 +985,22 @@ if (verifyForm) {
                 sessionStorage.setItem('valid_entry', 'true');
                 if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
                 
-                const intended = sessionStorage.getItem('intended_destination');
+                let intended = sessionStorage.getItem('intended_destination');
+                sessionStorage.removeItem('intended_destination');
+
+                // Prevent regular users from being forced into the dashboard by a stale intended_destination
+                if (intended && intended.includes('dashboard.html') && data.user.role === 'user') {
+                    intended = null;
+                }
+
                 if (intended) {
-                    sessionStorage.removeItem('intended_destination');
                     window.location.href = intended;
-                } else if (data.user.role === 'professional' && data.user.professionalProfile && data.user.professionalProfile.alias) {
-                    window.location.href = `treasure.html?alias=${encodeURIComponent(data.user.professionalProfile.alias)}`;
+                } else if (data.user.role === 'professional') {
+                    window.location.href = '/profDashboard.html';
+                } else if (data.user.role === 'admin') {
+                    window.location.href = '/dashboard.html';
                 } else {
-                    window.location.href = 'dashboard.html';
+                    window.location.href = '/categories.html';
                 }
             } else {
                 showAlert(alert, data.error || 'Invalid code');
@@ -1053,20 +1132,27 @@ async function loadTreasures(page = 1, append = false) {
     const city = urlParams.get('city');
     const neighborhood = urlParams.get('neighborhood');
 
-    const url = new URL(`${API_URL}/professionals`);
-    if (specialty && specialty.trim()) {
-        url.searchParams.set('specialty', specialty);
-    }
-    if (quality && quality.trim()) {
-        url.searchParams.set('quality', quality);
-    }
-    if (province && province.trim()) url.searchParams.set('province', province);
-    if (city && city.trim()) url.searchParams.set('city', city);
-    if (neighborhood && neighborhood.trim()) url.searchParams.set('neighborhood', neighborhood);
-
+    let url;
+    let usingSpecialtyApi = false;
     const limit = 50;
-    url.searchParams.set('page', page);
-    url.searchParams.set('limit', limit);
+
+    // Call the dedicated Specialty API if we are filtering strictly by a single specialty
+    if (specialty && specialty.trim() && !specialty.includes(',')) {
+        url = new URL(`${API_URL}/specialties/users`);
+        url.searchParams.set('specialty', specialty.trim());
+        usingSpecialtyApi = true;
+    } else {
+        url = new URL(`${API_URL}/professionals`);
+        if (specialty && specialty.trim()) url.searchParams.set('specialty', specialty);
+        if (quality && quality.trim()) url.searchParams.set('quality', quality);
+        if (province && province.trim()) url.searchParams.set('province', province);
+        if (city && city.trim()) url.searchParams.set('city', city);
+        if (neighborhood && neighborhood.trim()) url.searchParams.set('neighborhood', neighborhood);
+
+        url.searchParams.set('page', page);
+        url.searchParams.set('limit', limit);
+    }
+
     // Add a cache-busting parameter to ensure fresh data is always fetched
     url.searchParams.set('_', new Date().getTime());
 
@@ -1077,6 +1163,31 @@ async function loadTreasures(page = 1, append = false) {
         }
         
         let data = await res.json();
+
+        if (usingSpecialtyApi && data.success) {
+            // Map junction table records back to full User objects
+            let users = data.data.map(record => record.user).filter(Boolean);
+            
+            // Manually apply standard discovery filters for active/exposed status
+            users = users.filter(u => u.isVerified && u.professionalProfile?.subscriptionStatus !== 'suspended' && u.professionalProfile?.isExposed !== false);
+
+            // Apply remaining user-selected filters on the frontend
+            if (quality && quality.trim()) {
+                users = users.filter(u => u.professionalProfile?.quality === quality.trim());
+            }
+            if (province && province.trim()) {
+                users = users.filter(u => (u.professionalProfile?.location?.province || '').toLowerCase().includes(province.trim().toLowerCase()));
+            }
+            if (city && city.trim()) {
+                users = users.filter(u => (u.professionalProfile?.location?.city || '').toLowerCase().includes(city.trim().toLowerCase()));
+            }
+            if (neighborhood && neighborhood.trim()) {
+                users = users.filter(u => (u.professionalProfile?.location?.neighborhood || '').toLowerCase().includes(neighborhood.trim().toLowerCase()));
+            }
+
+            data.data = users;
+            data.count = users.length;
+        }
 
         if (data.success && data.data.length > 0) {
             if (!append) {
@@ -1138,9 +1249,6 @@ async function loadTreasures(page = 1, append = false) {
                                     </h3>
                                 </div>
                             </div>
-                            <div style="font-family: monospace; font-size: 1rem; color: #fff; background: rgba(212, 175, 55, 0.1); padding: 4px 12px; border-radius: 4px; border: 1px solid rgba(212,175,55,0.3); white-space: nowrap;">
-                                ${meta.price}
-                            </div>
                         </div>
                     `;
                     
@@ -1167,11 +1275,7 @@ async function loadTreasures(page = 1, append = false) {
                     card.className = 'card treasure-card';
                     card.style.position = 'relative';
                     
-                    const isOwner = loggedInProfId && treasure._id === loggedInProfId;
-                    const editBtn = isOwner ? `<div style="position: absolute; top: 10px; right: 10px; background: var(--primary-gold); color: var(--dark-bg); font-size: 0.8rem; font-weight: bold; padding: 4px 8px; border-radius: 4px; cursor: pointer; z-index: 5;" onclick="window.location.href='dashboard.html'">✏️ ${t('Edit')}</div>` : '';
-
                     card.innerHTML = `
-                        ${editBtn}
                         <div class="treasure-img-container" style="cursor: pointer;" onclick="window.location.href='treasure.html?alias=${encodeURIComponent(prof.alias || '')}'">
                             <img class="treasure-img" src="${photoUrl}" alt="${prof.alias || 'Unknown'}">
                         </div>
@@ -1199,17 +1303,27 @@ async function loadTreasures(page = 1, append = false) {
                 observer.observe(scrollTrigger);
             }
         } else {
-            // Ensure grid class is restored if no treasures are found so the fallback card centers correctly
-            grid.classList.add('grid');
-            const hasFilters = specialty || quality || province || city || neighborhood;
-            
-            grid.innerHTML = `
-                <div class="card" style="grid-column: 1/-1; text-align: center;">
-                    <h3 class="gold-text">${t('No Treasures Found')}</h3>
-                    <p style="margin-bottom: 20px;">${hasFilters ? t('No professionals match your current selection.') : t('No professionals have been revealed yet. Please check back later.')}</p>
-                    ${hasFilters ? `<button onclick="window.location.href='categories.html'">${t('Filter Again')}</button>` : ''}
-                </div>
-            `;
+            if (!append) {
+                // Ensure grid class is restored if no treasures are found so the fallback card centers correctly
+                grid.classList.add('grid');
+                const hasFilters = specialty || quality || province || city || neighborhood;
+                
+                grid.innerHTML = `
+                    <div class="card" style="grid-column: 1/-1; text-align: center;">
+                        <h3 class="gold-text">${t('No Treasures Found')}</h3>
+                        <p style="margin-bottom: 20px;">${hasFilters ? t('No professionals match your current selection.') : t('No professionals have been revealed yet. Please check back later.')}</p>
+                        ${hasFilters ? `<button onclick="window.location.href='categories.html'">${t('Filter Again')}</button>` : ''}
+                    </div>
+                `;
+            } else {
+                const endMsg = document.createElement('div');
+                endMsg.style.textAlign = 'center';
+                endMsg.style.padding = '20px';
+                endMsg.style.color = '#888';
+                endMsg.style.width = '100%';
+                endMsg.innerHTML = `<p>${t('No more treasures to show.')}</p>`;
+                grid.appendChild(endMsg);
+            }
         }
         applyStaticTranslations(grid);
     } catch (err) {
@@ -1263,8 +1377,8 @@ async function loadTreasureDetails() {
             } catch(e) {}
 
             const editBtnHtml = isOwner ? `
-                <button onclick="window.location.href='dashboard.html'" title="${t('Edit Profile')}" style="position: absolute; top: 20px; right: 105px; padding: 6px 12px; font-size: 0.85rem; background: var(--primary-gold); color: var(--dark-bg); font-weight: bold; border: none; border-radius: 4px; cursor: pointer; transition: background 0.3s ease; z-index: 10;">
-                    ✏️ ${t('Edit Profile')}
+                <button onclick="window.location.href='/profDashboard.html'" title="${t('Edit Profile')}" style="position: absolute; top: 15px; right: 105px; font-size: 1.8rem; background: transparent; color: var(--primary-gold); border: none; cursor: pointer; transition: transform 0.3s ease; z-index: 10; text-shadow: 0 0 8px rgba(212, 175, 55, 0.6);" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
+                    ✏️
                 </button>
             ` : '';
 
@@ -1308,7 +1422,6 @@ async function loadTreasureDetails() {
                     </div>
 
                     <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
-                        <p><strong>Location:</strong> ${prof.location ? `${prof.location.neighborhood || 'N/A'}, ${prof.location.city || 'N/A'}` : 'N/A'}</p>
                         <p><strong>Location:</strong> ${(() => {
                             if (!prof.location) return 'N/A';
                             const p = prof.location.province || '';
@@ -1323,8 +1436,9 @@ async function loadTreasureDetails() {
                         <p><strong>Hours:</strong> ${(prof.workingHours && prof.workingHours.start) ? prof.workingHours.start + ' to ' + prof.workingHours.end : 'Anytime'}</p>
                     </div>
 
-                    <div style="margin-top: 30px; text-align: center;">
-                        ${hasWhatsapp ? `<button onclick="contactOnWhatsApp('${prof.alias}')">${t('Contact on WhatsApp')}</button>` : ''}
+                    <div style="margin-top: 30px; text-align: center; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
+                        ${hasWhatsapp ? `<button onclick="contactOnWhatsApp('${prof.alias}')" style="background: #25D366; color: white; border: none; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 20px; font-weight: bold;"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.405-.881-.728-1.476-1.626-1.65-1.923-.173-.298-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.012c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>${t('Contact on WhatsApp')}</button>` : ''}
+                        ${hasWhatsapp ? `<button onclick="contactOnPhone('${prof.alias}')" style="background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold); display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 20px;"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>${t('Phone Call')}</button>` : ''}
                     </div>
                 </div>
             `;
@@ -1531,12 +1645,12 @@ async function initializeFilters() {
 
         const controlsBar = document.createElement('div');
         Object.assign(controlsBar.style, {
-            position: 'sticky', top: '65px', zIndex: '800',
+            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: '9999',
             display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0',
-            marginBottom: '20px', padding: '5px', backgroundColor: 'rgba(10, 10, 10, 0.85)',
-            borderRadius: '30px', border: '1px solid rgba(212, 175, 55, 0.4)', backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)', boxShadow: '0 4px 15px rgba(0,0,0,0.6)',
-            width: 'fit-content', margin: '0 auto 20px auto'
+            padding: '5px', backgroundColor: 'transparent',
+            borderRadius: '30px', border: 'none', backdropFilter: 'none',
+            WebkitBackdropFilter: 'none', boxShadow: 'none',
+            width: 'fit-content'
         });
 
         const openFilterBtn = document.createElement('button');
@@ -1574,16 +1688,14 @@ async function initializeFilters() {
 
         [btnGridLarge, btnGridSmall].forEach(btn => {
             Object.assign(btn.style, {
-                background: 'transparent', border: '1px solid #444', color: '#888',
-                padding: '6px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center'
+                background: 'transparent', border: 'none', color: 'rgba(212, 175, 55, 0.4)',
+                padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'color 0.3s ease'
             });
         });
         
         const updateGridButtons = (isSmall) => {
-            btnGridSmall.style.color = isSmall ? 'white' : '#888';
-            btnGridSmall.style.borderColor = isSmall ? 'white' : '#444';
-            btnGridLarge.style.color = !isSmall ? 'white' : '#888';
-            btnGridLarge.style.borderColor = !isSmall ? 'white' : '#444';
+            btnGridSmall.style.color = isSmall ? 'var(--primary-gold)' : 'rgba(212, 175, 55, 0.4)';
+            btnGridLarge.style.color = !isSmall ? 'var(--primary-gold)' : 'rgba(212, 175, 55, 0.4)';
         };
         
         const isSmallGrid = localStorage.getItem('smallGridMode') === 'true';
@@ -1921,6 +2033,15 @@ function contactOnWhatsApp(alias) {
     window.open(url, '_blank');
 }
 
+// Contact on Phone
+function contactOnPhone(alias) {
+    if (typeof plausible === 'function') {
+        plausible('Phone Click', { props: { professional: alias } });
+    }
+    const url = `${API_URL}/professionals/${encodeURIComponent(alias)}/phone`;
+    window.open(url, '_self');
+}
+
 // --- Admin Dashboard Grid ---
 async function renderAdminGrid(container) {
     container.innerHTML = `
@@ -1931,13 +2052,21 @@ async function renderAdminGrid(container) {
                 <select id="adminFilterProv" class="form-select" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"><option value="">${t('All Provinces')}</option></select>
                 <select id="adminFilterCity" class="form-select" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"><option value="">${t('All Cities')}</option></select>
                 <select id="adminFilterNeigh" class="form-select" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"><option value="">${t('All Neighborhoods')}</option></select>
+                <select id="adminFilterSpecialty" class="form-select" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
+                    <option value="">${t('All Specialties')}</option>
+                    <option value="Love Alchemy">${t('Love Alchemy')}</option>
+                    <option value="Massage">${t('Massage')}</option>
+                    <option value="Virtual Connection">${t('Virtual Connection')}</option>
+                    <option value="Media Content">${t('Media Content')}</option>
+                    <option value="Streaming Kisses">${t('Streaming Kisses')}</option>
+                </select>
                 <select id="adminFilterQuality" class="form-select" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
                     <option value="">${t('All Qualities')}</option>
-                    <option value="Elite">${t(CATEGORY_META['Elite'].name)} - ${CATEGORY_META['Elite'].price}</option>
-                    <option value="Premium">${t(CATEGORY_META['Premium'].name)} - ${CATEGORY_META['Premium'].price}</option>
-                    <option value="Gold">${t(CATEGORY_META['Gold'].name)} - ${CATEGORY_META['Gold'].price}</option>
-                    <option value="Silver">${t(CATEGORY_META['Silver'].name)} - ${CATEGORY_META['Silver'].price}</option>
-                    <option value="Standard">${t(CATEGORY_META['Standard'].name)} - ${CATEGORY_META['Standard'].price}</option>
+                    <option value="Elite">${t(CATEGORY_META['Elite'].name)}</option>
+                    <option value="Premium">${t(CATEGORY_META['Premium'].name)}</option>
+                    <option value="Gold">${t(CATEGORY_META['Gold'].name)}</option>
+                    <option value="Silver">${t(CATEGORY_META['Silver'].name)}</option>
+                    <option value="Standard">${t(CATEGORY_META['Standard'].name)}</option>
                 </select>
                 <button id="adminFilterBtn" style="padding: 8px 20px; width: 100%;">${t('Filter')}</button>
             </div>
@@ -1960,7 +2089,19 @@ async function loadAdminGridData() {
     content.innerHTML = '<p>Loading...</p>';
     try {
         const token = localStorage.getItem('token');
-        let url = new URL(`${API_URL}/admin/professionals`);
+        
+        const specialtyEl = document.getElementById('adminFilterSpecialty');
+        const filterSpecialty = specialtyEl ? specialtyEl.value : '';
+        let url;
+        let usingSpecialtyApi = false;
+
+        if (filterSpecialty) {
+            url = new URL(`${API_URL}/specialties/users`);
+            url.searchParams.set('specialty', filterSpecialty);
+            usingSpecialtyApi = true;
+        } else {
+            url = new URL(`${API_URL}/admin/professionals`);
+        }
         url.searchParams.set('_', new Date().getTime());
         let res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
         
@@ -1969,6 +2110,7 @@ async function loadAdminGridData() {
             url = new URL(`${API_URL}/professionals`);
             url.searchParams.set('limit', 5000);
             res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+            usingSpecialtyApi = false;
         }
         const data = await res.json();
 
@@ -1978,6 +2120,11 @@ async function loadAdminGridData() {
         }
 
         let profs = data.data;
+
+        if (usingSpecialtyApi) {
+            // Map junction table records back to full User objects
+            profs = profs.map(record => record.user).filter(Boolean);
+        }
 
         // Apply frontend filters
         const provEl = document.getElementById('adminFilterProv');
@@ -2000,7 +2147,7 @@ async function loadAdminGridData() {
             
             if (prov === 'caba') {
                 const lNeigh = (loc.neighborhood || '').trim().toLowerCase();
-                if (neigh && (!lNeigh || !lNeigh.includes(neigh))) return false;
+                if (city && (!lNeigh || !lNeigh.includes(city))) return false;
             } else {
                 const lCity = (loc.city || '').trim().toLowerCase();
                 const lNeigh = (loc.neighborhood || '').trim().toLowerCase();
@@ -2048,9 +2195,6 @@ async function loadAdminGridData() {
                                 ${t(meta.name)} <span style="font-size: 0.8rem; color: #aaa; font-weight: normal; font-family: sans-serif;">${t(meta.desc)}</span>
                             </h4>
                         </div>
-                    </div>
-                    <div style="font-family: monospace; font-size: 0.9rem; color: #fff; background: rgba(212, 175, 55, 0.1); padding: 4px 10px; border-radius: 4px; border: 1px solid rgba(212,175,55,0.3); white-space: nowrap;">
-                        ${meta.price}
                     </div>
                 </div>
             `;
@@ -2115,7 +2259,7 @@ async function loadDashboard() {
         const token = localStorage.getItem('token');
         // Added credentials: 'include' to ensure the auth cookie is sent with the request.
         // This is the likely fix for the login redirect loop.
-        const res = await fetch(`${API_URL}/professionals/me`, {
+        const res = await fetch(`${API_URL}/professionals/me?_=${new Date().getTime()}`, {
             headers: { 'Authorization': `Bearer ${token}` },
             credentials: 'include'
         });
@@ -2166,6 +2310,7 @@ async function loadDashboard() {
                             <div style="display: flex; flex-direction: column; gap: 5px;">
                                 <button id="btnProfProfileAdmin" class="admin-nav-btn">👥 Professional Profiles</button>
                                 <button id="btnPendingApprovals" class="admin-nav-btn active-nav">✅ Pending Approvals</button>
+                                <button id="btnPaymentVerifications" class="admin-nav-btn">💳 Payment Verifications</button>
                                 <button id="btnDashboardConfig" class="admin-nav-btn">⚙️ Dashboard Config</button>
                             </div>
                         </div>
@@ -2214,6 +2359,7 @@ async function loadDashboard() {
                 document.getElementById('btnTreasuresSteps').addEventListener('click', () => openActivityLogsModal('Treasures Steps', { isGuest: 'false' }));
                 document.getElementById('btnViewLeads').addEventListener('click', openViewLeadsModal);
                 document.getElementById('btnPendingApprovals').addEventListener('click', openPendingVerificationsModal);
+                document.getElementById('btnPaymentVerifications').addEventListener('click', openPaymentVerificationsModal);
                 
                 document.getElementById('btnProfProfileAdmin').addEventListener('click', () => {
                     document.getElementById('adminGridContainer').scrollIntoView({ behavior: 'smooth' });
@@ -2284,15 +2430,42 @@ async function loadDashboard() {
                 }
 
                 if (isApproved && (!prof.photos || prof.photos.length === 0)) {
-                    alertsHtml += `<div style="background: rgba(212,175,55,0.1); border-left: 4px solid var(--primary-gold); padding: 10px; margin-bottom: 10px;">📸 <strong>Action Required:</strong> Please upload at least one photo below to appear in the directory.</div>`;
+                    alertsHtml += `<div style="background: rgba(212,175,55,0.1); border-left: 4px solid var(--primary-gold); padding: 15px; margin-bottom: 10px; line-height: 1.5;">🎉 <strong style="color: var(--primary-gold);">${t('Welcome to SexAppeal!')}</strong><br>${t('You are now approved and ready to upload your personal photos. Note: The first photo will be treated as your profile Thumbnail. You can drag and drop photos below to change their order at any time.')}</div>`;
                 }
 
                 if (!data.isReadyForTransactions && isApproved) {
                     alertsHtml += `<div style="background: rgba(255,0,0,0.1); border-left: 4px solid var(--accent-red); padding: 10px; margin-bottom: 10px;">💰 <strong>Rate Update:</strong> Please acknowledge the new pricing rates in the alert above to maintain your visibility.</div>`;
                 }
 
+                // Trial & Prorated Billing Engine Display
+                if (prof.subscriptionStatus === 'trial') {
+                    const trialEnd = new Date(prof.trialEndDate);
+                    const now = new Date();
+                    if (trialEnd > now) {
+                        const endYear = trialEnd.getFullYear();
+                        const endMonth = trialEnd.getMonth();
+                        const daysInMonth = new Date(endYear, endMonth + 1, 0).getDate();
+                        const remainingDays = daysInMonth - trialEnd.getDate() + 1; // Inclusive of end day
+                        
+                        let proratedAmt = 0;
+                        if (remainingDays > 0 && trialEnd.getDate() !== 1) {
+                            const globalPrices = data.globalPricing || { Standard: 15000, Silver: 20000, Gold: 30000, Premium: 40000, Elite: 50000 };
+                            const catPrice = globalPrices[prof.quality || 'Standard'];
+                            const pricePerDay = catPrice / daysInMonth;
+                            proratedAmt = Math.round(pricePerDay * remainingDays);
+                        }
+                        
+                        alertsHtml += `<div style="background: rgba(212,175,55,0.1); border-left: 4px solid var(--primary-gold); padding: 15px; margin-bottom: 10px;">
+                            💎 <strong>First Month Free:</strong> Your trial ends on ${trialEnd.toLocaleDateString()}.
+                            ${proratedAmt > 0 ? `<br>Since your trial ends mid-month, you will only be charged a prorated amount of <strong>${new Intl.NumberFormat('es-AR').format(proratedAmt)} ARS</strong> for the remainder of that month.` : ''}
+                        </div>`;
+                    }
+                }
+
                 if (prof.subscriptionStatus === 'suspended') {
-                    alertsHtml += `<div style="background: rgba(255,0,0,0.1); border-left: 4px solid var(--accent-red); padding: 10px; margin-bottom: 10px;">🛑 <strong>Account Suspended:</strong> Your profile is hidden due to unpaid balances. Upload your receipt.</div>`;
+                    let pendingInv = (prof.invoices || []).find(i => i.status === 'pending');
+                    let feeText = pendingInv && pendingInv.lateFeeApplied ? ` A 2% late fee has been applied. Your new balance is $${new Intl.NumberFormat('es-AR').format(pendingInv.amount)} ARS.` : '';
+                    alertsHtml += `<div style="background: rgba(255,0,0,0.1); border-left: 4px solid var(--accent-red); padding: 10px; margin-bottom: 10px;">🛑 <strong>Account Suspended:</strong> Your profile is hidden due to unpaid balances.${feeText} Upload your receipt to restore access.</div>`;
                 }
 
                 if (!alertsHtml) {
@@ -2304,6 +2477,25 @@ async function loadDashboard() {
                     ${alertsHtml}
                 `;
                 content.insertBefore(notifSection, insertRef);
+            }
+            
+            // Analytics Frame (Last Month)
+            let analyticsSection = document.getElementById('analyticsSection');
+            if (!analyticsSection && user.role === 'professional') {
+                analyticsSection = document.createElement('div');
+                analyticsSection.id = 'analyticsSection';
+                analyticsSection.className = 'card fileteado-section';
+                analyticsSection.style.marginBottom = '20px';
+                analyticsSection.style.border = '1px solid var(--primary-gold)';
+                analyticsSection.innerHTML = `
+                    <h3 class="gold-text" style="margin-bottom: 15px;">Performance Analytics (Last Month)</h3>
+                    <div style="display: flex; gap: 20px; justify-content: space-around; text-align: center;">
+                        <div><div style="font-size: 2.5rem; color: var(--primary-gold);">${stats.profileViews || 0}</div><div style="font-size: 0.9rem; color: #ccc;">Profile Image Hits</div></div>
+                        <div><div style="font-size: 2.5rem; color: var(--primary-gold);">${stats.whatsappClicks || 0}</div><div style="font-size: 0.9rem; color: #ccc;">WhatsApp Clicks</div></div>
+                        <div><div style="font-size: 2.5rem; color: var(--primary-gold);">${stats.phoneClicks || 0}</div><div style="font-size: 0.9rem; color: #ccc;">Phone Calls</div></div>
+                    </div>
+                `;
+                content.insertBefore(analyticsSection, insertRef);
             }
 
             // Connection Requests section
@@ -2326,19 +2518,427 @@ async function loadDashboard() {
                 document.getElementById('btnViewConnections').addEventListener('click', openPendingConnectionsModal);
             }
 
+            // Services and Category Block (Checkboxes with Tooltips)
+            if (!document.getElementById('servicesBlock')) {
+                const servicesBlock = document.createElement('div');
+                servicesBlock.id = 'servicesBlock';
+                servicesBlock.className = 'card fileteado-section';
+                servicesBlock.style.marginTop = '20px';
+                servicesBlock.style.border = '1px solid var(--primary-gold)';
+                
+                const title = document.createElement('h3');
+                title.className = 'gold-text';
+                title.textContent = 'Category & Specialties';
+                title.style.marginBottom = '15px';
+                servicesBlock.appendChild(title);
+                
+                const catInfo = document.createElement('div');
+                const qMeta = CATEGORY_META[prof.quality || 'Standard'];
+                catInfo.innerHTML = `<p style="margin-bottom: 15px;"><strong>Category:</strong> <span style="color: var(--primary-gold);">${qMeta ? t(qMeta.name) : (prof.quality || 'Standard')}</span></p>
+                    <label style="display: block; margin-bottom: 5px;">${t('Category:')}</label>
+                    <select id="upQuality" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid var(--primary-gold); border-radius: 4px; margin-bottom: 15px;">
+                        <option value="Elite" ${prof.quality === 'Elite' ? 'selected' : ''}>${t(CATEGORY_META['Elite'].name)}</option>
+                        <option value="Premium" ${prof.quality === 'Premium' ? 'selected' : ''}>${t(CATEGORY_META['Premium'].name)}</option>
+                        <option value="Gold" ${prof.quality === 'Gold' ? 'selected' : ''}>${t(CATEGORY_META['Gold'].name)}</option>
+                        <option value="Silver" ${prof.quality === 'Silver' ? 'selected' : ''}>${t(CATEGORY_META['Silver'].name)}</option>
+                        <option value="Standard" ${prof.quality === 'Standard' ? 'selected' : ''}>${t(CATEGORY_META['Standard'].name)}</option>
+                    </select>
+                `;
+                const catSelect = catInfo.querySelector('#upQuality');
+                if (catSelect) catSelect.addEventListener('change', () => { if (typeof window.saveProfessionalProfile === 'function') window.saveProfessionalProfile(true); });
+                servicesBlock.appendChild(catInfo);
+                
+                const specLabel = document.createElement('label');
+                specLabel.textContent = t('Specialties:');
+                specLabel.style.display = 'block';
+                specLabel.style.marginBottom = '10px';
+                servicesBlock.appendChild(specLabel);
+                
+                const specs = [
+                    { name: 'Love Alchemy', tooltip: 'Sex' },
+                    { name: 'Massage', tooltip: 'Conventional massage' },
+                    { name: 'Virtual Connection', tooltip: 'Virtual call' },
+                    { name: 'Media Content', tooltip: 'Share hot content pics or videos' },
+                    { name: 'Streaming Kisses', tooltip: 'Live streaming kisses' }
+                ];
+                
+                const specsContainer = document.createElement('div');
+                specsContainer.style.display = 'flex';
+                specsContainer.style.flexWrap = 'wrap';
+                specsContainer.style.gap = '10px';
+                
+                const userServices = prof.services || [];
+                
+                specs.forEach(spec => {
+                    const lbl = document.createElement('label');
+                    lbl.title = spec.tooltip;
+                    lbl.style.display = 'flex';
+                    lbl.style.alignItems = 'center';
+                    lbl.style.gap = '5px';
+                    lbl.style.cursor = 'pointer';
+                    lbl.style.padding = '8px 12px';
+                    lbl.style.background = 'rgba(212,175,55,0.1)';
+                    lbl.style.borderRadius = '4px';
+                    lbl.style.border = '1px solid rgba(212,175,55,0.3)';
+                    lbl.style.fontSize = '0.9rem';
+                    
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.value = spec.name;
+                    cb.className = 'dashboard-specialty-cb';
+                    cb.checked = userServices.includes(spec.name) || userServices.includes(spec.name.toLowerCase());
+                    
+                    cb.addEventListener('change', () => {
+                        if (typeof window.saveProfessionalProfile === 'function') window.saveProfessionalProfile(true);
+                    });
+
+                    lbl.appendChild(cb);
+                    lbl.appendChild(document.createTextNode(t(spec.name)));
+                    specsContainer.appendChild(lbl);
+                });
+                
+                servicesBlock.appendChild(specsContainer);
+                
+                const formObj = document.getElementById('updateProfileForm');
+                const bioEl = document.getElementById('upBio');
+                
+                // Hide old services dropdown if exists
+                const oldServ = document.getElementById('upServices');
+                if (oldServ) {
+                    oldServ.style.display = 'none';
+                    if (oldServ.previousElementSibling) oldServ.previousElementSibling.style.display = 'none';
+                }
+
+                if (bioEl && bioEl.parentNode && bioEl.parentNode.tagName === 'DIV' && bioEl.parentNode.querySelector('#goldPenIcon')) {
+                    formObj.insertBefore(servicesBlock, bioEl.parentNode);
+                } else if (bioEl) {
+                    formObj.insertBefore(servicesBlock, bioEl);
+                } else if (formObj) {
+                    formObj.appendChild(servicesBlock);
+                }
+            }
+
+            // Extended Contact block
+            if (!document.getElementById('extraContactBlock')) {
+                const extraBlock = document.createElement('div');
+                extraBlock.id = 'extraContactBlock';
+                extraBlock.className = 'card fileteado-section';
+                extraBlock.style.marginTop = '20px';
+                extraBlock.style.border = '1px solid var(--primary-gold)';
+                extraBlock.innerHTML = `
+                    <h3 class="gold-text" style="margin-bottom: 15px;">Extended Contact & Address</h3>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <label style="display: block; margin-bottom: 5px;">Post Code</label>
+                        <input type="text" id="upPostCode" value="${prof.location?.postalCode || ''}" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <label style="display: block; margin-bottom: 5px;">Instagram</label>
+                            <input type="text" id="upInstagram" value="${prof.instagram || ''}" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
+                        </div>
+                        <div style="flex: 1; min-width: 200px;">
+                            <label style="display: block; margin-bottom: 5px;">Facebook</label>
+                            <input type="text" id="upFacebook" value="${prof.facebook || ''}" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
+                        </div>
+                    </div>
+                `;
+                const formObj = document.getElementById('updateProfileForm');
+                const vacBlock = document.getElementById('vacationBlock');
+                if (vacBlock) {
+                    formObj.insertBefore(extraBlock, vacBlock);
+                } else {
+                    formObj.appendChild(extraBlock);
+                }
+                extraBlock.querySelectorAll('input').forEach(input => {
+                    input.addEventListener('blur', () => { if (typeof window.saveProfessionalProfile === 'function') window.saveProfessionalProfile(true); });
+                });
+            }
+
             // Safe value setter (ignores missing HTML elements)
             const setVal = (id, val) => {
                 const el = document.getElementById(id);
                 if (el) el.value = val;
             };
-            
-            // Populate Performance Stats
-            const statViews = document.getElementById('statProfileViews');
-            if (statViews) statViews.textContent = stats.profileViews;
-            const statWa = document.getElementById('statWaClicks');
-            if (statWa) statWa.textContent = stats.whatsappClicks;
 
             // Fill fields
+            setVal('upFirstName', prof.firstName || '');
+            setVal('upSurname', prof.surname || '');
+            setVal('upMiddleName', prof.middleName || '');
+            setVal('upIdNumber', prof.idNumber || '');
+            if (prof.birthDate) {
+                const d = new Date(prof.birthDate);
+                setVal('upBirthDate', d.toISOString().split('T')[0]);
+            }
+            setVal('upAge', prof.age || '');
+            setVal('upMobilePhone', prof.mobilePhone || '');
+            setVal('upStreet', prof.location?.street || '');
+            setVal('upStreetNumber', prof.location?.number || '');
+            setVal('upFloor', prof.location?.floor || '');
+            setVal('upApartment', prof.location?.apartment || '');
+
+            const upBirthDate = document.getElementById('upBirthDate');
+            if (upBirthDate) {
+                upBirthDate.addEventListener('change', (e) => {
+                    if (e.target.value) {
+                        const dob = new Date(e.target.value);
+                        const ageDifMs = Date.now() - dob.getTime();
+                        document.getElementById('upAge').value = Math.abs(new Date(ageDifMs).getUTCFullYear() - 1970);
+                    }
+                });
+            }
+
+            // Make non-editable fields grey and build Profile UI
+            if (user.role === 'professional') {
+                // Only Address and Connection blocks remain editable
+                const readOnlyFields = ['upFirstName', 'upSurname', 'upMiddleName', 'upIdNumber', 'upBirthDate', 'upAlias', 'upMeasurements', 'upHeight'];
+                readOnlyFields.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.readOnly = true; el.disabled = true;
+                        el.style.background = '#333'; el.style.color = '#888'; el.style.borderColor = '#444'; el.style.cursor = 'not-allowed';
+                    }
+                });
+                const readOnlyToggles = ['upOwnApartment', 'upFantasyWardrobe', 'upServices'];
+                readOnlyToggles.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) { el.disabled = true; el.style.opacity = '0.6'; el.style.cursor = 'not-allowed'; }
+                });
+
+                // Main Profile Frame (Yellow Pen)
+                const formEl = document.getElementById('updateProfileForm');
+                if (formEl && !document.getElementById('yellowPenIcon')) {
+                    formEl.style.position = 'relative';
+                    const yellowPen = document.createElement('span');
+                    yellowPen.id = 'yellowPenIcon';
+                    yellowPen.innerHTML = '✏️';
+                    yellowPen.style.cssText = 'position: absolute; top: 10px; right: 10px; color: yellow; font-size: 1.5rem; cursor: pointer; text-shadow: 0 0 5px rgba(255,255,0,0.5); z-index: 10;';
+                    yellowPen.title = 'Edit Profile (Address and Connection Info Only)';
+                    formEl.appendChild(yellowPen);
+                }
+
+                // Service Description Frame (Gold Pen)
+                const bioEl = document.getElementById('upBio');
+                if (bioEl && !document.getElementById('goldPenIcon')) {
+                    const wrapper = document.createElement('div');
+                    wrapper.style.position = 'relative';
+                    wrapper.style.marginTop = '20px';
+                    wrapper.style.padding = '15px';
+                    wrapper.style.border = '1px solid var(--primary-gold)';
+                    wrapper.style.borderRadius = '8px';
+                    
+                    const goldPen = document.createElement('span');
+                    goldPen.id = 'goldPenIcon';
+                    goldPen.innerHTML = '✏️';
+                    goldPen.style.cssText = 'position: absolute; top: 10px; right: 10px; color: gold; font-size: 1.5rem; cursor: pointer; text-shadow: 0 0 5px rgba(212,175,55,0.5); z-index: 10;';
+                    goldPen.title = 'Edit Service Description';
+                    
+                    const title = document.createElement('h3');
+                    title.className = 'gold-text';
+                    title.textContent = 'Service description';
+                    title.style.marginBottom = '10px';
+                    
+                    bioEl.parentNode.insertBefore(wrapper, bioEl);
+                    wrapper.appendChild(title);
+                    wrapper.appendChild(goldPen);
+                    wrapper.appendChild(bioEl);
+                    
+                    bioEl.style.width = '100%';
+                    bioEl.style.minHeight = '100px';
+                }
+
+                // Availability Schedule Block
+                if (!document.getElementById('availabilityBlock')) {
+                    const availBlock = document.createElement('div');
+                    availBlock.id = 'availabilityBlock';
+                    availBlock.className = 'card fileteado-section';
+                    availBlock.style.marginTop = '20px';
+                    availBlock.style.border = '1px solid var(--primary-gold)';
+                    availBlock.style.position = 'relative';
+
+                    const goldPenAvail = document.createElement('span');
+                    goldPenAvail.innerHTML = '✏️';
+                    goldPenAvail.style.cssText = 'position: absolute; top: 10px; right: 10px; color: gold; font-size: 1.5rem; cursor: pointer; text-shadow: 0 0 5px rgba(212,175,55,0.5); z-index: 10;';
+                    goldPenAvail.title = 'Edit Availability';
+                    availBlock.appendChild(goldPenAvail);
+                    
+                    const title = document.createElement('h3');
+                    title.className = 'gold-text';
+                    title.textContent = 'Availability Schedule';
+                    title.style.marginBottom = '15px';
+                    availBlock.appendChild(title);
+                    
+                    // Days checkboxes
+                    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                    const daysContainer = document.createElement('div');
+                    daysContainer.style.display = 'flex';
+                    daysContainer.style.gap = '10px';
+                    daysContainer.style.flexWrap = 'wrap';
+                    daysContainer.style.marginBottom = '15px';
+                    
+                    const userDays = prof.workingDays || days;
+                    days.forEach(day => {
+                        const lbl = document.createElement('label');
+                        lbl.style.display = 'flex';
+                        lbl.style.alignItems = 'center';
+                        lbl.style.gap = '5px';
+                        lbl.style.cursor = 'pointer';
+                        
+                        const cb = document.createElement('input');
+                        cb.type = 'checkbox';
+                        cb.value = day;
+                        cb.className = 'avail-day-cb';
+                        cb.checked = userDays.includes(day);
+                        
+                        lbl.appendChild(cb);
+                        lbl.appendChild(document.createTextNode(day.substring(0, 3))); // Mon, Tue...
+                        daysContainer.appendChild(lbl);
+                    });
+                    availBlock.appendChild(daysContainer);
+                    
+                    // Times
+                    const timeContainer = document.createElement('div');
+                    timeContainer.style.display = 'flex';
+                    timeContainer.style.gap = '15px';
+                    
+                    const startDiv = document.createElement('div');
+                    startDiv.style.flex = '1';
+                    startDiv.innerHTML = '<label style="display:block; margin-bottom:5px;">Start Time (AM/PM)</label>';
+                    const startInput = document.createElement('input');
+                    startInput.type = 'time';
+                    startInput.id = 'upAvailStart';
+                    startInput.value = prof.workingHours?.start || '00:00';
+                    startInput.style.cssText = 'width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;';
+                    startDiv.appendChild(startInput);
+                    
+                    const endDiv = document.createElement('div');
+                    endDiv.style.flex = '1';
+                    endDiv.innerHTML = '<label style="display:block; margin-bottom:5px;">End Time (AM/PM)</label>';
+                    const endInput = document.createElement('input');
+                    endInput.type = 'time';
+                    endInput.id = 'upAvailEnd';
+                    endInput.value = prof.workingHours?.end || '23:59';
+                    endInput.style.cssText = 'width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;';
+                    endDiv.appendChild(endInput);
+                    
+                    timeContainer.appendChild(startDiv);
+                    timeContainer.appendChild(endDiv);
+                    availBlock.appendChild(timeContainer);
+                    
+                    // Disable inputs by default
+                    const inputs = [startInput, endInput, ...availBlock.querySelectorAll('.avail-day-cb')];
+                    inputs.forEach(el => {
+                        el.disabled = true;
+                        if(el.type !== 'checkbox') el.style.background = '#333';
+                    });
+                    
+                    goldPenAvail.addEventListener('click', () => {
+                        inputs.forEach(el => {
+                            el.disabled = false;
+                            if(el.type !== 'checkbox') el.style.background = '#222';
+                        });
+                        goldPenAvail.style.color = '#fff';
+                        goldPenAvail.style.textShadow = '0 0 10px #fff';
+                        setTimeout(() => {
+                            goldPenAvail.style.color = 'gold';
+                            goldPenAvail.style.textShadow = '0 0 5px rgba(212,175,55,0.5)';
+                        }, 500);
+                    });
+
+                    // Hide the old legacy inputs cleanly
+                    const oldStart = document.getElementById('upWorkingHoursStart');
+                    if (oldStart && oldStart.parentNode && oldStart.parentNode.parentNode) {
+                        oldStart.parentNode.parentNode.style.display = 'none';
+                    }
+                    const oldDays = document.getElementById('upWorkingDays');
+                    if (oldDays) {
+                        oldDays.style.display = 'none';
+                        const oldDaysLabel = oldDays.previousElementSibling;
+                        if (oldDaysLabel && oldDaysLabel.tagName === 'LABEL') oldDaysLabel.style.display = 'none';
+                    }
+
+                    // Insert before Vacation Block if exists, else before photos
+                    const vacBlock = document.getElementById('vacationBlock');
+                    if (vacBlock) {
+                        vacBlock.parentNode.insertBefore(availBlock, vacBlock);
+                    } else {
+                        const formObj = document.getElementById('updateProfileForm');
+                        const photoGridEl = document.getElementById('photoGrid');
+                        if (formObj && photoGridEl) {
+                            formObj.insertBefore(availBlock, photoGridEl.parentNode);
+                        } else if (formObj) {
+                            formObj.appendChild(availBlock);
+                        }
+                    }
+                }
+
+                // Vacation Block
+                if (!document.getElementById('vacationBlock')) {
+                    const vacBlock = document.createElement('div');
+                    vacBlock.id = 'vacationBlock';
+                    vacBlock.className = 'card fileteado-section';
+                    vacBlock.style.marginTop = '20px';
+                    vacBlock.style.border = '1px solid var(--primary-gold)';
+                    vacBlock.innerHTML = `
+                        <h3 class="gold-text" style="margin-bottom: 5px;">Miscellaneous (Vacation)</h3>
+                        <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 15px;">Max 20 calendar days. No more than 1 vacation request per year.</p>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 150px;">
+                                <label style="display: block; margin-bottom: 5px;">Start Date</label>
+                                <input type="date" id="upVacationStart" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
+                            </div>
+                            <div style="flex: 1; min-width: 150px;">
+                                <label style="display: block; margin-bottom: 5px;">End Date</label>
+                                <input type="date" id="upVacationEnd" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
+                            </div>
+                        </div>
+                        <div id="vacationWarn" style="color: var(--accent-red); font-size: 0.85rem; margin-top: 10px;"></div>
+                    `;
+                    
+                    const formObj = document.getElementById('updateProfileForm');
+                    const photoGridEl = document.getElementById('photoGrid');
+                    if (formObj && photoGridEl) {
+                        formObj.insertBefore(vacBlock, photoGridEl.parentNode);
+                    } else if (formObj) {
+                        formObj.appendChild(vacBlock);
+                    }
+
+                    if (prof.vacation) {
+                        if (prof.vacation.startDate) document.getElementById('upVacationStart').value = new Date(prof.vacation.startDate).toISOString().split('T')[0];
+                        if (prof.vacation.endDate) document.getElementById('upVacationEnd').value = new Date(prof.vacation.endDate).toISOString().split('T')[0];
+                        
+                        const reqYear = new Date(prof.vacation.requestedAt).getFullYear();
+                        if (reqYear === new Date().getFullYear()) {
+                            document.getElementById('vacationWarn').textContent = 'You have already submitted a vacation request for this year. It cannot be modified.';
+                            document.getElementById('vacationWarn').style.color = '#ccc';
+                            document.getElementById('upVacationStart').disabled = true;
+                            document.getElementById('upVacationEnd').disabled = true;
+                            document.getElementById('upVacationStart').style.background = '#333';
+                            document.getElementById('upVacationEnd').style.background = '#333';
+                        }
+                    }
+
+                    document.getElementById('upVacationEnd').addEventListener('change', () => {
+                        const start = new Date(document.getElementById('upVacationStart').value);
+                        const end = new Date(document.getElementById('upVacationEnd').value);
+                        const warn = document.getElementById('vacationWarn');
+                        warn.textContent = '';
+                        if (start && end) {
+                            const diff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+                            if (diff > 20) {
+                                warn.textContent = 'Maximum 20 calendar days exceeded. End date automatically adjusted to highest value (20 days).';
+                                const newEnd = new Date(start.getTime() + 20 * 24 * 60 * 60 * 1000);
+                                document.getElementById('upVacationEnd').value = newEnd.toISOString().split('T')[0];
+                            } else if (diff < 0) {
+                                warn.textContent = 'End date cannot be before start date.';
+                                document.getElementById('upVacationEnd').value = document.getElementById('upVacationStart').value;
+                            }
+                        }
+                    });
+                }
+            }
+
             setVal('upAlias', prof.alias || '');
             setVal('upBio', prof.bio || '');
             
@@ -2347,7 +2947,7 @@ async function loadDashboard() {
             if (displayQuality) {
                 const q = prof.quality || 'Standard';
                 const meta = CATEGORY_META[q];
-                displayQuality.textContent = meta ? `${meta.name} (${meta.price})` : q;
+                displayQuality.textContent = meta ? `${meta.name}` : q;
                 displayQuality.className = `quality-badge quality-${q.toLowerCase()}`;
             }
             
@@ -2398,14 +2998,15 @@ async function loadDashboard() {
                 photoGrid.style.flexWrap = 'wrap';
                 photoGrid.style.gap = '15px';
                 
-                // Add the rectangular frame
                 const frameLabel = document.createElement('label');
                 frameLabel.className = 'add-photo-frame';
-                frameLabel.style.cssText = 'width: 120px; height: 160px; border: 2px dashed var(--primary-gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--primary-gold); font-size: 2rem; background: rgba(212, 175, 55, 0.05); transition: background 0.3s ease;';
+                frameLabel.style.cssText = 'width: 120px; height: 160px; border: 2px dashed var(--primary-gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--primary-gold); font-size: 2rem; background: rgba(212, 175, 55, 0.05); transition: background 0.3s ease; flex-shrink: 0;';
                 frameLabel.innerHTML = '<span>+</span>';
                 
                 if (newPhotoInput) {
                     newPhotoInput.style.display = 'none';
+                    newPhotoInput.accept = 'image/png, image/jpeg, image/jpg, image/webp';
+                    newPhotoInput.multiple = true;
                     frameLabel.appendChild(newPhotoInput);
                 }
                 
@@ -2413,6 +3014,48 @@ async function loadDashboard() {
 
                 (prof.photos || []).forEach(url => addPhotoToGrid(url));
                 
+                let photoWrapper = document.getElementById('photoWrapperCustom');
+                if (!photoWrapper) {
+                    photoWrapper = document.createElement('div');
+                    photoWrapper.id = 'photoWrapperCustom';
+                    photoWrapper.className = 'card fileteado-section';
+                    photoWrapper.style.display = 'flex';
+                    photoWrapper.style.justifyContent = 'space-between';
+                    photoWrapper.style.alignItems = 'center';
+                    photoWrapper.style.border = '1px solid var(--primary-gold)';
+                    photoWrapper.style.position = 'relative';
+                    photoWrapper.style.marginTop = '20px';
+                    
+                    const title = document.createElement('h3');
+                    title.className = 'gold-text';
+                    title.textContent = 'Personal Photos';
+                    title.style.position = 'absolute';
+                    title.style.top = '15px';
+                    title.style.left = '15px';
+                    
+                    photoGrid.parentNode.insertBefore(photoWrapper, photoGrid);
+                    
+                    const leftDiv = document.createElement('div');
+                    leftDiv.style.flex = '1';
+                    leftDiv.style.marginTop = '40px'; 
+                    leftDiv.appendChild(photoGrid);
+                    
+                    const uploadBtn = document.createElement('button');
+                    uploadBtn.type = 'button';
+                    uploadBtn.textContent = 'Upload';
+                    uploadBtn.style.padding = '10px 20px';
+                    uploadBtn.style.marginLeft = '20px';
+                    uploadBtn.style.background = 'var(--primary-gold)';
+                    uploadBtn.style.color = '#111';
+                    uploadBtn.style.fontWeight = 'bold';
+                    uploadBtn.style.whiteSpace = 'nowrap';
+                    uploadBtn.onclick = () => { if (newPhotoInput) newPhotoInput.click(); };
+                    
+                    photoWrapper.appendChild(title);
+                    photoWrapper.appendChild(leftDiv);
+                    photoWrapper.appendChild(uploadBtn);
+                }
+
                 if (!isApproved) {
                     photoGrid.style.opacity = '0.3';
                     photoGrid.style.pointerEvents = 'none';
@@ -2435,6 +3078,22 @@ async function loadDashboard() {
                     newPhotoInput.disabled = false;
                     const msg = document.getElementById('photoApprovalMsg');
                     if (msg) msg.remove();
+                }
+
+                // Inject Bottom Back Button
+                if (!document.getElementById('bottomBackBtn')) {
+                    const bottomBackBtn = document.createElement('button');
+                    bottomBackBtn.id = 'bottomBackBtn';
+                    bottomBackBtn.type = 'button';
+                    bottomBackBtn.innerHTML = '&#8592; Back to Main Dashboard';
+                    bottomBackBtn.style.cssText = 'background: var(--primary-gold); color: var(--dark-bg); font-weight: bold; margin-top: 25px; width: 100%;';
+                    bottomBackBtn.onclick = async () => {
+                        if (typeof window.saveProfessionalProfile === 'function') {
+                            await window.saveProfessionalProfile(true);
+                        }
+                        window.location.href = 'categories.html';
+                    };
+                    document.getElementById('updateProfileForm').appendChild(bottomBackBtn);
                 }
             }
 
@@ -2467,7 +3126,9 @@ async function loadDashboard() {
                 suspensionAlert.className = 'card alert';
                 suspensionAlert.style.marginBottom = '20px';
                 suspensionAlert.style.border = '2px solid var(--accent-red)';
-                suspensionAlert.innerHTML = `<h3 style="color: var(--accent-red); margin-top: 0;">Account Suspended</h3><p>Your profile has been removed from the public grid due to an unpaid balance past the 5-business-day grace period. A 2% late fee has been applied.</p><p>To restore your access, please upload your payment receipt below. Once verified by an admin, your profile will reappear on the directory.</p>`;
+                let pendingInv = (prof.invoices || []).find(i => i.status === 'pending');
+                let feeText = pendingInv && pendingInv.lateFeeApplied ? ` A 2% late fee has been applied. Your new total is <strong>$${new Intl.NumberFormat('es-AR').format(pendingInv.amount)} ARS</strong>.` : '';
+                suspensionAlert.innerHTML = `<h3 style="color: var(--accent-red); margin-top: 0;">Account Suspended</h3><p>Your profile has been removed from the public grid due to an unpaid balance past the 5-business-day grace period.${feeText}</p><p>To restore your access, please upload your payment receipt below. Once verified by an admin, your profile will reappear on the directory.</p>`;
                 content.prepend(suspensionAlert);
                 
                 // Disable the update profile form so they know they are restricted
@@ -2503,16 +3164,31 @@ async function loadDashboard() {
 // Update Profile
 const updateProfileForm = document.getElementById('updateProfileForm');
 if (updateProfileForm) {
-    updateProfileForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const alert = document.getElementById('updateAlert');
+    let isSaving = false;
+    
+    window.saveProfessionalProfile = async (silent = false) => {
+        if (isSaving) return;
+        isSaving = true;
+        const alertEl = document.getElementById('updateAlert');
         const formData = new FormData();
 
         // Append all text fields
+        formData.append('firstName', document.getElementById('upFirstName')?.value || '');
+        formData.append('surname', document.getElementById('upSurname')?.value || '');
+        formData.append('middleName', document.getElementById('upMiddleName')?.value || '');
+        formData.append('idNumber', document.getElementById('upIdNumber')?.value || '');
+        formData.append('birthDate', document.getElementById('upBirthDate')?.value || '');
+        formData.append('mobilePhone', document.getElementById('upMobilePhone')?.value || '');
+        formData.append('street', document.getElementById('upStreet')?.value || '');
+        formData.append('number', document.getElementById('upStreetNumber')?.value || '');
+        formData.append('floor', document.getElementById('upFloor')?.value || '');
+        formData.append('apartment', document.getElementById('upApartment')?.value || '');
+
         formData.append('alias', document.getElementById('upAlias').value);
         formData.append('bio', document.getElementById('upBio').value);
         formData.append('hasOwnApartment', document.getElementById('upOwnApartment').checked);
         formData.append('hasFantasyWardrobe', document.getElementById('upFantasyWardrobe').checked);
+        formData.append('quality', document.getElementById('upQuality')?.value || '');
         
         const upIsExposed = document.getElementById('upIsExposed');
         if (upIsExposed) formData.append('isExposed', upIsExposed.checked);
@@ -2520,16 +3196,22 @@ if (updateProfileForm) {
         const upPaysMonthly = document.getElementById('upPaysMonthly');
         if (upPaysMonthly) formData.append('paysMonthlyCharges', upPaysMonthly.checked);
         
-        const upServicesEl = document.getElementById('upServices');
-        let servicesVal = '';
-        if (upServicesEl) {
-            if (upServicesEl.tagName === 'SELECT') {
-                servicesVal = Array.from(upServicesEl.selectedOptions).map(opt => opt.value).join(',');
-            } else {
-                servicesVal = upServicesEl.value;
+        const dashboardSpecCbs = document.querySelectorAll('.dashboard-specialty-cb');
+        if (dashboardSpecCbs.length > 0) {
+            const selectedSpecs = Array.from(dashboardSpecCbs).filter(cb => cb.checked).map(cb => cb.value).join(',');
+            formData.set('services', selectedSpecs);
+        } else {
+            const upServicesEl = document.getElementById('upServices');
+            let servicesVal = '';
+            if (upServicesEl) {
+                if (upServicesEl.tagName === 'SELECT') {
+                    servicesVal = Array.from(upServicesEl.selectedOptions).map(opt => opt.value).join(',');
+                } else {
+                    servicesVal = upServicesEl.value;
+                }
             }
+            formData.append('services', servicesVal);
         }
-        formData.append('services', servicesVal);
         
         const upProv = document.getElementById('upProvince');
         const upCity = document.getElementById('upCity');
@@ -2538,7 +3220,8 @@ if (updateProfileForm) {
         if (upProv) {
             formData.append('province', upProv.value);
             if (upProv.value.trim().toLowerCase() === 'caba') {
-                if (upNeigh) formData.append('neighborhood', upNeigh.value);
+                formData.append('city', '');
+                if (upCity) formData.append('neighborhood', upCity.value);
             } else {
                 if (upCity) formData.append('city', upCity.value);
                 if (upNeigh) formData.append('neighborhood', upNeigh.value);
@@ -2548,15 +3231,34 @@ if (updateProfileForm) {
         formData.append('measurements', document.getElementById('upMeasurements').value);
         formData.append('height', document.getElementById('upHeight').value);
         formData.append('whatsappNumber', document.getElementById('upWhatsapp').value);
+
+        formData.append('postalCode', document.getElementById('upPostCode')?.value || '');
+        formData.append('instagram', document.getElementById('upInstagram')?.value || '');
+        formData.append('facebook', document.getElementById('upFacebook')?.value || '');
         
         const upWhStart = document.getElementById('upWorkingHoursStart');
         const upWhEnd = document.getElementById('upWorkingHoursEnd');
         const upWDays = document.getElementById('upWorkingDays');
         if (upWhStart) formData.append('workingHoursStart', upWhStart.value);
         if (upWhEnd) formData.append('workingHoursEnd', upWhEnd.value);
+        
+        formData.append('vacationStart', document.getElementById('upVacationStart')?.value || '');
+        formData.append('vacationEnd', document.getElementById('upVacationEnd')?.value || '');
         if (upWDays) {
             const dVal = upWDays.tagName === 'SELECT' ? Array.from(upWDays.selectedOptions).map(o => o.value).join(',') : upWDays.value;
             formData.append('workingDays', dVal);
+        }
+
+        // Overwrite the FormData payload with values from the new Availability block if they exist
+        const availStart = document.getElementById('upAvailStart');
+        const availEnd = document.getElementById('upAvailEnd');
+        if (availStart) formData.set('workingHoursStart', availStart.value);
+        if (availEnd) formData.set('workingHoursEnd', availEnd.value);
+        
+        const availCbs = document.querySelectorAll('.avail-day-cb');
+        if (availCbs && availCbs.length > 0) {
+            const selectedDays = Array.from(availCbs).filter(cb => cb.checked).map(cb => cb.value).join(',');
+            formData.set('workingDays', selectedDays);
         }
 
         const existingPhotos = [];
@@ -2587,24 +3289,48 @@ if (updateProfileForm) {
 
         try {
             const token = localStorage.getItem('token');
-            // Added credentials: 'include' to ensure auth cookie is sent
             const res = await fetch(`${API_URL}/professionals/updateprofile`, {
                 method: 'PUT',
                 headers: { 
                     'Authorization': `Bearer ${token}`
                 },
                 credentials: 'include',
-                body: formData
+                body: formData,
+                keepalive: true // Ensures the save finishes even if the user closes the tab mid-save
             });
             const data = await res.json();
-            if (data.success) {
-                showAlert(alert, 'Profile updated successfully!', false);
-            } else {
-                showAlert(alert, data.error || 'Update failed');
+            if (!silent) {
+                if (data.success) {
+                    showAlert(alertEl, 'Profile updated successfully!', false);
+                } else {
+                    showAlert(alertEl, data.error || 'Update failed');
+                }
             }
         } catch (err) {
-            showAlert(alert, 'Server connection error');
+            if (!silent) showAlert(alertEl, 'Server connection error');
+        } finally {
+            isSaving = false;
         }
+    };
+
+    // Manual Submit Fallback
+    updateProfileForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        window.saveProfessionalProfile(false);
+    });
+
+    // Auto-Save Triggers
+    const formInputs = updateProfileForm.querySelectorAll('input, select, textarea');
+    formInputs.forEach(input => {
+        if (input.type === 'file') return; // Handled specially by addPhotoToGrid
+        input.addEventListener('blur', () => window.saveProfessionalProfile(true));
+        if (input.type === 'checkbox' || input.type === 'radio' || input.tagName === 'SELECT') {
+            input.addEventListener('change', () => window.saveProfessionalProfile(true));
+        }
+    });
+
+    window.addEventListener('beforeunload', () => {
+        window.saveProfessionalProfile(true);
     });
 }
 
@@ -3051,6 +3777,144 @@ async function loadLeads() {
     }
 }
 
+// --- Admin View Payment Verifications Modal ---
+async function openPaymentVerificationsModal() {
+    let modal = document.getElementById('paymentVerificationsModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'paymentVerificationsModal';
+        Object.assign(modal.style, {
+            position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.9)', zIndex: '3000', display: 'flex',
+            flexDirection: 'column', padding: '20px', overflowY: 'auto'
+        });
+
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = t('Close');
+        closeBtn.style.alignSelf = 'flex-end';
+        closeBtn.style.marginBottom = '10px';
+        closeBtn.onclick = () => modal.style.display = 'none';
+
+        const container = document.createElement('div');
+        Object.assign(container.style, {
+            backgroundColor: 'var(--dark-bg, #1a1a1a)', padding: '20px',
+            borderRadius: '8px', color: 'white', maxWidth: '1000px', margin: '0 auto', width: '100%'
+        });
+
+        container.innerHTML = `
+            <h2 class="gold-text" style="margin-bottom: 20px;">Payment Verifications</h2>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--primary-gold);">
+                            <th style="padding: 10px;">Name</th>
+                            <th style="padding: 10px;">Surname</th>
+                            <th style="padding: 10px;">Alias</th>
+                            <th style="padding: 10px;">Receipt</th>
+                            <th style="padding: 10px;">Processed</th>
+                        </tr>
+                    </thead>
+                    <tbody id="paymentsTableBody">
+                        <tr><td colspan="5" style="padding: 10px; text-align: center;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        modal.appendChild(closeBtn);
+        modal.appendChild(container);
+        document.body.appendChild(modal);
+        applyStaticTranslations(modal);
+    }
+
+    modal.style.display = 'flex';
+    loadPaymentVerifications();
+}
+
+async function loadPaymentVerifications() {
+    const tbody = document.getElementById('paymentsTableBody');
+    tbody.innerHTML = '<tr><td colspan="5" style="padding: 10px; text-align: center;">Loading...</td></tr>';
+    
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/admin/payments/pending`, { 
+            headers: { 'Authorization': `Bearer ${token}` },
+            credentials: 'include'
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            tbody.innerHTML = '';
+            if (data.data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="padding: 10px; text-align: center;">No pending payments.</td></tr>';
+                return;
+            }
+            
+            data.data.forEach(prof => {
+                const p = prof.professionalProfile || {};
+                const alias = p.alias || 'Unknown';
+                const firstName = p.firstName || '';
+                const lastName = p.lastName || '';
+                const receiptUrl = p.paymentReceiptUrl || '';
+
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid #333';
+                tr.innerHTML = `
+                    <td style="padding: 10px;">${firstName}</td>
+                    <td style="padding: 10px;">${lastName}</td>
+                    <td style="padding: 10px;">${alias}</td>
+                    <td style="padding: 10px; text-align: center;">
+                        <a href="${receiptUrl}" target="_blank" style="color: var(--primary-gold); text-decoration: none; font-size: 1.2rem;" title="View Receipt">📄</a>
+                    </td>
+                    <td style="padding: 10px;">
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="checkbox" class="process-payment-cb" data-id="${prof._id}">
+                            Processed
+                        </label>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.querySelectorAll('.process-payment-cb').forEach(cb => {
+                cb.onchange = (e) => {
+                    if (e.target.checked) {
+                        acknowledgePayment(e.target.getAttribute('data-id'));
+                    }
+                };
+            });
+            applyStaticTranslations(tbody);
+
+        } else {
+            tbody.innerHTML = `<tr><td colspan="5" style="padding: 10px; color: var(--accent-red);">Error: ${data.error}</td></tr>`;
+        }
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" style="padding: 10px; color: var(--accent-red);">Network Error</td></tr>`;
+    }
+}
+
+async function acknowledgePayment(id) {
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/admin/payments/${id}/acknowledge`, {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            credentials: 'include'
+        });
+        const data = await res.json();
+        if (data.success) {
+            loadPaymentVerifications(); 
+        } else {
+            alert(data.error || 'Failed to acknowledge payment');
+        }
+    } catch (err) {
+        alert('Server connection error');
+    }
+}
+
 // --- Admin View Pending Verifications Modal ---
 async function openPendingVerificationsModal() {
     let modal = document.getElementById('pendingModal');
@@ -3236,8 +4100,6 @@ async function openMailBroadcastModal() {
                 <textarea id="broadcastMessage" required rows="6" style="padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px; font-family: sans-serif;"></textarea>
 
                 <p style="font-size: 0.85rem; color: #aaa;">Note: The greeting "Hello [Alias]," will be automatically prepended to each email.</p>
-
-                <button type="submit" style="margin-top: 10px; padding: 10px; background: var(--primary-gold); color: var(--dark-bg); font-weight: bold; border: none; border-radius: 4px; cursor: pointer;">Send Broadcast</button>
             </form>
         `;
 
@@ -3444,16 +4306,35 @@ function renderEditForm(prof) {
                 <option value="rejected" ${prof.verificationStatus === 'rejected' ? 'selected' : ''}>Rejected</option>
             </select>
 
+            <h4 style="margin-bottom: 5px; border-bottom: 1px solid #444; padding-bottom: 5px; color: var(--primary-gold);">Identity & Contact</h4>
+            <div style="display:flex; gap:10px; flex-wrap: wrap; margin-bottom: 10px;">
+                <div style="flex:1;"><label>First Name</label><input type="text" id="adminEditFirstName" value="${profile.firstName || ''}" style="width:100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                <div style="flex:1;"><label>Last Name</label><input type="text" id="adminEditLastName" value="${profile.lastName || ''}" style="width:100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                <div style="flex:1;"><label>DNI</label><input type="text" id="adminEditIdNumber" value="${profile.idNumber || ''}" style="width:100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                <div style="flex:1;"><label>Birth Date</label><input type="date" id="adminEditBirthDate" value="${profile.birthDate ? profile.birthDate.substring(0,10) : ''}" style="width:100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap: wrap; margin-bottom: 15px;">
+                <div style="flex:1;"><label>Mobile Phone</label><input type="text" id="adminEditMobilePhone" value="${profile.mobilePhone || ''}" style="width:100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                <div style="flex:1;"><label>Street</label><input type="text" id="adminEditStreet" value="${profile.location?.street || ''}" style="width:100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                <div style="flex:1;"><label>Number</label><input type="text" id="adminEditStreetNumber" value="${profile.location?.number || ''}" style="width:100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                <div style="flex:1;"><label>Floor</label><input type="text" id="adminEditFloor" value="${profile.location?.floor || ''}" style="width:100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                <div style="flex:1;"><label>Apt</label><input type="text" id="adminEditApartment" value="${profile.location?.apartment || ''}" style="width:100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                <div style="flex:1;"><label>Post Code</label><input type="text" id="adminEditPostCode" value="${profile.location?.postalCode || ''}" style="width:100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap: wrap; margin-bottom: 15px;">
+                <div style="flex:1;"><label>Instagram</label><input type="text" id="adminEditInstagram" value="${profile.instagram || ''}" style="width:100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                <div style="flex:1;"><label>Facebook</label><input type="text" id="adminEditFacebook" value="${profile.facebook || ''}" style="width:100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+            </div>
+
             <label>Alias</label>
             <input type="text" id="adminEditAlias" value="${profile.alias || ''}" style="padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
-
             <label>Quality</label>
             <select id="adminEditQuality" style="padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
-                <option value="Standard" ${profile.quality === 'Standard' ? 'selected' : ''}>${t(CATEGORY_META['Standard'].name)} - ${CATEGORY_META['Standard'].price}</option>
-                <option value="Silver" ${profile.quality === 'Silver' ? 'selected' : ''}>${t(CATEGORY_META['Silver'].name)} - ${CATEGORY_META['Silver'].price}</option>
-                <option value="Gold" ${profile.quality === 'Gold' ? 'selected' : ''}>${t(CATEGORY_META['Gold'].name)} - ${CATEGORY_META['Gold'].price}</option>
-                <option value="Premium" ${profile.quality === 'Premium' ? 'selected' : ''}>${t(CATEGORY_META['Premium'].name)} - ${CATEGORY_META['Premium'].price}</option>
-                <option value="Elite" ${profile.quality === 'Elite' ? 'selected' : ''}>${t(CATEGORY_META['Elite'].name)} - ${CATEGORY_META['Elite'].price}</option>
+                <option value="Standard" ${profile.quality === 'Standard' ? 'selected' : ''}>${t(CATEGORY_META['Standard'].name)}</option>
+                <option value="Silver" ${profile.quality === 'Silver' ? 'selected' : ''}>${t(CATEGORY_META['Silver'].name)}</option>
+                <option value="Gold" ${profile.quality === 'Gold' ? 'selected' : ''}>${t(CATEGORY_META['Gold'].name)}</option>
+                <option value="Premium" ${profile.quality === 'Premium' ? 'selected' : ''}>${t(CATEGORY_META['Premium'].name)}</option>
+                <option value="Elite" ${profile.quality === 'Elite' ? 'selected' : ''}>${t(CATEGORY_META['Elite'].name)}</option>
             </select>
 
             <label>Bio</label>
@@ -3539,6 +4420,14 @@ function renderEditForm(prof) {
             email: document.getElementById('adminEditEmail').value,
             verificationStatus: document.getElementById('adminEditStatus').value,
             professionalProfile: {
+                    firstName: document.getElementById('adminEditFirstName').value,
+                    lastName: document.getElementById('adminEditLastName').value,
+                    idNumber: document.getElementById('adminEditIdNumber').value,
+                    birthDate: document.getElementById('adminEditBirthDate').value ? new Date(document.getElementById('adminEditBirthDate').value).toISOString() : undefined,
+                    age: document.getElementById('adminEditBirthDate').value ? Math.abs(new Date(Date.now() - new Date(document.getElementById('adminEditBirthDate').value).getTime()).getUTCFullYear() - 1970) : undefined,
+                    mobilePhone: document.getElementById('adminEditMobilePhone').value,
+                    instagram: document.getElementById('adminEditInstagram')?.value || '',
+                    facebook: document.getElementById('adminEditFacebook')?.value || '',
                 alias: document.getElementById('adminEditAlias').value,
                 quality: document.getElementById('adminEditQuality').value,
                 bio: document.getElementById('adminEditBio').value,
@@ -3555,8 +4444,13 @@ function renderEditForm(prof) {
                 paysMonthlyCharges: document.getElementById('adminEditPaysMonthly').checked,
                 location: {
                     province: document.getElementById('adminEditProvince')?.value || '',
-                    city: (document.getElementById('adminEditProvince')?.value || '').trim().toLowerCase() === 'caba' ? '' : document.getElementById('adminEditCity')?.value || '',
-                    neighborhood: document.getElementById('adminEditNeigh')?.value || ''
+                    city: (document.getElementById('adminEditProvince')?.value || '').trim().toLowerCase() === 'caba' ? '' : (document.getElementById('adminEditCity')?.value || ''),
+                    neighborhood: (document.getElementById('adminEditProvince')?.value || '').trim().toLowerCase() === 'caba' ? (document.getElementById('adminEditCity')?.value || '') : (document.getElementById('adminEditNeigh')?.value || ''),
+                        street: document.getElementById('adminEditStreet')?.value || '',
+                        number: document.getElementById('adminEditStreetNumber')?.value || '',
+                        floor: document.getElementById('adminEditFloor')?.value || '',
+                        apartment: document.getElementById('adminEditApartment')?.value || '',
+                        postalCode: document.getElementById('adminEditPostCode')?.value || ''
                 },
                 measurements: document.getElementById('adminEditMeasurements').value,
                 height: document.getElementById('adminEditHeight').value,
@@ -3791,18 +4685,58 @@ function addPhotoToGrid(fileOrUrl) {
     item.appendChild(img);
     item.appendChild(overlay);
 
-    item.addEventListener('click', () => {
+    // --- Drag and Drop Logic ---
+    item.draggable = true;
+    item.addEventListener('dragstart', function(e) {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', img.src); // Required for Firefox
+        item.classList.add('dragging');
+        setTimeout(() => item.style.opacity = '0.5', 0);
+    });
+    item.addEventListener('dragend', function() {
+        item.classList.remove('dragging');
+        item.style.opacity = '1';
+    });
+    item.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    });
+    item.addEventListener('dragenter', function(e) {
+        e.preventDefault();
+        if (this !== document.querySelector('.dragging')) this.style.transform = 'scale(1.05)';
+    });
+    item.addEventListener('dragleave', function() {
+        this.style.transform = 'scale(1)';
+    });
+    item.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.style.transform = 'scale(1)';
+        const draggedItem = document.querySelector('.dragging');
+        if (draggedItem && draggedItem !== this) {
+            let allItems = [...grid.querySelectorAll('.photo-item')];
+            let draggedIndex = allItems.indexOf(draggedItem);
+            let targetIndex = allItems.indexOf(this);
+            if (draggedIndex < targetIndex) this.after(draggedItem);
+            else this.before(draggedItem);
+                if (typeof window.saveProfessionalProfile === 'function') window.saveProfessionalProfile(true);
+        }
+    });
+
+    overlay.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevents accidental dragging interference
         if (confirm('Are you sure you want to remove this photo from your gallery?')) {
-            // If it's a newly added photo, revoke its object URL to free up memory
             if (newFilesMap.has(img.src)) {
                 URL.revokeObjectURL(img.src);
                 newFilesMap.delete(img.src);
             }
             item.remove();
+                if (typeof window.saveProfessionalProfile === 'function') window.saveProfessionalProfile(true);
         }
     });
 
-    grid.appendChild(item);
+    const frame = grid.querySelector('.add-photo-frame');
+    if (frame) grid.insertBefore(item, frame);
+    else grid.appendChild(item);
 }
 
 const newPhotoInput = document.getElementById('newPhotoInput');
@@ -3816,6 +4750,9 @@ if (newPhotoInput) {
                 }
                 addPhotoToGrid(file);
             }
+                setTimeout(() => {
+                    if (typeof window.saveProfessionalProfile === 'function') window.saveProfessionalProfile(true);
+                }, 100);
         }
     });
 }
@@ -3908,7 +4845,7 @@ async function renderSpecialtyDropdown(containerId, preselectedServices = [], op
         }
         preselectedArr = preselectedArr.map(s => (s || '').trim().toLowerCase()).filter(Boolean);
 
-        const specialties = ['Massage', 'Virtual Connection', 'Love Alchemy', 'Content Media'];
+        const specialties = ['Massage', 'Virtual Connection', 'Love Alchemy', 'Media Content', 'Streaming Kisses'];
         
         container.innerHTML = '';
         
@@ -4149,6 +5086,237 @@ async function setupLocationDropdowns(provinceId, cityId, neighborhoodId, isFilt
     await loadSublocations();
 }
 
+// --- Professional Dedicated 5-Block Editing Dashboard ---
+
+async function loadProfDashboard() {
+    const formObj = document.getElementById('updateProfileForm');
+    const loader = document.getElementById('loader');
+    const content = document.getElementById('profDashboardContent');
+    if (!formObj || !content) return;
+
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/professionals/me?_=${new Date().getTime()}`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+            credentials: 'include'
+        });
+        const data = await res.json();
+
+        if (data.success && data.data.role === 'professional') {
+            const user = data.data;
+            const prof = user.professionalProfile || {};
+            const stats = data.stats || { profileViews: 0, whatsappClicks: 0, phoneClicks: 0 };
+            const isApproved = user.verificationStatus === 'approved';
+
+            formObj.innerHTML = `
+                <h2 class="gold-text" style="margin-bottom: 20px;">Professional Dashboard</h2>
+                
+                <!-- 1. Statistics Top Frame -->
+                <div class="card fileteado-section" style="margin-bottom: 20px; border: 1px solid var(--primary-gold);">
+                    <h3 class="gold-text" style="margin-bottom: 15px;">Statistics</h3>
+                    <div style="display: flex; gap: 20px; justify-content: space-around; text-align: center; flex-wrap: wrap;">
+                        <div><div style="font-size: 2.5rem; color: var(--primary-gold);">${stats.profileViews || 0}</div><div style="font-size: 0.9rem; color: #ccc;">Dashboard Photo Clicks</div></div>
+                        <div><div style="font-size: 2.5rem; color: var(--primary-gold);">${stats.whatsappClicks || 0}</div><div style="font-size: 0.9rem; color: #ccc;">WhatsApp Button Pushes</div></div>
+                        <div><div style="font-size: 2.5rem; color: var(--primary-gold);">${stats.phoneClicks || 0}</div><div style="font-size: 0.9rem; color: #ccc;">Call Button Pushes</div></div>
+                        <div><div style="font-size: 2.5rem; color: var(--primary-gold);">0</div><div style="font-size: 0.9rem; color: #ccc;">Hourly Hits (Peak Time)</div></div>
+                    </div>
+                </div>
+                
+                <input type="hidden" id="upIdNumber" value="${prof.idNumber || ''}">
+                <input type="hidden" id="upBirthDate" value="${prof.birthDate ? new Date(prof.birthDate).toISOString().split('T')[0] : ''}">
+                <input type="hidden" id="upMobilePhone" value="${prof.mobilePhone || ''}">
+                <textarea id="upBio" style="display:none;">${prof.bio || ''}</textarea>
+                <input type="checkbox" id="upIsExposed" style="display:none;" ${prof.isExposed !== false ? 'checked' : ''}>
+                <input type="checkbox" id="upPaysMonthly" style="display:none;" ${prof.paysMonthlyCharges !== false ? 'checked' : ''}>
+                <input type="hidden" id="upWhatsapp" value="${prof.whatsappNumber || ''}">
+                <input type="hidden" id="upInstagram" value="${prof.instagram || ''}">
+                <input type="hidden" id="upFacebook" value="${prof.facebook || ''}">
+
+                <!-- 2. Personal Information -->
+                <div class="card fileteado-section" style="margin-bottom: 20px; border: 1px solid var(--primary-gold);">
+                    <h3 class="gold-text" style="margin-bottom: 15px;">Personal Information</h3>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <div style="flex: 1; min-width: 150px;"><label>Name</label><input type="text" id="upFirstName" value="${prof.firstName || ''}" style="width: 100%; padding: 8px; background: #333; color: #888; border: 1px solid #444; border-radius: 4px;" disabled></div>
+                        <div style="flex: 1; min-width: 150px;"><label>Surname</label><input type="text" id="upSurname" value="${prof.surname || ''}" style="width: 100%; padding: 8px; background: #333; color: #888; border: 1px solid #444; border-radius: 4px;" disabled></div>
+                        <div style="flex: 1; min-width: 150px;"><label>Middle Name</label><input type="text" id="upMiddleName" value="${prof.middleName || ''}" style="width: 100%; padding: 8px; background: #333; color: #888; border: 1px solid #444; border-radius: 4px;" disabled></div>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <div style="flex: 1; min-width: 150px;"><label>Alias</label><input type="text" id="upAlias" value="${prof.alias || ''}" style="width: 100%; padding: 8px; background: #333; color: #888; border: 1px solid #444; border-radius: 4px;" disabled></div>
+                        <div style="flex: 1; min-width: 150px;"><label>Height</label><input type="text" id="upHeight" value="${prof.height || ''}" style="width: 100%; padding: 8px; background: #333; color: #888; border: 1px solid #444; border-radius: 4px;" disabled></div>
+                        <div style="flex: 1; min-width: 150px;"><label>Measures</label><input type="text" id="upMeasurements" value="${prof.measurements || ''}" style="width: 100%; padding: 8px; background: #333; color: #888; border: 1px solid #444; border-radius: 4px;" disabled></div>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 150px;">
+                            <label>Category</label>
+                            <select id="upQuality" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid var(--primary-gold); border-radius: 4px;">
+                                <option value="Elite" ${prof.quality === 'Elite' ? 'selected' : ''}>Elite</option>
+                                <option value="Premium" ${prof.quality === 'Premium' ? 'selected' : ''}>Premium</option>
+                                <option value="Gold" ${prof.quality === 'Gold' ? 'selected' : ''}>Gold</option>
+                                <option value="Silver" ${prof.quality === 'Silver' ? 'selected' : ''}>Silver</option>
+                                <option value="Standard" ${prof.quality === 'Standard' ? 'selected' : ''}>Standard</option>
+                            </select>
+                        </div>
+                        <div style="flex: 2; min-width: 250px;">
+                            <label>Specialties</label>
+                            <div id="specsContainer" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px;"></div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 15px; border-top: 1px solid #444; padding-top: 15px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #ccc; font-size: 0.9rem;">
+                            <input type="checkbox" id="upOwnApartment" ${prof.hasOwnApartment ? 'checked' : ''}>
+                            ${t('Has own apartment')}
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #ccc; font-size: 0.9rem;">
+                            <input type="checkbox" id="upFantasyWardrobe" ${prof.hasFantasyWardrobe ? 'checked' : ''}>
+                            ${t('Has fantasy wardrobe')} (sexy costumes, high heels)
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 3. Address -->
+                <div class="card fileteado-section" style="margin-bottom: 20px; border: 1px solid var(--primary-gold);">
+                    <h3 class="gold-text" style="margin-bottom: 15px;">Address</h3>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <div style="flex: 2; min-width: 200px;"><label>Street</label><input type="text" id="upStreet" value="${prof.location?.street || ''}" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                        <div style="flex: 1; min-width: 100px;"><label>Number</label><input type="text" id="upStreetNumber" value="${prof.location?.number || ''}" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                        <div style="flex: 1; min-width: 80px;"><label>Floor</label><input type="text" id="upFloor" value="${prof.location?.floor || ''}" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                        <div style="flex: 1; min-width: 80px;"><label>Appartment</label><input type="text" id="upApartment" value="${prof.location?.apartment || ''}" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                        <div style="flex: 1; min-width: 100px;"><label>Postal Code</label><input type="text" id="upPostCode" value="${prof.location?.postalCode || ''}" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 150px;"><label>Province</label><select id="upProvince" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></select></div>
+                        <div style="flex: 1; min-width: 150px;"><label>Ciudad-Barrio (City)</label><select id="upCity" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></select></div>
+                        <div style="flex: 1; min-width: 150px;"><label>Ciudad-Barrio (Neighborhood)</label><input type="text" id="upNeighborhood" value="${prof.location?.neighborhood || ''}" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;" placeholder="Neighborhood..."></div>
+                    </div>
+                </div>
+
+                <!-- 4. Availability -->
+                <div class="card fileteado-section" style="margin-bottom: 20px; border: 1px solid var(--primary-gold);">
+                    <h3 class="gold-text" style="margin-bottom: 15px;">Availability</h3>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
+                        <div style="flex: 1; min-width: 150px;"><label>Avail-start</label><input type="time" id="upAvailStart" value="${prof.workingHours?.start || '00:00'}" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                        <div style="flex: 1; min-width: 150px;"><label>Avail-end</label><input type="time" id="upAvailEnd" value="${prof.workingHours?.end || '23:59'}" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                        <div style="flex: 1; min-width: 150px;"><label>Vac-start</label><input type="date" id="upVacationStart" value="${prof.vacation?.startDate ? new Date(prof.vacation.startDate).toISOString().split('T')[0] : ''}" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                        <div style="flex: 1; min-width: 150px;"><label>Vac-end</label><input type="date" id="upVacationEnd" value="${prof.vacation?.endDate ? new Date(prof.vacation.endDate).toISOString().split('T')[0] : ''}" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                    </div>
+                    <div id="daysContainer" style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px;"></div>
+                </div>
+
+                <!-- 5. Photos -->
+                <div class="card fileteado-section" style="margin-bottom: 20px; border: 1px solid var(--primary-gold);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 class="gold-text" style="margin: 0;">Photos</h3>
+                        <button type="button" id="btnUploadPhoto" style="padding: 8px 16px; background: var(--primary-gold); color: #111; font-weight: bold; border: none; border-radius: 4px; cursor: pointer;">Upload</button>
+                    </div>
+                    <p style="font-size: 0.85rem; color: #ccc; margin-bottom: 15px;">Admin upload, update, remove actions. Drag photos to reorder.</p>
+                    <input type="file" id="newPhotoInput" accept="image/png, image/jpeg, image/jpg, image/webp" multiple style="display: none;">
+                    <div id="photoGrid" style="display: flex; flex-wrap: wrap; gap: 15px;">
+                        <label class="add-photo-frame" style="width: 120px; height: 160px; border: 2px dashed var(--primary-gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--primary-gold); font-size: 2rem; background: rgba(212, 175, 55, 0.05); transition: background 0.3s ease; flex-shrink: 0;">
+                            <span>+</span>
+                        </label>
+                    </div>
+                    <p id="photoApprovalMsg" style="color: var(--accent-red); font-size: 0.85rem; margin-top: 10px; display: ${isApproved ? 'none' : 'block'};">Profile photos can only be uploaded after your account is approved.</p>
+                </div>
+                
+                <div id="updateAlert" class="alert hidden" style="padding: 10px; border-radius: 4px; border: 1px solid transparent; margin-bottom: 20px;"></div>
+                <button type="button" id="explicitSaveBtn" class="hidden" style="background: #25D366; color: white; font-weight: bold; width: 100%; padding: 12px; border-radius: 4px; border: none; cursor: pointer; margin-bottom: 15px;">💾 Save Changes</button>
+                <button type="button" id="bottomBackBtn" style="background: var(--primary-gold); color: var(--dark-bg); font-weight: bold; width: 100%; padding: 12px; border-radius: 4px; border: none; cursor: pointer;">&#8592; Back to Main Dashboard</button>
+            `;
+
+            // Logic to populate the components
+            const specsContainer = document.getElementById('specsContainer');
+            const specs = [
+                { name: 'Love Alchemy', tooltip: 'Sex' }, { name: 'Massage', tooltip: 'Conventional massage' },
+                { name: 'Virtual Connection', tooltip: 'Virtual call' }, { name: 'Media Content', tooltip: 'Share hot content pics or videos' },
+                { name: 'Streaming Kisses', tooltip: 'Live streaming kisses' }
+            ];
+            const userServices = prof.services || [];
+            specs.forEach(spec => {
+                const lbl = document.createElement('label');
+                lbl.title = spec.tooltip;
+                lbl.style.cssText = 'display:flex; align-items:center; gap:5px; cursor:pointer; padding:8px 12px; background:rgba(212,175,55,0.1); border-radius:4px; border:1px solid rgba(212,175,55,0.3); font-size:0.9rem;';
+                const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = spec.name; cb.className = 'dashboard-specialty-cb';
+                cb.checked = userServices.includes(spec.name) || userServices.includes(spec.name.toLowerCase());
+                lbl.appendChild(cb); lbl.appendChild(document.createTextNode(t(spec.name)));
+                specsContainer.appendChild(lbl);
+            });
+
+            const daysContainer = document.getElementById('daysContainer');
+            const fullDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            const shortDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            const userDays = prof.workingDays || fullDays;
+            fullDays.forEach((day, i) => {
+                const lbl = document.createElement('label');
+                lbl.style.cssText = 'display:flex; align-items:center; gap:5px; cursor:pointer;';
+                const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = day; cb.className = 'avail-day-cb';
+                cb.checked = userDays.includes(day);
+                lbl.appendChild(cb); lbl.appendChild(document.createTextNode(shortDays[i]));
+                daysContainer.appendChild(lbl);
+            });
+
+            setupLocationDropdowns('upProvince', 'upCity', 'upNeighborhood', false, prof.location || {});
+
+            const photoGrid = document.getElementById('photoGrid');
+            const newPhotoInput = document.getElementById('newPhotoInput');
+            const btnUploadPhoto = document.getElementById('btnUploadPhoto');
+            
+            if (newPhotoInput) {
+                if (!isApproved) {
+                    newPhotoInput.disabled = true; btnUploadPhoto.disabled = true; btnUploadPhoto.style.opacity = '0.5';
+                    photoGrid.style.opacity = '0.3'; photoGrid.style.pointerEvents = 'none';
+                }
+                btnUploadPhoto.onclick = () => newPhotoInput.click();
+                const frameLabel = photoGrid.querySelector('.add-photo-frame');
+                if (frameLabel) frameLabel.appendChild(newPhotoInput);
+                (prof.photos || []).forEach(url => addPhotoToGrid(url));
+                newPhotoInput.addEventListener('change', (e) => {
+                    if (e.target.files) {
+                        for (const file of e.target.files) {
+                            if (!file.type.startsWith('image/')) continue;
+                            addPhotoToGrid(file);
+                        }
+                        document.getElementById('explicitSaveBtn').classList.remove('hidden');
+                    }
+                });
+            }
+
+            // Show Save Button on any form modification to avoid focus-out issues
+            const markDirty = (e) => {
+                if (e.target.matches('input, select, textarea')) {
+                    document.getElementById('explicitSaveBtn').classList.remove('hidden');
+                }
+            };
+            formObj.addEventListener('input', markDirty);
+            formObj.addEventListener('change', markDirty);
+
+            document.getElementById('explicitSaveBtn').onclick = async () => {
+                if (typeof window.saveProfessionalProfile === 'function') {
+                    const btn = document.getElementById('explicitSaveBtn');
+                    btn.textContent = 'Saving...';
+                    btn.style.opacity = '0.7';
+                    await window.saveProfessionalProfile(false); // False = show success alert to the user
+                    btn.textContent = '💾 Save Changes';
+                    btn.style.opacity = '1';
+                    btn.classList.add('hidden'); // Hide the button again until next change
+                }
+            };
+
+            document.getElementById('bottomBackBtn').onclick = async () => {
+                if (typeof window.saveProfessionalProfile === 'function') await window.saveProfessionalProfile(true);
+                window.location.href = '/perfil/' + encodeURIComponent(prof.alias || '');
+            };
+
+            loader.classList.add('hidden');
+            content.classList.remove('hidden');
+            applyStaticTranslations(content);
+        } else {
+            window.location.href = '/index.html';
+        }
+    } catch (err) {
+        if(loader) loader.innerHTML = '<p class="alert">Server connection error.</p>';
+    }
+}
+
 // --- Auto-Initialize ---
 document.addEventListener('DOMContentLoaded', async () => {
     // Age Verification Gate:
@@ -4251,9 +5419,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupPasswordToggles();
 
     if (!isPublicPage && is18Plus !== 'true' && !hasToken) {
-        // If on a protected page without age verification, redirect to the landing page.
-        window.location.replace('/index.html');
-        return; // Stop further script execution on this page.
+        const ref = document.referrer;
+        // Fallback: If they clicked a direct link from the landing page (like an inline onclick)
+        // that navigated here before the JS age-gate logic could set the flag,
+        // we safely assume they clicked the +18 button since they came from the root/index page.
+        if (ref && (ref.endsWith('/') || ref.includes('index.html'))) {
+            localStorage.setItem('is18Plus', 'true');
+            sessionStorage.setItem('valid_entry', 'true');
+            sessionStorage.setItem('ancestor_code', 'index.html');
+        } else {
+            // If on a protected page without age verification, redirect to the landing page.
+            window.location.replace('/index.html');
+            return; // Stop further script execution on this page.
+        }
     }
 
     // --- THE FLOW GUARDIAN (Ancestor Code System) ---
@@ -4261,15 +5439,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const allowedAncestors = {
         'categories.html': ['index.html', 'categories.html', 'treasure.html', 'dashboard.html', 'login.html'],
         'treasure.html': ['categories.html', 'treasure.html'],
-        'dashboard.html': ['index.html', 'login.html', 'verify.html', 'categories.html', 'treasure.html', 'dashboard.html'],
+        'dashboard.html': ['index.html', 'login.html', 'verify.html', 'categories.html', 'treasure.html', 'dashboard.html', 'profDashboard.html'],
+        'profDashboard.html': ['index.html', 'login.html', 'verify.html', 'dashboard.html', 'profDashboard.html', 'categories.html', 'treasure.html'],
         'verify.html': ['register.html', 'login.html', 'verify.html'],
-        'register.html': ['index.html', 'login.html', 'register.html'],
-        'login.html': ['index.html', 'register.html', 'recover.html', 'login.html'],
+        'register.html': ['index.html', 'login.html', 'register.html', 'dashboard.html', 'categories.html', 'treasure.html'],
+        'login.html': ['index.html', 'register.html', 'recover.html', 'login.html', 'dashboard.html', 'categories.html', 'treasure.html'],
         'recover.html': ['login.html', 'recover.html'],
         'home.html': ['dashboard.html', 'home.html']
     };
 
-    if (effectivePage === 'index.html' || effectivePage === 'login.html') {
+    if (publicPages.includes(effectivePage) || is18Plus === 'true' || hasToken) {
         sessionStorage.setItem('valid_entry', 'true');
     }
 
@@ -4281,7 +5460,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const referrer = document.referrer;
             const isExternalReferrer = referrer && !referrer.includes(window.location.hostname);
             
-            if (isExternalReferrer || sessionStorage.getItem('valid_entry') !== 'true') {
+            if (sessionStorage.getItem('valid_entry') !== 'true') {
                 sessionStorage.setItem('intended_destination', window.location.href);
                 console.warn(`[Flow Guardian] Strict entry enforced. Redirecting to start.`);
                 window.location.replace('/index.html');
@@ -4292,8 +5471,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const currentAncestorCode = sessionStorage.getItem('ancestor_code');
         const allowed = allowedAncestors[effectivePage];
 
-        // If they are age-verified but opening a new tab/bookmark directly to public feeds, seed the flow naturally
-        if (!currentAncestorCode && is18Plus === 'true' && (effectivePage === 'categories.html' || effectivePage === 'treasure.html')) {
+        // If they are logged in or age-verified but opening a new tab/bookmark directly to internal pages, seed the flow naturally
+        if (!currentAncestorCode && (is18Plus === 'true' || hasToken) && (effectivePage === 'categories.html' || effectivePage === 'treasure.html' || effectivePage === 'dashboard.html')) {
             sessionStorage.setItem('ancestor_code', 'index.html');
         } else if (allowed && (!currentAncestorCode || !allowed.includes(currentAncestorCode))) {
             console.warn(`[Flow Guardian] Access denied. Invalid ancestor code for ${effectivePage}. Redirecting to start.`);
@@ -4335,7 +5514,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Guests won't have a token, but they should still auto-forward if verified
         if (is18Plus === 'true') {
-            window.location.replace('categories.html');
+            const intended = sessionStorage.getItem('intended_destination');
+            if (intended) {
+                sessionStorage.removeItem('intended_destination');
+                window.location.replace(intended);
+            } else {
+                window.location.replace('categories.html');
+            }
             return;
         }
     }
@@ -4466,6 +5651,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     if (document.getElementById('treasureGrid')) loadTreasures();
     if (document.getElementById('dashboardContent')) loadDashboard();
+    if (document.getElementById('profDashboardContent')) loadProfDashboard();
     if (document.getElementById('treasureDetail')) loadTreasureDetails();
 
 });

@@ -1,4 +1,3 @@
-@echo off
 echo ===================================================
 echo 📸 Syncing Local Test Photos to Production
 echo ===================================================

@@ -2,6 +2,7 @@ const User = require('../models/User');
 const config = require('../config/appConfig');
 const ActivityLog = require('../models/ActivityLog');
 const sendEmail = require('../sendEmail');
+const Specialty = require('../models/Specialty');
 
 // Simple in-memory cache setup
 const cache = new Map();
@@ -130,10 +131,15 @@ exports.getProfessionals = async (req, res, next) => {
 // @access  Public
 exports.getProfessionalByAlias = async (req, res, next) => {
   try {
+    // Failsafe: Prevent 'me' from being treated as an alias if route auth falls through
+    if (req.params.alias.toLowerCase() === 'me') {
+      return res.status(403).json({ success: false, error: 'Access denied. You must be logged in as a professional to view the dashboard.' });
+    }
+
+    const aliasRegex = new RegExp(`^${req.params.alias}$`, 'i');
     const professional = await User.findOne({ 
-      'professionalProfile.alias': req.params.alias,
-      role: 'professional',
-      isVerified: true
+      'professionalProfile.alias': aliasRegex,
+      role: 'professional'
     }).select('professionalProfile.alias professionalProfile.quality professionalProfile.bio professionalProfile.services professionalProfile.location professionalProfile.pricing professionalProfile.measurements professionalProfile.height professionalProfile.eyeColor professionalProfile.hasTattoos professionalProfile.whatsappNumber professionalProfile.photos professionalProfile.workingHours professionalProfile.workingDays');
 
     if (!professional) {
@@ -152,11 +158,13 @@ exports.getProfessionalByAlias = async (req, res, next) => {
 
     // Track the Profile View Activity
     try {
+      const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket ? req.socket.remoteAddress : req.ip);
       await ActivityLog.create({
         professional: professional._id,
         action: 'profile_view',
-        ipAddress: req.ip,
-        userAgent: req.headers['user-agent']
+        ipAddress: clientIp,
+        userAgent: req.headers['user-agent'],
+        isGuest: false
       });
     } catch(err) { console.error('Activity log error:', err.message); }
 
@@ -183,10 +191,10 @@ exports.getProfessionalByAlias = async (req, res, next) => {
 // @access  Public
 exports.contactWhatsApp = async (req, res, next) => {
   try {
+    const aliasRegex = new RegExp(`^${req.params.alias}$`, 'i');
     const professional = await User.findOne({ 
-      'professionalProfile.alias': req.params.alias,
-      role: 'professional',
-      isVerified: true
+      'professionalProfile.alias': aliasRegex,
+      role: 'professional'
     }).select('professionalProfile.whatsappNumber professionalProfile.alias');
 
     if (!professional || !professional.professionalProfile.whatsappNumber) {
@@ -199,11 +207,13 @@ exports.contactWhatsApp = async (req, res, next) => {
 
     // Track the WhatsApp Click Activity
     try {
+      const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket ? req.socket.remoteAddress : req.ip);
       await ActivityLog.create({
         professional: professional._id,
         action: 'whatsapp_click',
-        ipAddress: req.ip,
-        userAgent: req.headers['user-agent']
+        ipAddress: clientIp,
+        userAgent: req.headers['user-agent'],
+        isGuest: false
       });
     } catch(err) { console.error('Activity log error:', err.message); }
 
@@ -282,15 +292,24 @@ exports.getMe = async (req, res, next) => {
     // Fetch performance metrics to show on the dashboard
     let profileViews = 0;
     let whatsappClicks = 0;
+    let phoneClicks = 0;
     try {
-      profileViews = await ActivityLog.countDocuments({ professional: user._id, action: 'profile_view' });
-      whatsappClicks = await ActivityLog.countDocuments({ professional: user._id, action: 'whatsapp_click' });
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      profileViews = await ActivityLog.countDocuments({ professional: user._id, action: 'profile_view', createdAt: { $gte: thirtyDaysAgo } });
+      whatsappClicks = await ActivityLog.countDocuments({ professional: user._id, action: 'whatsapp_click', createdAt: { $gte: thirtyDaysAgo } });
+      phoneClicks = await ActivityLog.countDocuments({ professional: user._id, action: 'phone_click', createdAt: { $gte: thirtyDaysAgo } });
     } catch (err) { console.error('Failed to load stats:', err.message); }
+
+    // Fetch dynamic pricing
+    const adminUser = await User.findOne({ role: 'admin' });
+    const globalPricing = adminUser?.adminSettings?.pricing || {
+        Elite: 50000, Premium: 40000, Gold: 30000, Silver: 20000, Standard: 15000
+    };
 
     res.status(200).json({
       success: true,
       isReadyForTransactions,
-      stats: { profileViews, whatsappClicks },
+      stats: { profileViews, whatsappClicks, phoneClicks },
       globalPricing,
       data: user
     });
@@ -316,11 +335,13 @@ exports.acknowledgeRateChange = async (req, res, next) => {
     user.professionalProfile.rateChangeAcknowledged = true;
     await user.save();
 
+    const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket ? req.socket.remoteAddress : req.ip);
     await ActivityLog.create({
       professional: user._id,
       action: 'acknowledge_rate_change',
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent']
+      ipAddress: clientIp,
+      userAgent: req.headers['user-agent'],
+      isGuest: false
     });
 
     res.status(200).json({
@@ -388,17 +409,13 @@ exports.updateProfile = async (req, res, next) => {
     // Get existing photos from the form (sent as a JSON string)
     const existingPhotos = req.body.existingPhotos ? JSON.parse(req.body.existingPhotos) : [];
 
-    // Get URLs of newly uploaded files from multer
-    const newPhotoUrls = req.files ? req.files.map(file => `/uploads/photos/${file.filename}`) : [];
-
-    // Combine old and new photo URLs
-    const allPhotos = [...existingPhotos, ...newPhotoUrls];
-
     // Check metadata for new photos to validate they are recent (within 1 year)
     let lastPhotoUpdate = undefined;
+    const newPhotoUrls = [];
+    const fs = require('fs');
+    
     if (req.files && req.files.length > 0) {
       const oneYearAgo = Date.now() - 365 * 24 * 60 * 60 * 1000;
-      const fs = require('fs');
       let invalidFound = false;
       
       for (const file of req.files) {
@@ -408,18 +425,47 @@ exports.updateProfile = async (req, res, next) => {
       }
       
       if (invalidFound) {
-        req.files.forEach(file => fs.unlinkSync(file.path));
+        req.files.forEach(file => { if (fs.existsSync(file.path)) fs.unlinkSync(file.path); });
         return res.status(400).json({ success: false, error: 'One or more uploaded photos are older than a year according to metadata. Please upload recent photos.' });
       }
       lastPhotoUpdate = Date.now();
+
+      // Convert files to Base64 strings to store in the database
+      for (const file of req.files) {
+        const base64Data = fs.readFileSync(file.path, 'base64');
+        newPhotoUrls.push(`data:${file.mimetype};base64,${base64Data}`);
+        if (fs.existsSync(file.path)) fs.unlinkSync(file.path); // Remove external file
+      }
     }
+
+    // Combine old and new photo URLs
+    const allPhotos = [...existingPhotos, ...newPhotoUrls];
 
     const rawDays = req.body.workingDays;
     const parsedDays = rawDays ? rawDays.split(',').map(s => s.trim()).filter(s => s) : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+    const oldProf = currentUser.professionalProfile || {};
+    const isApproved = currentUser.verificationStatus === 'approved';
+
+    let identityFields = {};
+    if (!isApproved) {
+      if (req.body.firstName !== undefined) identityFields.firstName = req.body.firstName;
+      if (req.body.surname !== undefined) identityFields.surname = req.body.surname;
+      if (req.body.middleName !== undefined) identityFields.middleName = req.body.middleName;
+      if (req.body.idNumber !== undefined) identityFields.idNumber = req.body.idNumber;
+      if (req.body.birthDate) {
+        identityFields.birthDate = new Date(req.body.birthDate);
+        identityFields.age = Math.abs(new Date(Date.now() - identityFields.birthDate.getTime()).getUTCFullYear() - 1970);
+      }
+    }
+
     // Build the professionalProfile object from the form fields
     const professionalProfile = {
       alias: req.body.alias,
+      ...identityFields,
+      mobilePhone: req.body.mobilePhone !== undefined ? req.body.mobilePhone : oldProf.mobilePhone,
+      instagram: req.body.instagram !== undefined ? req.body.instagram : oldProf.instagram,
+      facebook: req.body.facebook !== undefined ? req.body.facebook : oldProf.facebook,
       bio: req.body.bio,
       services: req.body.services ? req.body.services.split(',').map(s => s.trim()).filter(s => s) : [],
       measurements: req.body.measurements,
@@ -445,46 +491,94 @@ exports.updateProfile = async (req, res, next) => {
     if (lastPhotoUpdate) professionalProfile.lastPhotoUpdate = lastPhotoUpdate;
 
     // Safely update the nested location object if location data is provided
-    if (req.body.province || req.body.city || req.body.neighborhood) {
+    if (req.body.province || req.body.city || req.body.neighborhood || req.body.street !== undefined || req.body.number !== undefined || req.body.floor !== undefined || req.body.apartment !== undefined || req.body.postalCode !== undefined) {
       professionalProfile.location = {
-        province: req.body.province || undefined,
-        city: req.body.city || undefined,
-        neighborhood: req.body.neighborhood || undefined
+        province: req.body.province || oldProf.location?.province,
+        city: req.body.city !== undefined ? req.body.city : oldProf.location?.city,
+        neighborhood: req.body.neighborhood !== undefined ? req.body.neighborhood : oldProf.location?.neighborhood,
+        street: req.body.street !== undefined ? req.body.street : oldProf.location?.street,
+        number: req.body.number !== undefined ? req.body.number : oldProf.location?.number,
+        floor: req.body.floor !== undefined ? req.body.floor : oldProf.location?.floor,
+        apartment: req.body.apartment !== undefined ? req.body.apartment : oldProf.location?.apartment,
+        postalCode: req.body.postalCode !== undefined ? req.body.postalCode : oldProf.location?.postalCode
       };
     }
 
-    // Auto-calculate Category (Quality) based on scoring algorithm
-    let score = 0;
-    if (professionalProfile.hasOwnApartment) score += 2;
-    if (professionalProfile.hasFantasyWardrobe) score += 2;
-    
-    const nbhd = (professionalProfile.location?.neighborhood || '').trim().toLowerCase();
-    if (['recoleta', 'puerto madero', 'palermo'].includes(nbhd)) score += 3;
-    else if (['belgrano', 'caballito', 'san telmo'].includes(nbhd)) score += 2;
-    else if (nbhd !== '') score += 1;
+    if (req.body.quality) {
+        professionalProfile.quality = req.body.quality;
+    } else {
+        professionalProfile.quality = oldProf.quality || 'Standard';
+    }
 
-    if (score >= 8) professionalProfile.quality = 'Elite';
-    else if (score >= 6) professionalProfile.quality = 'Premium';
-    else if (score >= 4) professionalProfile.quality = 'Gold';
-    else if (score >= 2) professionalProfile.quality = 'Silver';
-    else professionalProfile.quality = 'Standard';
+    // Check if sensitive contact/location details were changed
+    let sensitiveChanged = false;
+    if (req.body.mobilePhone !== undefined && req.body.mobilePhone !== (oldProf.mobilePhone || '')) sensitiveChanged = true;
+    if (req.body.street !== undefined && req.body.street !== (oldProf.location?.street || '')) sensitiveChanged = true;
+    if (req.body.number !== undefined && req.body.number !== (oldProf.location?.number || '')) sensitiveChanged = true;
+    if (req.body.floor !== undefined && req.body.floor !== (oldProf.location?.floor || '')) sensitiveChanged = true;
+    if (req.body.apartment !== undefined && req.body.apartment !== (oldProf.location?.apartment || '')) sensitiveChanged = true;
 
     // Use dot notation to avoid overwriting the entire subdocument
     const fieldsToUpdate = {};
     Object.keys(professionalProfile).forEach(key => {
       fieldsToUpdate[`professionalProfile.${key}`] = professionalProfile[key];
     });
+    
+    if (req.body.vacationStart && req.body.vacationEnd) {
+      const vStart = new Date(req.body.vacationStart);
+      const vEnd = new Date(req.body.vacationEnd);
+      const diffDays = Math.ceil((vEnd - vStart) / (1000 * 60 * 60 * 24));
+      
+      let finalEnd = vEnd;
+      if (diffDays > 20) {
+        finalEnd = new Date(vStart.getTime() + 20 * 24 * 60 * 60 * 1000);
+      }
+      
+      const currentYear = new Date().getFullYear();
+      const lastRequestYear = oldProf.vacation?.requestedAt ? oldProf.vacation.requestedAt.getFullYear() : 0;
+      
+      if (lastRequestYear !== currentYear || !oldProf.vacation?.requestedAt) {
+        fieldsToUpdate['professionalProfile.vacation'] = {
+          startDate: vStart,
+          endDate: finalEnd,
+          requestedAt: new Date()
+        };
+      }
+    }
+
+    if (sensitiveChanged && isApproved) {
+        fieldsToUpdate.verificationStatus = 'pending';
+        fieldsToUpdate.isVerified = false;
+        try {
+          const adminEmail = config.payment && config.payment.adminEmail ? config.payment.adminEmail : 'admin@drsrv.net.ar';
+          sendEmail({ email: adminEmail, subject: 'SexAppeal - Re-Verification Required', message: `Professional "${oldProf.alias}" modified their sensitive contact/address details and has been moved back to pending verification.` });
+        } catch(e) {}
+    }
 
     const user = await User.findByIdAndUpdate(req.user.id, { $set: fieldsToUpdate }, {
       new: true,
       runValidators: true
     });
 
+    // Sync the many-to-many Specialties table
+    if (req.body.services !== undefined) {
+      await Specialty.deleteMany({ user: user._id });
+      if (professionalProfile.services.length > 0) {
+        const specialtyDocs = professionalProfile.services.map(s => ({
+          user: user._id,
+          specialty: s
+        }));
+        await Specialty.insertMany(specialtyDocs).catch(err => console.error('Failed to sync specialties table:', err.message));
+      }
+    }
+
+    const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket ? req.socket.remoteAddress : req.ip);
     await ActivityLog.create({
       professional: user._id,
       action: 'update_profile',
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent']
+      ipAddress: clientIp,
+      userAgent: req.headers['user-agent'],
+      isGuest: false
     });
 
     // Notify admin of profile update
@@ -506,5 +600,41 @@ exports.updateProfile = async (req, res, next) => {
       success: false,
       error: error.message
     });
+  }
+};
+
+// @desc    Redirect to Professional's Phone (Anti-Scraping Protection)
+// @route   GET /api/v1/professionals/:alias/phone
+// @access  Public
+exports.contactPhone = async (req, res, next) => {
+  try {
+    const aliasRegex = new RegExp(`^${req.params.alias}$`, 'i');
+    const professional = await User.findOne({ 
+      'professionalProfile.alias': aliasRegex,
+      role: 'professional'
+    }).select('professionalProfile.whatsappNumber professionalProfile.alias');
+
+    if (!professional || !professional.professionalProfile.whatsappNumber) {
+      return res.status(404).send('Phone contact not available for this professional.');
+    }
+
+    const cleanNumber = professional.professionalProfile.whatsappNumber.replace(/\D/g, '');
+    const phoneUrl = `tel:+${cleanNumber}`;
+
+    // Track the Phone Click Activity
+    try {
+      const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket ? req.socket.remoteAddress : req.ip);
+      await ActivityLog.create({
+        professional: professional._id,
+        action: 'phone_click',
+        ipAddress: clientIp,
+        userAgent: req.headers['user-agent'],
+        isGuest: false
+      });
+    } catch(err) { console.error('Activity log error:', err.message); }
+
+    res.redirect(phoneUrl);
+  } catch (error) {
+    res.status(400).send('Unable to redirect to phone.');
   }
 };

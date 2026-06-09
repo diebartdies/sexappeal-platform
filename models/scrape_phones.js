@@ -6,15 +6,9 @@ const PotentialProfessional = require('./PotentialProfessional');
 
 // Add the URLs of the root domain pages you want to scrape here
 const targetWebpages = [
-    'https://www.gemidos.tv',
-    'https://www.bairesgirls.com',
     'https://www.argxp.com',
-    'https://www.pekadoras.com',
-    'https://www.selfieescorts.com',
-    'https://www.sexysabor.com',
-    'https://www.putasvip.com',
-    'https://www.escortbuenosaires.com',
-    'https://www.simpleescorts.com'
+    'https://www.gemidos.tv',
+    'https://www.empireescorts.com'
 ];
 
 // Regex designed to capture common Argentine mobile numbers (with or without +54 9)
@@ -28,8 +22,9 @@ async function extractPhones() {
 
     // Launch a headless browser
     const browser = await puppeteer.launch({ 
-        headless: true,
-        userDataDir: './.cache/puppeteer_user_data'
+        headless: "new",
+        userDataDir: './.cache/puppeteer_user_data',
+        args: ['--no-sandbox', '--disable-blink-features=AutomationControlled']
     });
     const page = await browser.newPage();
 
@@ -42,19 +37,28 @@ async function extractPhones() {
             // Go to the main page
             await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
             
+            // Wait to ensure initial redirects settle
+            await new Promise(resolve => setTimeout(resolve, 5000));
+
             // Attempt to automatically bypass common "18+" or "Enter" popups
             try {
-                await page.evaluate(() => {
+                const clickedPopup = await page.evaluate(() => {
                     const elements = Array.from(document.querySelectorAll('a, button, div[role="button"]'));
                     const keywords = ['18+', 'entrar', 'soy mayor', 'enter', 'accept', 'agree', 'sí,', 'si,', 'ingresar', 'acceder', 'continuar', 'yes', 'confirmar'];
                     for (const el of elements) {
                         const text = (el.innerText || '').toLowerCase().trim();
                         if (text.length > 0 && text.length < 30 && keywords.some(kw => text.includes(kw)) && el.offsetHeight > 0) {
                             el.click();
-                            break;
+                            return true;
                         }
                     }
+                    return false;
                 });
+
+                if (clickedPopup) {
+                    console.log('   Clicked entrance popup, waiting for redirect...');
+                    await new Promise(resolve => setTimeout(resolve, 6000));
+                }
             } catch (err) {
                 // Ignore if it fails, not all sites have popups
             }
@@ -105,9 +109,8 @@ async function extractPhones() {
             
             // Remove duplicates
             const uniqueLinks = [...new Set(links)];
-            
-            // Lowered the limit to a safer batch size to prevent IP bans and timeouts
-            const profileLinksToVisit = uniqueLinks.slice(0, 25);
+            // Increased the limit to harvest a massive batch specifically from ArgXP
+            const profileLinksToVisit = uniqueLinks.slice(0, 100);
             console.log(`   Found ${uniqueLinks.length} internal links. Visiting ${profileLinksToVisit.length} profiles...`);
 
             const sitePhones = new Map();
@@ -134,16 +137,62 @@ async function extractPhones() {
                     if (extractedAlias) {
                         extractedAlias = extractedAlias.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
                         const lowerAlias = extractedAlias.toLowerCase();
-                        if (lowerAlias.includes('escort') || lowerAlias.includes('puta') || lowerAlias.includes('gemidos') || lowerAlias.includes('argxp') || lowerAlias.includes('baires') || lowerAlias.includes('damas de') || lowerAlias.includes('connections') || lowerAlias.includes('lima leonis') || lowerAlias.includes('dream girl')) {
+                        if (lowerAlias.includes('escort') || lowerAlias.includes('puta') || lowerAlias.includes('gemidos') || lowerAlias.includes('argxp') || lowerAlias.includes('empire') || lowerAlias.includes('baires') || lowerAlias.includes('damas de') || lowerAlias.includes('connections') || lowerAlias.includes('lima leonis') || lowerAlias.includes('dream girl')) {
                             extractedAlias = '';
                         }
                     }
 
+                    // Extract numbers directly from explicit WhatsApp links (highly accurate)
+                    const waLinks = await page.evaluate(() => {
+                        return Array.from(document.querySelectorAll('a[href*="wa.me"], a[href*="api.whatsapp.com/send"], a[href*="whatsapp://send"], a[href*="web.whatsapp.com/send"]'))
+                            .map(a => a.href);
+                    });
+
+                    let rawPhonesData = [];
+                    waLinks.forEach(link => {
+                        try {
+                            const urlObj = new URL(link);
+                            let pStr = urlObj.hostname.includes('wa.me') ? urlObj.pathname.replace('/', '') : urlObj.searchParams.get('phone');
+                            let linkAlias = '';
+                            
+                            // Attempt to extract alias from the text parameter (e.g. "Hola *Megan*...")
+                            const textParam = urlObj.searchParams.get('text');
+                            if (textParam) {
+                                console.log(`   [DEBUG] Raw WhatsApp text found: "${textParam}"`);
+                                const match = textParam.match(/\*(.*?)\*/);
+                                if (match && match[1]) {
+                                    linkAlias = match[1].trim();
+                                    console.log(`   [DEBUG] -> Successfully extracted name (via asterisks): "${linkAlias}"`);
+                                } else {
+                                    const matchFallback = textParam.match(/Hola\s+([^,¿\?]+)/i);
+                                    if (matchFallback && matchFallback[1]) {
+                                        linkAlias = matchFallback[1].trim();
+                                        console.log(`   [DEBUG] -> Successfully extracted name (via fallback): "${linkAlias}"`);
+                                    } else {
+                                        console.log(`   [DEBUG] -> Failed to extract name from text.`);
+                                    }
+                                }
+                            }
+
+                            if (pStr) {
+                                rawPhonesData.push({ phone: pStr.replace(/\D/g, ''), alias: linkAlias });
+                            }
+                        } catch (e) {}
+                    });
+
+                    // Fallback: extract from raw HTML text
                     const matches = html.match(phoneRegex);
                     if (matches && matches.length > 0) {
                         matches.forEach(phone => {
-                            const cleanPhone = phone.replace(/\D/g, '');
+                            rawPhonesData.push({ phone: phone.replace(/\D/g, ''), alias: '' });
+                        });
+                    }
+
+                    if (rawPhonesData.length > 0) {
+                        rawPhonesData.forEach(item => {
                             
+                            const cleanPhone = item.phone;
+
                             // Normalize to national 10-digit number for validation
                             let nationalPhone = cleanPhone;
                             if (nationalPhone.startsWith('549') && nationalPhone.length >= 13) nationalPhone = nationalPhone.slice(3);
@@ -160,9 +209,10 @@ async function extractPhones() {
 
                             // Only accept exactly 10 digits without 6+ repeating numbers
                             if (nationalPhone.length === 10 && !/(.)\1{5,}/.test(nationalPhone)) {
+                                const finalAlias = item.alias || extractedAlias;
                                 // Only save if we don't have it, or if we found a better alias for an existing number
-                                if (!sitePhones.has(nationalPhone) || (extractedAlias && !sitePhones.get(nationalPhone))) {
-                                    sitePhones.set(nationalPhone, extractedAlias);
+                                if (!sitePhones.has(nationalPhone) || (finalAlias && !sitePhones.get(nationalPhone))) {
+                                    sitePhones.set(nationalPhone, finalAlias);
                                 }
                             }
                         });

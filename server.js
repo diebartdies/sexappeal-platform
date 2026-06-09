@@ -108,6 +108,7 @@ const locationController = require('./controllers/locationController');
 const transactionController = require('./controllers/transactionController');
 const potentialProfessionalController = require('./controllers/potentialProfessionalController');
 const paymentController = require('./controllers/paymentController');
+const specialtyController = require('./controllers/specialtyController');
 const { protect, authorize } = require('./middleware/auth');
 
 app.post('/api/v1/auth/register', upload.array('verificationDocuments', 3), authController.register);
@@ -125,10 +126,35 @@ app.post('/api/v1/feedback', protect, feedbackController.submitFeedback);
 app.get('/api/v1/locations/provinces', locationController.getProvinces);
 app.get('/api/v1/locations/provinces/:provinceId/sublocations', locationController.getSublocations);
 
+// Professional Dashboard Routes (Private) - Must be declared before /:alias
+app.get('/api/v1/professionals/me', protect, authorize('professional', 'admin'), async (req, res, next) => {
+    try {
+        const userId = req.user.id || req.user._id;
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ success: false, error: 'Professional not found' });
+        
+        const adminUser = await User.findOne({ role: 'admin' });
+        const globalPricing = adminUser?.adminSettings?.pricing || { Elite: 50000, Premium: 40000, Gold: 30000, Silver: 20000, Standard: 15000 };
+        const isReadyForTransactions = user.professionalProfile?.rateChangeAcknowledged !== false;
+
+        res.status(200).json({
+            success: true,
+            data: user,
+            stats: { profileViews: 0, whatsappClicks: 0, phoneClicks: 0 },
+            globalPricing,
+            isReadyForTransactions
+        });
+    } catch (err) { next(err); }
+});
+app.put('/api/v1/professionals/updateprofile', protect, authorize('professional'), upload.array('photos', 10), professionalController.updateProfile);
+app.put('/api/v1/professionals/acknowledge-rate', protect, authorize('professional'), professionalController.acknowledgeRateChange);
+app.post('/api/v1/professionals/upload-receipt', protect, authorize('professional'), upload.single('receipt'), paymentController.uploadReceipt);
+
 // Professional Public Routes
 app.get('/api/v1/professionals', professionalController.getProfessionals);
 app.get('/api/v1/professionals/specialties', professionalController.getSpecialties);
 app.get('/api/v1/professionals/:alias', professionalController.getProfessionalByAlias);
+app.get('/api/v1/specialties/users', specialtyController.getUsersBySpecialty);
 app.get('/api/v1/professionals/:alias/whatsapp', professionalController.contactWhatsApp);
 
 // Review Routes
@@ -136,16 +162,11 @@ const reviewsController = require('./controllers/reviewsController');
 app.get('/api/v1/professionals/:professionalId/reviews', reviewsController.getReviews);
 app.post('/api/v1/professionals/:professionalId/reviews', protect, reviewsController.addReview);
 
-
-// Professional Dashboard Routes (Private)
-app.get('/api/v1/professionals/me', protect, authorize('professional', 'admin'), professionalController.getMe);
-app.put('/api/v1/professionals/updateprofile', protect, authorize('professional'), upload.array('photos', 10), professionalController.updateProfile);
-app.put('/api/v1/professionals/acknowledge-rate', protect, authorize('professional'), professionalController.acknowledgeRateChange);
-app.post('/api/v1/professionals/upload-receipt', protect, authorize('professional'), upload.single('receipt'), paymentController.uploadReceipt);
-
 // Admin routes
 app.get('/api/v1/admin/verifications/pending', protect, authorize('admin'), adminController.getPendingVerifications);
 app.put('/api/v1/admin/verifications/:id', protect, authorize('admin'), adminController.verifyProfessional);
+app.get('/api/v1/admin/payments/pending', protect, authorize('admin'), adminController.getPendingPayments);
+app.put('/api/v1/admin/payments/:id/acknowledge', protect, authorize('admin'), adminController.acknowledgePayment);
 app.post('/api/v1/admin/notify-rate-change', protect, authorize('admin'), professionalController.notifyRateChange);
 app.get('/api/v1/admin/logs', protect, authorize('admin'), adminController.getActivityLogs);
 app.put('/api/v1/admin/professionals/:id', protect, authorize('admin'), adminController.updateProfessionalProfile);
@@ -223,28 +244,150 @@ setInterval(async () => {
   }
 }, 24 * 60 * 60 * 1000);
 
-// Background Task: Send Monthly Payment Reminders (Runs every 24 hours)
+// Mock WhatsApp notification sender
+async function sendWhatsappNotification(phone, message) {
+  console.log(`[WhatsApp Notification queued for ${phone}]:\n${message}`);
+  // In a real environment, this would push to a queue consumed by whatsapp_outreach.js
+}
+
+// Helper to calculate active business days in current month, excluding vacation
+function getActiveBusinessDaysCount(date, vacation) {
+  let count = 0;
+  const curDate = new Date(date.getFullYear(), date.getMonth(), 1);
+  while (curDate <= date) {
+    const dayOfWeek = curDate.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    
+    let isVacation = false;
+    if (vacation && vacation.startDate && vacation.endDate) {
+      const vStart = new Date(vacation.startDate); vStart.setHours(0,0,0,0);
+      const vEnd = new Date(vacation.endDate); vEnd.setHours(23,59,59,999);
+      if (curDate >= vStart && curDate <= vEnd) isVacation = true;
+    }
+
+    if (!isWeekend && !isVacation) count++;
+    curDate.setDate(curDate.getDate() + 1);
+  }
+  return count;
+}
+
+// Background Task: Billing, Invoices, and Suspensions Engine (Runs every 24 hours)
 setInterval(async () => {
   try {
     const today = new Date();
-    // Run this logic only on the 1st of the month
-    if (today.getDate() === 1) {
-      const activeUsers = await User.find({
-        role: 'professional',
-        'professionalProfile.subscriptionStatus': 'active'
-      });
+    today.setHours(0,0,0,0);
 
-      for (const user of activeUsers) {
-        await sendEmail({
-          email: user.email,
-          subject: 'SexAppeal Platform - Monthly Subscription Fee Reminder',
-          message: `Hello ${user.professionalProfile?.alias || 'Professional'},\n\nThis is a friendly reminder that your monthly subscription fee for the SexAppeal Platform is due between the 1st and 5th of this month.\n\nPlease transfer the fee via MercadoPago (CVU: ${config.payment.mercadoPago.cvu}, Alias: ${config.payment.mercadoPago.alias}) or Bank Transfer (CBU: ${config.payment.bankTransfer.cbu}, Alias: ${config.payment.bankTransfer.alias}).\n\nAfter transferring, please log in to your Dashboard and upload the payment receipt to keep your account active.\n\nThank you for being part of our platform!`
-        });
-        console.log(`[Payment Reminder] Sent monthly payment reminder email to ${user.email}`);
+    const adminUser = await User.findOne({ role: 'admin' });
+    const globalPricing = adminUser?.adminSettings?.pricing || { Elite: 50000, Premium: 40000, Gold: 30000, Silver: 20000, Standard: 15000 };
+
+    // Retrieve all active professionals subject to monthly charges
+    const activeUsers = await User.find({
+      role: 'professional',
+      'professionalProfile.subscriptionStatus': 'active',
+      'professionalProfile.paysMonthlyCharges': { $ne: false } // Only process those that pay
+    });
+
+    for (const user of activeUsers) {
+      const userActiveDays = getActiveBusinessDaysCount(today, user.professionalProfile.vacation);
+      
+      // Check if vacation JUST ended to send resumption notification
+      if (user.professionalProfile.vacation && user.professionalProfile.vacation.endDate) {
+        const vEnd = new Date(user.professionalProfile.vacation.endDate);
+        vEnd.setHours(0,0,0,0);
+        const dayAfterVacation = new Date(vEnd);
+        dayAfterVacation.setDate(dayAfterVacation.getDate() + 1);
+        
+        if (today.getTime() === dayAfterVacation.getTime()) {
+          await sendEmail({
+            email: user.email,
+            subject: 'SexAppeal Platform - Vacation Period Ended',
+            message: `Hello ${user.professionalProfile?.alias || 'Professional'},\n\nYour vacation period has concluded. Welcome back! All your profile counters and activities have resumed.`
+          });
+          if (user.professionalProfile.whatsappNumber) {
+            sendWhatsappNotification(user.professionalProfile.whatsappNumber, `Hello ${user.professionalProfile?.alias || 'Professional'}! 💎\n\nYour vacation period has concluded. Welcome back! All your profile counters and activities have resumed.`);
+          }
+        }
+      }
+
+      // 1. Invoice Generation (Runs safely on the LAST DAY of the month)
+      const isLastDay = today.getDate() === new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+      const yyyyMm = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}`;
+      const hasCurrentInvoice = user.professionalProfile.invoices?.some(inv => inv.billingMonth === yyyyMm);
+      
+      if (isLastDay && !hasCurrentInvoice) {
+        const daysInMonth = today.getDate();
+        let billableDays = daysInMonth;
+
+        if (user.professionalProfile.subscriptionStatus === 'trial') {
+          const trialEnd = new Date(user.professionalProfile.trialEndDate);
+          const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+          const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+          if (trialEnd >= monthStart && trialEnd <= monthEnd) billableDays = monthEnd.getDate() - trialEnd.getDate();
+          else if (trialEnd > monthEnd) billableDays = 0;
+        }
+
+        let vacationDaysInMonth = 0;
+        if (user.professionalProfile.vacation && user.professionalProfile.vacation.startDate && user.professionalProfile.vacation.endDate) {
+          const vStart = new Date(user.professionalProfile.vacation.startDate);
+          const vEnd = new Date(user.professionalProfile.vacation.endDate);
+          const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+          const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+          
+          const overlapStart = new Date(Math.max(vStart, monthStart));
+          const overlapEnd = new Date(Math.min(vEnd, monthEnd));
+          if (overlapStart <= overlapEnd) vacationDaysInMonth = Math.ceil((overlapEnd - overlapStart) / (1000 * 60 * 60 * 24)) + 1;
+        }
+
+        billableDays -= vacationDaysInMonth;
+        if (billableDays < 0) billableDays = 0;
+
+        const category = user.professionalProfile.quality || 'Standard';
+        const monthlyAmount = globalPricing[category] || 15000;
+        const amountToBill = Math.round((monthlyAmount / daysInMonth) * billableDays);
+
+        if (amountToBill > 0) {
+          user.professionalProfile.paymentReceiptUrl = undefined;
+          user.professionalProfile.paymentProcessed = false;
+          
+          user.professionalProfile.invoices.push({ billingMonth: yyyyMm, amount: amountToBill, dueDate: new Date(today.getFullYear(), today.getMonth() + 1, 7), status: 'pending', lateFeeApplied: false });
+          await user.save();
+          
+          await sendEmail({ email: user.email, subject: `SexAppeal Platform - Invoice for ${yyyyMm}`, message: `Hello ${user.professionalProfile?.alias || 'Professional'},\n\nYour subscription fee for ${yyyyMm} is $${amountToBill} ARS.\n\nPlease upload your receipt within the first 5 business days of next month to avoid a late fee and suspension.\n\nThank you!` });
+          if (user.professionalProfile.whatsappNumber) sendWhatsappNotification(user.professionalProfile.whatsappNumber, `Hello ${user.professionalProfile?.alias || 'Professional'}! 💎\n\nYour invoice for ${yyyyMm} is ready. The amount due is $${amountToBill} ARS. Please upload your receipt in the dashboard within the first 5 business days to keep your profile active.\n\nThank you!`);
+          console.log(`[Billing Engine] Generated invoice for ${user.email} - $${amountToBill}`);
+        } else {
+          user.professionalProfile.paymentProcessed = true;
+          await user.save();
+        }
+      }
+
+      // 2. Late Fee & Suspension Enforcement (After 5th Business Day, looking at PREVIOUS month's invoice)
+      const prevMonthDate = new Date(today.getFullYear(), today.getMonth(), 0);
+      const prevYyyyMm = `${prevMonthDate.getFullYear()}-${(prevMonthDate.getMonth() + 1).toString().padStart(2, '0')}`;
+
+      if (userActiveDays > 5) {
+        const hasReceipt = user.professionalProfile.paymentReceiptUrl && user.professionalProfile.paymentReceiptUrl.trim() !== '';
+        const prevInvoice = user.professionalProfile.invoices.find(inv => inv.billingMonth === prevYyyyMm && inv.status === 'pending');
+        
+        if (!hasReceipt && prevInvoice && !prevInvoice.lateFeeApplied) {
+          user.professionalProfile.subscriptionStatus = 'suspended';
+          prevInvoice.amount = Math.round(prevInvoice.amount * 1.02); // Add 2% late interest
+          prevInvoice.lateFeeApplied = true;
+          
+          await user.save();
+          
+          await sendEmail({
+            email: user.email,
+            subject: 'SexAppeal Platform - Account Suspended (Late Payment)',
+            message: `Hello ${user.professionalProfile?.alias || 'Professional'},\n\nYour profile has been temporarily removed from the public directory because we have not received your payment receipt within the first 5 active business days.\n\nA 2% late fee has been applied. Your new total balance for ${prevYyyyMm} is $${prevInvoice.amount} ARS.\n\nPlease upload your payment receipt to be reactivated.\n\nThank you.`
+          });
+          console.log(`[Suspension Engine] Suspended ${user.email} and applied 2% late fee.`);
+        }
       }
     }
   } catch (err) {
-    console.error('[Payment Reminder Error]', err.message);
+    console.error('[Billing Engine Error]', err.message);
   }
 }, 24 * 60 * 60 * 1000);
 

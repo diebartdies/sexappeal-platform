@@ -1,4 +1,3 @@
-@echo off
 setlocal
 
 echo ===================================================
@@ -6,8 +5,12 @@ echo 🚀 SexAppeal - Automated Deployment Script v2.1
 echo ===================================================
 echo.
 
-echo [1/6] Compressing project files (ignoring heavy cache files)...
-tar -czvf upload_package.tar.gz --exclude=node_modules --exclude=.git --exclude=public/uploads --exclude=.cache --exclude=upload_package.tar.gz .
+:: Define your server configuration here
+set SERVER_USER=root
+set SERVER_IP=91.208.206.35
+
+echo [1/6] Compressing project files locally (ignoring heavy cache files)...
+tar -czvf upload_package.tar.gz --exclude=node_modules --exclude=.git --exclude=public/uploads --exclude=.cache --exclude=upload_package.tar.gz --exclude=docker-compose.override.yml --exclude=.env .
 if %errorlevel% neq 0 (
     echo ❌ ERROR: Failed to create archive.
     goto end
@@ -20,19 +23,32 @@ echo Local Checksum: %LOCAL_CHECKSUM%
 
 echo.
 echo [3/6] Uploading package to the server...
-scp upload_package.tar.gz root@91.208.206.35:/root/SexAppeal-platform/
+scp upload_package.tar.gz %SERVER_USER%@%SERVER_IP%:/root/SexAppeal-platform/
 if %errorlevel% neq 0 (
     echo ❌ ERROR: Failed to upload file.
     goto cleanup
 )
 
 echo.
-echo [4/6] Verifying integrity and deploying on server...
-ssh root@91.208.206.35 "cd /root/SexAppeal-platform && REMOTE_CHECKSUM=$(sha256sum upload_package.tar.gz | awk '{print $1}') && echo Server Checksum: $REMOTE_CHECKSUM && if [ \"$REMOTE_CHECKSUM\" == \"%LOCAL_CHECKSUM%\" ]; then echo '✅ Checksums match. Proceeding with deployment...' && tar -xzvf upload_package.tar.gz && rm upload_package.tar.gz && echo '✅ Files extracted successfully.' && docker restart sexappeal_app && echo '🚀 DEPLOYMENT SUCCEEDED! Application is now running the new code.'; else echo '❌ CHECKSUM MISMATCH! Deployment aborted.' && rm upload_package.tar.gz && exit 1; fi"
+echo [4/6] Verifying integrity and extracting on server...
+ssh %SERVER_USER%@%SERVER_IP% "cd /root/SexAppeal-platform && REMOTE_CHECKSUM=$(sha256sum upload_package.tar.gz | awk '{print $1}') && echo Server Checksum: $REMOTE_CHECKSUM && if [ \"$REMOTE_CHECKSUM\" == \"%LOCAL_CHECKSUM%\" ]; then echo '✅ Checksums match. Proceeding with extraction...' && tar -xzvf upload_package.tar.gz --warning=no-unknown-keyword && rm upload_package.tar.gz && echo '✅ Files extracted successfully.'; else echo '❌ CHECKSUM MISMATCH! Deployment aborted.' && rm upload_package.tar.gz && exit 1; fi"
+if %errorlevel% neq 0 (
+    echo ❌ ERROR: Deployment aborted during verification/extraction.
+    goto cleanup
+)
+
+echo.
+echo [5/6] Building and restarting the application containers...
+ssh %SERVER_USER%@%SERVER_IP% "cd /root/SexAppeal-platform && docker-compose up --build -d"
+if %errorlevel% neq 0 (
+    echo ❌ ERROR: Failed to build and start containers.
+) else (
+    echo 🚀 DEPLOYMENT SUCCEEDED! Application is now running the new code.
+)
 
 :cleanup
 echo.
-echo [5/6] Cleaning up local temporary files...
+echo Cleaning up local temporary files...
 del upload_package.tar.gz
 
 echo.

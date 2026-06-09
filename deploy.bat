@@ -1,4 +1,3 @@
-@echo off
 echo ===================================================
 echo   SexAppeal Platform - Automated Deployment
 echo ===================================================

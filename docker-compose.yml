@@ -23,6 +23,8 @@ services:
       - NODE_ENV=production
       - MONGO_URI=mongodb://mongo:27017/sexappeal
     volumes:
+      - ./public:/app/public
+      - ./controllers:/app/controllers
       - ./public/uploads:/app/public/uploads
     depends_on:
       mongo:
