@@ -106,7 +106,7 @@ exports.getProfessionals = async (req, res, next) => {
       'professionalProfile.hasTattoos': 1,
       'professionalProfile.workingHours': 1,
       'professionalProfile.workingDays': 1,
-      'professionalProfile.photos': { $slice: 1 } // Only fetch the first photo to prevent massive Base64 payload crashes
+      'professionalProfile.photos': 1
     };
 
     if (req.query.minimal === 'true') {
@@ -134,6 +134,10 @@ exports.getProfessionals = async (req, res, next) => {
       },
       data: professionals.map(p => {
         const profObj = p.toObject ? p.toObject() : (p._doc || p);
+        // Only send the first photo to the client grid to prevent massive Base64 payloads
+        if (profObj.professionalProfile && profObj.professionalProfile.photos && profObj.professionalProfile.photos.length > 0) {
+          profObj.professionalProfile.photos = [profObj.professionalProfile.photos[0]];
+        }
         return {
           ...profObj,
           revelationStatus: config.experience ? config.experience.statusRevealed : 'REVEALED',

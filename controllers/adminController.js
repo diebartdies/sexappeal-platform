@@ -26,11 +26,8 @@ exports.getAllProfessionals = async (req, res, next) => {
     const professionalsData = professionals.map(p => {
         const obj = p.toObject();
         if (obj.professionalProfile && obj.professionalProfile.photos) {
-            obj.professionalProfile.photos = obj.professionalProfile.photos.map(photo => {
-                if (typeof photo === 'string') return photo;
-                if (photo.url) return photo.url;
-                return `/api/v1/professionals/photo/${obj._id}/${photo._id}`;
-            });
+            obj.professionalProfile.photos = obj.professionalProfile.photos.length > 0 ? [obj.professionalProfile.photos[0]] : [];
+            obj.professionalProfile.photos = obj.professionalProfile.photos.length > 0 ? [obj.professionalProfile.photos[0]] : [];
         }
         return obj;
     });

@@ -3,6 +3,7 @@ version: '3.8'
 services:
   mongo:
     image: mongo:4.4
+    command: ["mongod", "--wiredTigerCacheSizeGB", "0.25"]
     container_name: sexappeal_mongo
     restart: unless-stopped
     volumes:

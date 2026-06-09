@@ -1133,25 +1133,17 @@ async function loadTreasures(page = 1, append = false) {
     const neighborhood = urlParams.get('neighborhood');
 
     let url;
-    let usingSpecialtyApi = false;
     const limit = 12; // Prevent Base64 payload overload
 
-    // Call the dedicated Specialty API if we are filtering strictly by a single specialty
-    if (specialty && specialty.trim() && !specialty.includes(',')) {
-        url = new URL(`${API_URL}/specialties/users`);
-        url.searchParams.set('specialty', specialty.trim());
-        usingSpecialtyApi = true;
-    } else {
-        url = new URL(`${API_URL}/professionals`);
-        if (specialty && specialty.trim()) url.searchParams.set('specialty', specialty);
-        if (quality && quality.trim()) url.searchParams.set('quality', quality);
-        if (province && province.trim()) url.searchParams.set('province', province);
-        if (city && city.trim()) url.searchParams.set('city', city);
-        if (neighborhood && neighborhood.trim()) url.searchParams.set('neighborhood', neighborhood);
+    url = new URL(`${API_URL}/professionals`);
+    if (specialty && specialty.trim()) url.searchParams.set('specialty', specialty);
+    if (quality && quality.trim()) url.searchParams.set('quality', quality);
+    if (province && province.trim()) url.searchParams.set('province', province);
+    if (city && city.trim()) url.searchParams.set('city', city);
+    if (neighborhood && neighborhood.trim()) url.searchParams.set('neighborhood', neighborhood);
 
-        url.searchParams.set('page', page);
-        url.searchParams.set('limit', limit);
-    }
+    url.searchParams.set('page', page);
+    url.searchParams.set('limit', limit);
 
     // Add a cache-busting parameter to ensure fresh data is always fetched
     url.searchParams.set('_', new Date().getTime());
@@ -1163,31 +1155,6 @@ async function loadTreasures(page = 1, append = false) {
         }
         
         let data = await res.json();
-
-        if (usingSpecialtyApi && data.success) {
-            // Map junction table records back to full User objects
-            let users = data.data.map(record => record.user).filter(Boolean);
-            
-            // Manually apply standard discovery filters for active/exposed status
-            users = users.filter(u => u.isVerified && u.professionalProfile?.subscriptionStatus !== 'suspended' && u.professionalProfile?.isExposed !== false);
-
-            // Apply remaining user-selected filters on the frontend
-            if (quality && quality.trim()) {
-                users = users.filter(u => u.professionalProfile?.quality === quality.trim());
-            }
-            if (province && province.trim()) {
-                users = users.filter(u => (u.professionalProfile?.location?.province || '').toLowerCase().includes(province.trim().toLowerCase()));
-            }
-            if (city && city.trim()) {
-                users = users.filter(u => (u.professionalProfile?.location?.city || '').toLowerCase().includes(city.trim().toLowerCase()));
-            }
-            if (neighborhood && neighborhood.trim()) {
-                users = users.filter(u => (u.professionalProfile?.location?.neighborhood || '').toLowerCase().includes(neighborhood.trim().toLowerCase()));
-            }
-
-            data.data = users;
-            data.count = users.length;
-        }
 
         if (data.success && data.data.length > 0) {
             if (!append) {
@@ -2091,18 +2058,8 @@ async function loadAdminGridData() {
     try {
         const token = localStorage.getItem('token');
         
-        const specialtyEl = document.getElementById('adminFilterSpecialty');
-        const filterSpecialty = specialtyEl ? specialtyEl.value : '';
         let url;
-        let usingSpecialtyApi = false;
-
-        if (filterSpecialty) {
-            url = new URL(`${API_URL}/specialties/users`);
-            url.searchParams.set('specialty', filterSpecialty);
-            usingSpecialtyApi = true;
-        } else {
-            url = new URL(`${API_URL}/admin/professionals`);
-        }
+        url = new URL(`${API_URL}/admin/professionals`);
         url.searchParams.set('_', new Date().getTime());
         let res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
         
@@ -2111,7 +2068,6 @@ async function loadAdminGridData() {
             url = new URL(`${API_URL}/professionals`);
             url.searchParams.set('limit', 100);
             res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
-            usingSpecialtyApi = false;
         }
         const data = await res.json();
 
@@ -2122,21 +2078,18 @@ async function loadAdminGridData() {
 
         let profs = data.data;
 
-        if (usingSpecialtyApi) {
-            // Map junction table records back to full User objects
-            profs = profs.map(record => record.user).filter(Boolean);
-        }
-
         // Apply frontend filters
         const provEl = document.getElementById('adminFilterProv');
         const cityEl = document.getElementById('adminFilterCity');
         const neighEl = document.getElementById('adminFilterNeigh');
         const qualityEl = document.getElementById('adminFilterQuality');
+        const specialtyEl = document.getElementById('adminFilterSpecialty');
         
         const prov = provEl ? provEl.value.trim().toLowerCase() : '';
         const city = cityEl ? cityEl.value.trim().toLowerCase() : '';
         const neigh = neighEl ? neighEl.value.trim().toLowerCase() : '';
         const quality = qualityEl ? qualityEl.value : '';
+        const filterSpecialty = specialtyEl ? specialtyEl.value.toLowerCase() : '';
 
         profs = profs.filter(p => {
             if (!p) return false;
@@ -2157,6 +2110,7 @@ async function loadAdminGridData() {
             }
             
             if (quality && (!prof.quality || prof.quality !== quality)) return false;
+            if (filterSpecialty && (!prof.services || !prof.services.map(s => s.toLowerCase()).includes(filterSpecialty))) return false;
             return true;
         });
 
