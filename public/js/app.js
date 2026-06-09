@@ -3271,6 +3271,12 @@ if (updateProfileForm) {
                 body: formData,
                 keepalive: true // Ensures the save finishes even if the user closes the tab mid-save
             });
+            
+            if (!res.ok) {
+                if (res.status === 413) throw new Error("Payload Too Large. Nginx limit exceeded.");
+                if (res.status === 502) throw new Error("Bad Gateway. The server is restarting.");
+            }
+
             const data = await res.json();
             if (!silent) {
                 if (data.success) {
@@ -3280,7 +3286,7 @@ if (updateProfileForm) {
                 }
             }
         } catch (err) {
-            if (!silent) showAlert(alertEl, 'Server connection error');
+            if (!silent) showAlert(alertEl, err.message || 'Server connection error');
         } finally {
             isSaving = false;
         }
@@ -5105,7 +5111,6 @@ async function loadProfDashboard() {
             formObj.style.margin = '0 auto';
 
             formObj.innerHTML = `
-                <h2 class="gold-text" style="margin-bottom: 20px;">Professional Dashboard</h2>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2 class="gold-text" style="margin: 0; display: flex; align-items: center; gap: 10px;">
                         Professional Dashboard <span style="font-size: 1.5rem; text-shadow: 0 0 5px rgba(212,175,55,0.5);">✏️</span>
