@@ -1134,7 +1134,7 @@ async function loadTreasures(page = 1, append = false) {
 
     let url;
     let usingSpecialtyApi = false;
-    const limit = 50;
+    const limit = 12; // Prevent Base64 payload overload
 
     // Call the dedicated Specialty API if we are filtering strictly by a single specialty
     if (specialty && specialty.trim() && !specialty.includes(',')) {
@@ -1882,6 +1882,7 @@ async function applyCountsToDropdowns() {
         if (!profsFetchPromise) {
             const url = new URL(`${API_URL}/professionals`);
             url.searchParams.set('limit', 5000);
+            url.searchParams.set('minimal', 'true'); // Prevent fetching photos for count sweeps
             url.searchParams.set('_', new Date().getTime()); // Prevent browser from caching old seed data
             profsFetchPromise = fetch(url).then(res => res.json()).catch(e => {
                 console.error('Error fetching profs for counts', e);
@@ -2108,7 +2109,7 @@ async function loadAdminGridData() {
         if (!res.ok) {
             // Fallback to public endpoint if the custom admin route isn't available
             url = new URL(`${API_URL}/professionals`);
-            url.searchParams.set('limit', 5000);
+            url.searchParams.set('limit', 100);
             res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
             usingSpecialtyApi = false;
         }

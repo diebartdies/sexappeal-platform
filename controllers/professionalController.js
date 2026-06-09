@@ -12,6 +12,7 @@ const CACHE_TTL = 60 * 1000; // 1 minute TTL in milliseconds
 function checkIsActive(profile) {
   if (!profile || !profile.workingDays || profile.workingDays.length === 0) return false;
   if (!profile.workingHours || !profile.workingHours.start || !profile.workingHours.end) return false;
+  if (typeof profile.workingHours.start !== 'string' || typeof profile.workingHours.end !== 'string') return false;
 
   const now = new Date();
   const formatter = new Intl.DateTimeFormat('en-US', {
@@ -92,8 +93,32 @@ exports.getProfessionals = async (req, res, next) => {
 
     const total = await User.countDocuments(query);
 
+    let selectQuery = {
+      'professionalProfile.alias': 1,
+      'professionalProfile.quality': 1,
+      'professionalProfile.bio': 1,
+      'professionalProfile.services': 1,
+      'professionalProfile.location': 1,
+      'professionalProfile.pricing': 1,
+      'professionalProfile.measurements': 1,
+      'professionalProfile.height': 1,
+      'professionalProfile.eyeColor': 1,
+      'professionalProfile.hasTattoos': 1,
+      'professionalProfile.workingHours': 1,
+      'professionalProfile.workingDays': 1,
+      'professionalProfile.photos': { $slice: 1 } // Only fetch the first photo to prevent massive Base64 payload crashes
+    };
+
+    if (req.query.minimal === 'true') {
+      selectQuery = {
+        'professionalProfile.quality': 1,
+        'professionalProfile.services': 1,
+        'professionalProfile.location': 1
+      };
+    }
+
     const professionals = await User.find(query)
-      .select('professionalProfile.alias professionalProfile.quality professionalProfile.bio professionalProfile.services professionalProfile.location professionalProfile.pricing professionalProfile.measurements professionalProfile.height professionalProfile.eyeColor professionalProfile.hasTattoos professionalProfile.photos professionalProfile.workingHours professionalProfile.workingDays')
+      .select(selectQuery)
       .skip(skip)
       .limit(limit);
 
