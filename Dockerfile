@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Copy package.json and install dependencies
 COPY package*.json ./
-RUN npm install --omit=dev
+RUN npm install --omit=dev --loglevel=error
 
 # Upgrade Alpine packages to fix any lingering OS-level vulnerabilities
 RUN apk upgrade --no-cache

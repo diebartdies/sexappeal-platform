@@ -22,7 +22,8 @@ const app = express();
 app.set('trust proxy', 1);
 
 // Body parser
-app.use(express.json());
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
 // Cookie parser
 app.use(cookieParser());
@@ -77,7 +78,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ 
   storage: storage,
-  limits: { fieldSize: 50 * 1024 * 1024 } // 50MB limit to safely accept large Base64 arrays in req.body
+  limits: { fieldSize: 100 * 1024 * 1024 } // 100MB limit to safely accept large Base64 arrays in req.body
 });
 
 

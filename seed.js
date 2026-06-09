@@ -7,6 +7,7 @@ const ActivityLog = require('./models/ActivityLog');
 const PotentialProfessional = require('./models/PotentialProfessional');
 const fs = require('fs');
 const path = require('path');
+const sharp = require('sharp');
 
 const approveAllPending = async () => {
     try {
@@ -30,6 +31,23 @@ const approveAllPending = async () => {
         process.exit(1);
     }
 };
+
+// --- Node.js Image Compression Algorithm ---
+async function getCompressedBase64FromUrl(url) {
+    try {
+        const response = await fetch(url);
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const compressedBuffer = await sharp(buffer)
+            .resize({ width: 1080, withoutEnlargement: true })
+            .jpeg({ quality: 75 })
+            .toBuffer();
+        return `data:image/jpeg;base64,${compressedBuffer.toString('base64')}`;
+    } catch (err) {
+        console.error(`Error compressing ${url}:`, err.message);
+        return url; // Fallback to URL if compression fails
+    }
+}
 
 const seedData = async () => {
     try {
@@ -61,6 +79,13 @@ const seedData = async () => {
             'San Luis', 'Santa Cruz', 'Santa Fe', 'Santiago del Estero',
             'Tierra del Fuego, Antártida e Islas del Atlántico Sur', 'Tucumán', 'CABA'
         ];
+
+        console.log('Downloading and compressing sample photos (this may take a moment)...');
+        const compressedPhotoSet = [];
+        for (const url of photoSet) {
+            const base64 = await getCompressedBase64FromUrl(url);
+            compressedPhotoSet.push(base64);
+        }
 
         await Province.insertMany(provincesList.map(name => ({ name, countryCode: '054' })));
 
@@ -196,7 +221,7 @@ const seedData = async () => {
                     height: '175cm',
                     services: i % 2 === 0 ? ['Massage', 'Virtual Connection'] : ['love alchemy', 'Fantasies'],
                     whatsappNumber: `54911223344${(i % 100).toString().padStart(2, '0')}`,
-                    photos: photoSet
+                    photos: compressedPhotoSet
                 }
             });
         }
