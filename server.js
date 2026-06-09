@@ -55,8 +55,12 @@ app.use('/api', limiter);
 // Set static folder
 const path = require('path');
 app.use(express.static(path.join(__dirname, 'public'), {
-  setHeaders: (res, path) => {
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  setHeaders: (res, filePath) => {
+    if (filePath.match(/\.(jpg|jpeg|png|gif|webp|svg|css)$/i)) {
+      res.setHeader('Cache-Control', 'public, max-age=2592000'); // Cache images & CSS for 30 days
+    } else {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    }
   }
 }));
 
