@@ -12,17 +12,12 @@
 // Select the database to use.
 use('sexappeal'); // Adjust if your database name is different
 
-// Approve "test pro 12" account
-const aliasToApprove = 'Test Pro 12';
-
-const updateResult = db.getCollection('users').updateOne(
-  { 'professionalProfile.alias': { $regex: new RegExp(`^${aliasToApprove}$`, 'i') }, role: 'professional' },
-  { $set: { verificationStatus: 'approved', isVerified: true } }
+// Find and remove any old local filesystem paths from the photos arrays
+const updateResult = db.getCollection('users').updateMany(
+  { role: 'professional' },
+  { $pull: { 'professionalProfile.photos': { $regex: /^\/uploads\// } } }
 );
 
-console.log(`Matched: ${updateResult.matchedCount}, Modified: ${updateResult.modifiedCount}`);
-if (updateResult.modifiedCount > 0) {
-  console.log(`Successfully approved professional with alias: "${aliasToApprove}".`);
-} else {
-  console.log(`Could not approve. Professional with alias "${aliasToApprove}" not found or already approved.`);
-}
+console.log(`Database sweep complete!`);
+console.log(`Professionals Checked: ${updateResult.matchedCount}`);
+console.log(`Professionals Updated (Broken Links Removed): ${updateResult.modifiedCount}`);

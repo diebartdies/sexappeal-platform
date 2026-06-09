@@ -7,6 +7,7 @@ const cookieParser = require('cookie-parser');
 const config = require('./config/appConfig');
 const multer = require('multer');
 const fs = require('fs');
+const os = require('os');
 const connectDB = require('./config/database');
 const User = require('./models/User');
 const ActivityLog = require('./models/ActivityLog');
@@ -59,7 +60,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
 }));
 
 // --- Multer File Upload Configuration ---
-const uploadsDir = path.join(__dirname, 'public/uploads/photos');
+const uploadsDir = path.join(os.tmpdir(), 'sexappeal_uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -74,7 +75,10 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ 
+  storage: storage,
+  limits: { fieldSize: 50 * 1024 * 1024 } // 50MB limit to safely accept large Base64 arrays in req.body
+});
 
 
 // --- Global Guest Activity Tracker ---

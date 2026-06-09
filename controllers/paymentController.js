@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const sendEmail = require('../sendEmail');
 const config = require('../config/appConfig');
+const fs = require('fs');
 
 // @desc    Upload Payment Receipt
 // @route   POST /api/v1/professionals/upload-receipt
@@ -11,8 +12,10 @@ exports.uploadReceipt = async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'Please upload a receipt file or photo' });
     }
 
-    // The file is automatically saved by the Multer middleware
-    const receiptUrl = `/uploads/photos/${req.file.filename}`;
+    // Convert receipt to Base64 to store directly in the database
+    const base64Data = fs.readFileSync(req.file.path, 'base64');
+    const receiptUrl = `data:${req.file.mimetype};base64,${base64Data}`;
+    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); // Remove external file
 
     const user = await User.findByIdAndUpdate(req.user.id, {
         $set: {
