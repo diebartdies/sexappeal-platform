@@ -1151,7 +1151,7 @@ async function loadTreasures(page = 1, append = false) {
     const neighborhood = urlParams.get('neighborhood');
 
     let url;
-    const limit = 12; // Prevent Base64 payload overload
+    const limit = 100; // Increased to load more profiles automatically
 
     url = new URL(`${API_URL}/professionals`);
     if (specialty && specialty.trim()) url.searchParams.set('specialty', specialty);
@@ -1225,6 +1225,8 @@ async function loadTreasures(page = 1, append = false) {
                 }
             } catch(e) {}
 
+            let isFirstCategoryRendered = !append;
+
             for (const [cat, items] of Object.entries(categories)) {
                 if (items.length === 0) continue;
 
@@ -1282,14 +1284,18 @@ async function loadTreasures(page = 1, append = false) {
                     card.className = 'card treasure-card';
                     card.style.position = 'relative';
                     
+                    const lazyAttr = isFirstCategoryRendered ? '' : ' loading="lazy"';
                     card.innerHTML = `
                         <div class="treasure-img-container" style="cursor: pointer;" onclick="window.location.href='treasure.html?alias=${encodeURIComponent(prof.alias || '')}'">
                             <img class="treasure-img" src="${photoUrl}" alt="${prof.alias || 'Unknown'}">
+                            <img class="treasure-img" src="${photoUrl}" alt="${prof.alias || 'Unknown'}"${lazyAttr}>
                         </div>
                         <h3 class="treasure-alias gold-text" style="cursor: pointer; margin-bottom: 0; font-size: 0.95rem;" onclick="window.location.href='treasure.html?alias=${encodeURIComponent(prof.alias || '')}'">${prof.alias || 'Unknown'}</h3>
                     `;
                     innerGrid.appendChild(card);
                 });
+
+                isFirstCategoryRendered = false;
             }
             
             // Infinite Scroll: Automatically fetch next page when user scrolls near the bottom
@@ -2195,6 +2201,8 @@ async function loadAdminGridData() {
 
         content.innerHTML = '';
 
+        let isFirstAdminCategoryRendered = true;
+
         for (const [cat, items] of Object.entries(categories)) {
             if (items.length === 0) continue;
 
@@ -2240,10 +2248,12 @@ async function loadAdminGridData() {
                 const photo = (p.professionalProfile?.photos && p.professionalProfile.photos.length > 0) ? p.professionalProfile.photos[0] : 'https://via.placeholder.com/150?text=No+Photo';
                 const vStatus = p.verificationStatus || 'pending';
                 const statusColor = vStatus === 'approved' ? 'green' : (vStatus === 'rejected' ? 'red' : 'orange');
+                const lazyAttr = isFirstAdminCategoryRendered ? '' : ' loading="lazy"';
 
                 card.innerHTML = `
                     <div style="width: 100%; aspect-ratio: 1/1; overflow: hidden; border-radius: 4px; margin-bottom: 10px; position: relative;">
                         <img src="${photo}" style="width: 100%; height: 100%; object-fit: cover;">
+                        <img src="${photo}" style="width: 100%; height: 100%; object-fit: cover;"${lazyAttr}>
                         <div style="position: absolute; top: 5px; right: 5px; font-size: 0.55rem; padding: 2px 6px; border-radius: 10px; background: ${statusColor}; color: white; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.5);">
                             ${vStatus.toUpperCase()}
                         </div>
@@ -2262,6 +2272,8 @@ async function loadAdminGridData() {
 
             catSection.appendChild(grid);
             content.appendChild(catSection);
+            
+            isFirstAdminCategoryRendered = false;
         }
 
         if (profs.length === 0) {
