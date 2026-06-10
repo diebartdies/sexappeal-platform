@@ -3447,9 +3447,12 @@ async function openPendingConnectionsModal() {
         });
 
         const closeBtn = document.createElement('button');
-        closeBtn.textContent = t('Close');
-        closeBtn.style.alignSelf = 'flex-end';
-        closeBtn.style.marginBottom = '10px';
+        closeBtn.innerHTML = '&#8592; Back to Dashboard';
+        Object.assign(closeBtn.style, {
+            alignSelf: 'flex-start', marginBottom: '15px', padding: '8px 12px',
+            background: 'transparent', border: '1px solid var(--primary-gold)',
+            color: 'var(--primary-gold)', borderRadius: '4px', cursor: 'pointer'
+        });
         closeBtn.onclick = () => modal.style.display = 'none';
 
         const container = document.createElement('div');
@@ -4024,7 +4027,7 @@ async function loadPendingVerifications() {
             data.data.forEach(prof => {
                 const alias = prof.professionalProfile?.alias || 'Unknown';
                 const docs = prof.verificationDocuments && prof.verificationDocuments.length > 0 
-                    ? prof.verificationDocuments.map(doc => `<a href="${doc}" target="_blank" style="color: var(--primary-gold); text-decoration: underline;">View</a>`).join(', ')
+                    ? `<div style="display: flex; gap: 5px; flex-wrap: wrap;">` + prof.verificationDocuments.map(doc => `<img src="${doc}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; cursor: pointer; border: 1px solid #444;" onclick="openImageModal('${doc}')" title="Click to enlarge">`).join('') + `</div>`
                     : 'None';
                 const gesture = prof.verificationGesture || 'N/A';
 
@@ -4089,6 +4092,42 @@ async function updateVerificationStatus(id, status) {
         alert('Server connection error');
     }
 }
+
+// --- Image Viewer Modal ---
+window.openImageModal = function(src) {
+    let modal = document.getElementById('imageViewerModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'imageViewerModal';
+        Object.assign(modal.style, {
+            position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.95)', zIndex: '4000', display: 'flex',
+            flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
+        });
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.innerHTML = '&times;';
+        Object.assign(closeBtn.style, {
+            position: 'absolute', top: '20px', right: '30px',
+            background: 'transparent', color: 'var(--primary-gold)', border: 'none',
+            fontSize: '50px', cursor: 'pointer', lineHeight: '1'
+        });
+        closeBtn.onclick = () => modal.style.display = 'none';
+        
+        const img = document.createElement('img');
+        img.id = 'imageViewerImg';
+        Object.assign(img.style, {
+            maxWidth: '90%', maxHeight: '90%', objectFit: 'contain', border: '2px solid var(--primary-gold)', borderRadius: '8px'
+        });
+        
+        modal.appendChild(closeBtn);
+        modal.appendChild(img);
+        document.body.appendChild(modal);
+    }
+    
+    document.getElementById('imageViewerImg').src = src;
+    modal.style.display = 'flex';
+};
 
 // --- Admin Mail Broadcast Modal ---
 async function openMailBroadcastModal() {
