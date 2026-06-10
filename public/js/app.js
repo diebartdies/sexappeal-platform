@@ -1178,6 +1178,24 @@ async function loadTreasures(page = 1, append = false) {
         
         let data = await res.json();
 
+        // Update Progress Bar in the Floating Menu
+        const progressWrapper = document.getElementById('floatingProgressWrapper');
+        const progressBar = document.getElementById('floatingProgressBar');
+        const progressText = document.getElementById('floatingProgressText');
+        
+        if (progressWrapper && progressBar && progressText && data.pagination) {
+            const total = data.pagination.total;
+            if (total > 0) {
+                const loaded = Math.min(data.pagination.page * data.pagination.limit, total);
+                const percentage = Math.round((loaded / total) * 100);
+                progressWrapper.style.display = 'flex';
+                progressBar.style.width = `${percentage}%`;
+                progressText.textContent = `${percentage}%`;
+            } else {
+                progressWrapper.style.display = 'none';
+            }
+        }
+
         if (data.success && data.data.length > 0) {
             if (!append) {
                 grid.innerHTML = '';
@@ -1635,7 +1653,7 @@ async function initializeFilters() {
 
         const controlsBar = document.createElement('div');
         Object.assign(controlsBar.style, {
-            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: '9999',
+            position: 'fixed', bottom: '30px', left: '50%', transform: 'translateX(-50%)', zIndex: '9999',
             display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0',
             padding: '5px', backgroundColor: 'transparent',
             borderRadius: '30px', border: 'none', backdropFilter: 'none',
@@ -1699,8 +1717,39 @@ async function initializeFilters() {
 
         gridToggles.appendChild(btnGridLarge);
         gridToggles.appendChild(btnGridSmall);
+        
+        const progressWrapper = document.createElement('div');
+        progressWrapper.id = 'floatingProgressWrapper';
+        Object.assign(progressWrapper.style, {
+            display: 'none', alignItems: 'center', gap: '5px', padding: '0 10px', borderLeft: '1px solid rgba(212, 175, 55, 0.3)'
+        });
+        
+        const progressBg = document.createElement('div');
+        Object.assign(progressBg.style, {
+            width: '60px', height: '6px', background: 'rgba(212, 175, 55, 0.2)',
+            borderRadius: '3px', overflow: 'hidden'
+        });
+        
+        const progressBar = document.createElement('div');
+        progressBar.id = 'floatingProgressBar';
+        Object.assign(progressBar.style, {
+            width: '0%', height: '100%', background: 'var(--primary-gold)',
+            transition: 'width 0.3s ease'
+        });
+        
+        const progressText = document.createElement('span');
+        progressText.id = 'floatingProgressText';
+        Object.assign(progressText.style, {
+            fontSize: '0.75rem', color: 'var(--primary-gold)', fontWeight: 'bold'
+        });
+        
+        progressBg.appendChild(progressBar);
+        progressWrapper.appendChild(progressBg);
+        progressWrapper.appendChild(progressText);
+
         controlsBar.appendChild(openFilterBtn);
         controlsBar.appendChild(gridToggles);
+        controlsBar.appendChild(progressWrapper);
 
         grid.parentNode.insertBefore(controlsBar, grid);
 
