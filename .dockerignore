@@ -6,6 +6,9 @@ public/uploads/
 mongo-data/
 db/
 
+*.archive
+*.tar.gz
+
 .git
 .DS_Store
 .vscode/

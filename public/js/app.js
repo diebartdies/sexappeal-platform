@@ -1166,6 +1166,10 @@ async function loadTreasures(page = 1, append = false) {
     // Add a cache-busting parameter to ensure fresh data is always fetched
     url.searchParams.set('_', new Date().getTime());
 
+    if (!append) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--primary-gold); font-size: 1.2rem;">' + t('Loading...') + '</div>';
+    }
+
     try {
         const res = await fetch(url);
         if (!res.ok) {
@@ -5676,5 +5680,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (document.getElementById('profDashboardContent')) loadProfDashboard();
     if (document.getElementById('treasureDetail')) loadTreasureDetails();
 
-});
 });

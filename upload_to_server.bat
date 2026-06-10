@@ -39,7 +39,7 @@ if %errorlevel% neq 0 (
 
 echo.
 echo [5/6] Building and restarting the application containers...
-ssh %SERVER_USER%@%SERVER_IP% "cd /root/SexAppeal-platform && docker-compose up --build -d"
+ssh %SERVER_USER%@%SERVER_IP% "cd /root/SexAppeal-platform && docker-compose rm -fs app && docker-compose up --build -d"
 if %errorlevel% neq 0 (
     echo ❌ ERROR: Failed to build and start containers.
 ) else (
