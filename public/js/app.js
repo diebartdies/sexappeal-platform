@@ -1284,7 +1284,7 @@ async function loadTreasures(page = 1, append = false) {
                     
                     card.innerHTML = `
                         <div class="treasure-img-container" style="cursor: pointer;" onclick="window.location.href='treasure.html?alias=${encodeURIComponent(prof.alias || '')}'">
-                            <img class="treasure-img" src="${photoUrl}" alt="${prof.alias || 'Unknown'}" loading="lazy">
+                            <img class="treasure-img" src="${photoUrl}" alt="${prof.alias || 'Unknown'}">
                         </div>
                         <h3 class="treasure-alias gold-text" style="cursor: pointer; margin-bottom: 0; font-size: 0.95rem;" onclick="window.location.href='treasure.html?alias=${encodeURIComponent(prof.alias || '')}'">${prof.alias || 'Unknown'}</h3>
                     `;
@@ -1490,7 +1490,6 @@ async function loadTreasureDetails() {
                     const img = document.createElement('img');
                     img.src = url;
                     img.alt = `${prof.alias}'s photo`;
-                    img.loading = 'lazy';
                     Object.assign(img.style, {
                         width: '100%',
                         height: '100%',
@@ -2244,7 +2243,7 @@ async function loadAdminGridData() {
 
                 card.innerHTML = `
                     <div style="width: 100%; aspect-ratio: 1/1; overflow: hidden; border-radius: 4px; margin-bottom: 10px; position: relative;">
-                        <img src="${photo}" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy">
+                        <img src="${photo}" style="width: 100%; height: 100%; object-fit: cover;">
                         <div style="position: absolute; top: 5px; right: 5px; font-size: 0.55rem; padding: 2px 6px; border-radius: 10px; background: ${statusColor}; color: white; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.5);">
                             ${vStatus.toUpperCase()}
                         </div>
@@ -4577,9 +4576,12 @@ async function openEditPricingModal(currentPricing) {
         });
 
         const closeBtn = document.createElement('button');
-        closeBtn.textContent = t('Close');
-        closeBtn.style.alignSelf = 'flex-end';
-        closeBtn.style.marginBottom = '10px';
+        closeBtn.innerHTML = '&#8592; Back to Dashboard';
+        Object.assign(closeBtn.style, {
+            alignSelf: 'flex-start', marginBottom: '15px', padding: '8px 12px',
+            background: 'transparent', border: '1px solid var(--primary-gold)',
+            color: 'var(--primary-gold)', borderRadius: '4px', cursor: 'pointer'
+        });
         closeBtn.onclick = () => modal.style.display = 'none';
 
         const container = document.createElement('div');
