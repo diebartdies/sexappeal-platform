@@ -1287,7 +1287,6 @@ async function loadTreasures(page = 1, append = false) {
                     const lazyAttr = isFirstCategoryRendered ? '' : ' loading="lazy"';
                     card.innerHTML = `
                         <div class="treasure-img-container" style="cursor: pointer;" onclick="window.location.href='treasure.html?alias=${encodeURIComponent(prof.alias || '')}'">
-                            <img class="treasure-img" src="${photoUrl}" alt="${prof.alias || 'Unknown'}">
                             <img class="treasure-img" src="${photoUrl}" alt="${prof.alias || 'Unknown'}"${lazyAttr}>
                         </div>
                         <h3 class="treasure-alias gold-text" style="cursor: pointer; margin-bottom: 0; font-size: 0.95rem;" onclick="window.location.href='treasure.html?alias=${encodeURIComponent(prof.alias || '')}'">${prof.alias || 'Unknown'}</h3>
@@ -2252,7 +2251,6 @@ async function loadAdminGridData() {
 
                 card.innerHTML = `
                     <div style="width: 100%; aspect-ratio: 1/1; overflow: hidden; border-radius: 4px; margin-bottom: 10px; position: relative;">
-                        <img src="${photo}" style="width: 100%; height: 100%; object-fit: cover;">
                         <img src="${photo}" style="width: 100%; height: 100%; object-fit: cover;"${lazyAttr}>
                         <div style="position: absolute; top: 5px; right: 5px; font-size: 0.55rem; padding: 2px 6px; border-radius: 10px; background: ${statusColor}; color: white; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.5);">
                             ${vStatus.toUpperCase()}
@@ -2306,7 +2304,7 @@ async function loadDashboard() {
         if (data.success) {
             const user = data.data;
             localStorage.setItem('user', JSON.stringify(user)); // Ensure local storage is synced
-            const stats = data.stats || { profileViews: 0, whatsappClicks: 0 };
+            const stats = data.stats || { photoCount: 0, whatsappcCount: 0, callCount: 0 };
 
             // Apply global dynamic pricing
             if (data.globalPricing) {
@@ -2528,9 +2526,9 @@ async function loadDashboard() {
                 analyticsSection.innerHTML = `
                     <h3 class="gold-text" style="margin-bottom: 15px;">Performance Analytics (Last Month)</h3>
                     <div style="display: flex; gap: 20px; justify-content: space-around; text-align: center;">
-                        <div><div style="font-size: 2.5rem; color: var(--primary-gold);">${stats.profileViews || 0}</div><div style="font-size: 0.9rem; color: #ccc;">Profile Image Hits</div></div>
-                        <div><div style="font-size: 2.5rem; color: var(--primary-gold);">${stats.whatsappClicks || 0}</div><div style="font-size: 0.9rem; color: #ccc;">WhatsApp Clicks</div></div>
-                        <div><div style="font-size: 2.5rem; color: var(--primary-gold);">${stats.phoneClicks || 0}</div><div style="font-size: 0.9rem; color: #ccc;">Phone Calls</div></div>
+                        <div><div style="font-size: 2.5rem; color: var(--primary-gold);">${stats.photoCount || 0}</div><div style="font-size: 0.9rem; color: #ccc;">Dashboard Photo Clicks</div></div>
+                        <div><div style="font-size: 2.5rem; color: var(--primary-gold);">${stats.whatsappcCount || 0}</div><div style="font-size: 0.9rem; color: #ccc;">WhatsApp Button Pushes</div></div>
+                        <div><div style="font-size: 2.5rem; color: var(--primary-gold);">${stats.callCount || 0}</div><div style="font-size: 0.9rem; color: #ccc;">Call Button Pushes</div></div>
                     </div>
                 `;
                 content.insertBefore(analyticsSection, insertRef);
@@ -4039,6 +4037,11 @@ async function loadPendingVerifications() {
                 const alias = prof.professionalProfile?.alias || 'Unknown';
                 const docs = prof.verificationDocuments && prof.verificationDocuments.length > 0 
                     ? `<div style="display: flex; gap: 5px; flex-wrap: wrap;">` + prof.verificationDocuments.map(doc => `<img src="${doc}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; cursor: pointer; border: 1px solid #444;" onclick="openImageModal('${doc}')" title="Click to enlarge">`).join('') + `</div>`
+                const docs = prof.verificationDocuments && prof.verificationDocuments.length > 0
+                    ? `<div style="display: flex; gap: 5px; flex-wrap: wrap;">` + prof.verificationDocuments.map((doc, idx) => {
+                        const labels = ['ID Front', 'ID Back', 'Selfie'];
+                        return `<button class="view-doc-btn" data-prof-id="${prof._id}" data-doc-index="${idx}" style="padding: 4px 8px; background: #333; color: var(--primary-gold); border: 1px solid var(--primary-gold); border-radius: 4px; cursor: pointer; font-size: 0.8rem;">${labels[idx] || `Doc ${idx+1}`}</button>`;
+                    }).join('') + `</div>`
                     : 'None';
                 const gesture = prof.verificationGesture || 'N/A';
 
@@ -4065,6 +4068,16 @@ async function loadPendingVerifications() {
             });
             document.querySelectorAll('.reject-btn').forEach(btn => {
                 btn.onclick = () => updateVerificationStatus(btn.getAttribute('data-id'), 'rejected');
+            });
+            document.querySelectorAll('.view-doc-btn').forEach(btn => {
+                btn.onclick = () => {
+                    const profId = btn.getAttribute('data-prof-id');
+                    const idx = parseInt(btn.getAttribute('data-doc-index'), 10);
+                    const prof = data.data.find(p => p._id === profId);
+                    if (prof && prof.verificationDocuments && prof.verificationDocuments[idx]) {
+                        openImageModal(prof.verificationDocuments[idx]);
+                    }
+                };
             });
             applyStaticTranslations(tbody);
 
@@ -5208,7 +5221,7 @@ async function loadProfDashboard() {
         if (data.success && data.data.role === 'professional') {
             const user = data.data;
             const prof = user.professionalProfile || {};
-            const stats = data.stats || { profileViews: 0, whatsappClicks: 0, phoneClicks: 0 };
+            const stats = data.stats || { photoCount: 0, whatsappcCount: 0, callCount: 0 };
             const isApproved = user.verificationStatus === 'approved';
 
             // Make the form naturally wider to utilize the extra space
@@ -5228,9 +5241,9 @@ async function loadProfDashboard() {
                 <div class="card fileteado-section" style="margin-bottom: 20px; border: 1px solid var(--primary-gold);">
                     <h3 class="gold-text" style="margin-bottom: 15px;">Statistics</h3>
                     <div style="display: flex; gap: 20px; justify-content: space-around; text-align: center; flex-wrap: wrap;">
-                        <div><div style="font-size: 2.5rem; color: var(--primary-gold);">${stats.profileViews || 0}</div><div style="font-size: 0.9rem; color: #ccc;">Dashboard Photo Clicks</div></div>
-                        <div><div style="font-size: 2.5rem; color: var(--primary-gold);">${stats.whatsappClicks || 0}</div><div style="font-size: 0.9rem; color: #ccc;">WhatsApp Button Pushes</div></div>
-                        <div><div style="font-size: 2.5rem; color: var(--primary-gold);">${stats.phoneClicks || 0}</div><div style="font-size: 0.9rem; color: #ccc;">Call Button Pushes</div></div>
+                        <div><div style="font-size: 2.5rem; color: var(--primary-gold);">${stats.photoCount || 0}</div><div style="font-size: 0.9rem; color: #ccc;">Dashboard Photo Clicks</div></div>
+                        <div><div style="font-size: 2.5rem; color: var(--primary-gold);">${stats.whatsappcCount || 0}</div><div style="font-size: 0.9rem; color: #ccc;">WhatsApp Button Pushes</div></div>
+                        <div><div style="font-size: 2.5rem; color: var(--primary-gold);">${stats.callCount || 0}</div><div style="font-size: 0.9rem; color: #ccc;">Call Button Pushes</div></div>
                         <div><div style="font-size: 2.5rem; color: var(--primary-gold);">0</div><div style="font-size: 0.9rem; color: #ccc;">Hourly Hits (Peak Time)</div></div>
                     </div>
                 </div>

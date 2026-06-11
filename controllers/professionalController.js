@@ -3,6 +3,7 @@ const config = require('../config/appConfig');
 const ActivityLog = require('../models/ActivityLog');
 const sendEmail = require('../sendEmail');
 const Specialty = require('../models/Specialty');
+const Statistic = require('../models/Statistic');
 
 // Simple in-memory cache setup
 const cache = new Map();
@@ -195,6 +196,13 @@ exports.getProfessionalByAlias = async (req, res, next) => {
         userAgent: req.headers['user-agent'],
         isGuest: false
       });
+
+      const today = new Date().toISOString().split('T')[0];
+      await Statistic.findOneAndUpdate(
+        { professionalId: professional._id, date: today },
+        { $inc: { photoCount: 1 }, $set: { time: new Date() } },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
     } catch(err) { console.error('Activity log error:', err.message); }
 
     // Fetch dynamic pricing
@@ -244,6 +252,13 @@ exports.contactWhatsApp = async (req, res, next) => {
         userAgent: req.headers['user-agent'],
         isGuest: false
       });
+
+      const today = new Date().toISOString().split('T')[0];
+      await Statistic.findOneAndUpdate(
+        { professionalId: professional._id, date: today },
+        { $inc: { whatsappcCount: 1 }, $set: { time: new Date() } },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
     } catch(err) { console.error('Activity log error:', err.message); }
 
     res.redirect(waUrl);
@@ -319,14 +334,24 @@ exports.getMe = async (req, res, next) => {
     }
 
     // Fetch performance metrics to show on the dashboard
-    let profileViews = 0;
-    let whatsappClicks = 0;
-    let phoneClicks = 0;
+    let photoCount = 0;
+    let whatsappcCount = 0;
+    let callCount = 0;
     try {
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      profileViews = await ActivityLog.countDocuments({ professional: user._id, action: 'profile_view', createdAt: { $gte: thirtyDaysAgo } });
-      whatsappClicks = await ActivityLog.countDocuments({ professional: user._id, action: 'whatsapp_click', createdAt: { $gte: thirtyDaysAgo } });
-      phoneClicks = await ActivityLog.countDocuments({ professional: user._id, action: 'phone_click', createdAt: { $gte: thirtyDaysAgo } });
+      const statsAgg = await Statistic.aggregate([
+          { $match: { professionalId: user._id } },
+          { $group: {
+              _id: null,
+              photoCount: { $sum: "$photoCount" },
+              whatsappcCount: { $sum: "$whatsappcCount" },
+              callCount: { $sum: "$callCount" }
+          }}
+      ]);
+      if (statsAgg.length > 0) {
+          photoCount = statsAgg[0].photoCount || 0;
+          whatsappcCount = statsAgg[0].whatsappcCount || 0;
+          callCount = statsAgg[0].callCount || 0;
+      }
     } catch (err) { console.error('Failed to load stats:', err.message); }
 
     // Fetch dynamic pricing
@@ -338,7 +363,7 @@ exports.getMe = async (req, res, next) => {
     res.status(200).json({
       success: true,
       isReadyForTransactions,
-      stats: { profileViews, whatsappClicks, phoneClicks },
+      stats: { photoCount, whatsappcCount, callCount },
       globalPricing,
       data: user
     });
@@ -660,6 +685,13 @@ exports.contactPhone = async (req, res, next) => {
         userAgent: req.headers['user-agent'],
         isGuest: false
       });
+
+      const today = new Date().toISOString().split('T')[0];
+      await Statistic.findOneAndUpdate(
+        { professionalId: professional._id, date: today },
+        { $inc: { callCount: 1 }, $set: { time: new Date() } },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
     } catch(err) { console.error('Activity log error:', err.message); }
 
     res.redirect(phoneUrl);

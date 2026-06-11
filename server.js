@@ -146,10 +146,31 @@ app.get('/api/v1/professionals/me', protect, authorize('professional', 'admin'),
         const globalPricing = adminUser?.adminSettings?.pricing || { Elite: 50000, Premium: 40000, Gold: 30000, Silver: 20000, Standard: 15000 };
         const isReadyForTransactions = user.professionalProfile?.rateChangeAcknowledged !== false;
 
+        let photoCount = 0;
+        let whatsappcCount = 0;
+        let callCount = 0;
+        try {
+            const Statistic = require('./models/Statistic');
+            const statsAgg = await Statistic.aggregate([
+                { $match: { professionalId: user._id } },
+                { $group: {
+                    _id: null,
+                    photoCount: { $sum: "$photoCount" },
+                    whatsappcCount: { $sum: "$whatsappcCount" },
+                    callCount: { $sum: "$callCount" }
+                }}
+            ]);
+            if (statsAgg.length > 0) {
+                photoCount = statsAgg[0].photoCount || 0;
+                whatsappcCount = statsAgg[0].whatsappcCount || 0;
+                callCount = statsAgg[0].callCount || 0;
+            }
+        } catch (e) { console.error(e); }
+
         res.status(200).json({
             success: true,
             data: user,
-            stats: { profileViews: 0, whatsappClicks: 0, phoneClicks: 0 },
+            stats: { photoCount, whatsappcCount, callCount },
             globalPricing,
             isReadyForTransactions
         });
