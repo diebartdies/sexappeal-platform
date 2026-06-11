@@ -4035,8 +4035,6 @@ async function loadPendingVerifications() {
             
             data.data.forEach(prof => {
                 const alias = prof.professionalProfile?.alias || 'Unknown';
-                const docs = prof.verificationDocuments && prof.verificationDocuments.length > 0 
-                    ? `<div style="display: flex; gap: 5px; flex-wrap: wrap;">` + prof.verificationDocuments.map(doc => `<img src="${doc}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; cursor: pointer; border: 1px solid #444;" onclick="openImageModal('${doc}')" title="Click to enlarge">`).join('') + `</div>`
                 const docs = prof.verificationDocuments && prof.verificationDocuments.length > 0
                     ? `<div style="display: flex; gap: 5px; flex-wrap: wrap;">` + prof.verificationDocuments.map((doc, idx) => {
                         const labels = ['ID Front', 'ID Back', 'Selfie'];

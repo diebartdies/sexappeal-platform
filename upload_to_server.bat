@@ -11,6 +11,7 @@ set SERVER_IP=91.208.206.35
 
 echo [1/6] Compressing project files locally (ignoring heavy cache files)...
 tar -czvf upload_package.tar.gz --exclude=node_modules --exclude=.git --exclude=public/uploads --exclude=.cache --exclude=upload_package.tar.gz --exclude=docker-compose.override.yml --exclude=.env .
+tar -czvf upload_package.tar.gz --exclude=node_modules --exclude=.git --exclude=.cache --exclude=upload_package.tar.gz --exclude=docker-compose.override.yml --exclude=.env .
 if %errorlevel% neq 0 (
     echo ❌ ERROR: Failed to create archive.
     goto end

@@ -49,5 +49,9 @@ echo "🌱 Seeding the fresh database..."
 docker exec sexappeal_app node seed.js
 
 echo "==================================================="
+echo "🔄 Restoring latest daily backup..."
+/root/SexAppeal-platform/restore_latest_daily_backup.sh || { echo "ERROR: Database restore failed! Check logs."; exit 1; }
+
+echo "==================================================="
 echo "✅ PLATFORM REBUILT AND ONLINE!"
 echo "==================================================="
