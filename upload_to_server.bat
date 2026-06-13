@@ -45,11 +45,13 @@ if %errorlevel% neq 0 (
     goto cleanup
 )
 ssh %SERVER_USER%@%SERVER_IP% "mkdir -p %SERVER_PATH%/scripts"
+powershell -NoProfile -Command "$paths=@('%~dp0scripts\deploy-extract.sh','%~dp0scripts\deploy-restart.sh'); foreach($p in $paths){ $t=[IO.File]::ReadAllText($p) -replace \"`r`n\",\"`n\" -replace \"`r\",\"\"; [IO.File]::WriteAllText($p,$t,(New-Object System.Text.UTF8Encoding $false)) }"
 scp "%~dp0scripts\deploy-extract.sh" "%~dp0scripts\deploy-restart.sh" %SERVER_USER%@%SERVER_IP%:%SERVER_PATH%/scripts/
-if %errorlevel% neq 0 (
+if !errorlevel! neq 0 (
     echo ❌ ERROR: Failed to upload deploy helper scripts.
     goto cleanup
 )
+ssh %SERVER_USER%@%SERVER_IP% "sed -i 's/\r$//' %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh"
 
 echo.
 echo [5/7] Verifying integrity and extracting on server...

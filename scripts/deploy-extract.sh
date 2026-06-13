@@ -5,10 +5,6 @@ set -eu
 EXPECTED="${1:-}"
 DEPLOY_DIR="${2:-/root/SexAppeal-platform}"
 
-norm_hash() {
-  echo "$1" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]'
-}
-
 cd "$DEPLOY_DIR"
 
 if [ ! -f upload_package.tar.gz ]; then
@@ -21,9 +17,8 @@ if [ -z "$EXPECTED" ]; then
   exit 1
 fi
 
-REMOTE=$(sha256sum upload_package.tar.gz | awk '{print $1}')
-REMOTE=$(norm_hash "$REMOTE")
-EXPECTED=$(norm_hash "$EXPECTED")
+REMOTE=$(sha256sum upload_package.tar.gz | awk '{print $1}' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+EXPECTED=$(echo "$EXPECTED" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
 
 echo "Server checksum:  $REMOTE"
 echo "Expected checksum: $EXPECTED"
