@@ -15,14 +15,19 @@ else
 fi
 
 echo "Using: $DC"
-$DC rm -fs app 2>/dev/null || true
-$DC up --build -d
+echo "Ensuring mongo 4.4 is running (no recreate, no pull)..."
+$DC up -d --no-recreate --pull never mongo
+
+echo "Building and recreating app only..."
+$DC build app
+$DC up -d --force-recreate --no-deps app
 
 if docker ps --format '{{.Names}}' | grep -qx sexappeal_nginx; then
+  echo "Restarting nginx for SSL/config reload..."
   docker restart sexappeal_nginx
 else
-  echo "WARN: sexappeal_nginx not running; trying compose restart nginx..."
-  $DC restart nginx
+  echo "Starting nginx..."
+  $DC up -d --no-recreate nginx
 fi
 
 echo "Containers:"

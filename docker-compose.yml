@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   mongo:
+    # Server requires MongoDB 4.4 — do not upgrade to 5.x/6.x/7.x
     image: mongo:4.4
+    pull_policy: if_not_present
     command: ["mongod", "--wiredTigerCacheSizeGB", "0.25"]
     container_name: sexappeal_mongo
     restart: unless-stopped

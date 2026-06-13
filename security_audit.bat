@@ -10,7 +10,7 @@ echo   2. Running Docker Image Vulnerability Scan
 echo ===================================================
 :: Note: This uses Docker Scout, which is included with Docker Desktop
 docker scout quickview nginx:alpine
-docker scout quickview mongo:6.0
+docker scout quickview mongo:4.4
 echo.
 
 echo ===================================================
