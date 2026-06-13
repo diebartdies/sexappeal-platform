@@ -1,4 +1,4 @@
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 
 echo ===================================================
 echo 🚀 SexAppeal - Automated Deployment Script v2.2
@@ -25,9 +25,13 @@ if %errorlevel% neq 0 (
 )
 
 echo.
-echo [3/7] Calculating local file checksum (SHA256, lowercase)...
-for /f "delims=" %%A in ('powershell -NoProfile -Command "(Get-FileHash -Path 'upload_package.tar.gz' -Algorithm SHA256).Hash.ToLower()"') do set "LOCAL_CHECKSUM=%%A"
-if not defined LOCAL_CHECKSUM (
+echo [3/7] Calculating local file checksum (SHA256)...
+set "LOCAL_CHECKSUM="
+for /f "skip=1 delims=" %%A in ('certutil -hashfile upload_package.tar.gz SHA256 2^>nul') do (
+    if not defined LOCAL_CHECKSUM set "LOCAL_CHECKSUM=%%A"
+)
+set "LOCAL_CHECKSUM=%LOCAL_CHECKSUM: =%"
+if "%LOCAL_CHECKSUM%"=="" (
     echo ❌ ERROR: Could not compute local checksum.
     goto cleanup
 )
@@ -50,18 +54,16 @@ if %errorlevel% neq 0 (
 echo.
 echo [5/7] Verifying integrity and extracting on server...
 ssh %SERVER_USER%@%SERVER_IP% "chmod +x %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh && bash %SERVER_PATH%/scripts/deploy-extract.sh %LOCAL_CHECKSUM% %SERVER_PATH%"
-if %errorlevel% neq 0 (
-    echo ❌ ERROR: Step 5 failed — checksum mismatch or extract error.
-    echo    Common cause: Windows certutil UPPERCASE vs Linux lowercase (fixed in v2.2).
+if !errorlevel! neq 0 (
+    echo ❌ ERROR: Step 5 failed - checksum mismatch or extract error.
     goto cleanup
 )
 
 echo.
 echo [6/7] Building and restarting containers (app + nginx for SSL)...
 ssh %SERVER_USER%@%SERVER_IP% "bash %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%"
-if %errorlevel% neq 0 (
-    echo ❌ ERROR: Step 6 failed — docker build/start error.
-    echo    Try on server: cd %SERVER_PATH% ^&^& docker compose ps ^&^& docker compose logs --tail=30 app
+if !errorlevel! neq 0 (
+    echo ❌ ERROR: Step 6 failed - docker build/start error.
     goto cleanup
 )
 
@@ -76,15 +78,15 @@ echo.
 echo [7/7] Backing up to GitHub...
 git add .
 git diff --cached --quiet
-if %errorlevel% equ 0 (
+if !errorlevel! equ 0 (
     echo ℹ️ No git changes to commit — skipping commit/push.
 ) else (
     git commit -m "Automated deployment update"
-    if %errorlevel% neq 0 (
+    if !errorlevel! neq 0 (
         echo ⚠️ WARNING: git commit failed.
     ) else (
         git push
-        if %errorlevel% neq 0 (
+        if !errorlevel! neq 0 (
             echo ⚠️ WARNING: GitHub push failed. Push manually if needed.
         ) else (
             echo ✅ GitHub backup successful!

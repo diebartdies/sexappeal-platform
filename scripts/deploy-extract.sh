@@ -1,6 +1,6 @@
 #!/bin/bash
 # Verify upload_package.tar.gz checksum and extract (called from upload_to_server.bat)
-set -euo pipefail
+set -eu
 
 EXPECTED="${1:-}"
 DEPLOY_DIR="${2:-/root/SexAppeal-platform}"
@@ -29,12 +29,12 @@ echo "Server checksum:  $REMOTE"
 echo "Expected checksum: $EXPECTED"
 
 if [ "$REMOTE" != "$EXPECTED" ]; then
-  echo "CHECKSUM MISMATCH — deployment aborted."
+  echo "CHECKSUM MISMATCH - deployment aborted."
   rm -f upload_package.tar.gz
   exit 1
 fi
 
 echo "Checksums match. Extracting..."
-tar -xzvf upload_package.tar.gz --warning=no-unknown-keyword
+tar -xzf upload_package.tar.gz
 rm -f upload_package.tar.gz
 echo "Files extracted successfully."
