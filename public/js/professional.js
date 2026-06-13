@@ -769,14 +769,13 @@ export async function loadProfDashboard() {
 
             const daysContainer = document.getElementById('daysContainer');
             const fullDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-            const shortDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
             const userDays = prof.workingDays || fullDays;
-            fullDays.forEach((day, i) => {
+            fullDays.forEach((day) => {
                 const lbl = document.createElement('label');
                 lbl.style.cssText = 'display:flex; align-items:center; gap:5px; cursor:pointer;';
                 const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = day; cb.className = 'avail-day-cb';
                 cb.checked = userDays.includes(day);
-                lbl.appendChild(cb); lbl.appendChild(document.createTextNode(shortDays[i]));
+                lbl.appendChild(cb); lbl.appendChild(document.createTextNode(t(day)));
                 daysContainer.appendChild(lbl);
             });
 

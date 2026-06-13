@@ -1,5 +1,5 @@
 import { BASE_ORIGIN, API_URL, CATEGORY_META, resolvePhotoSrc, appPath, isReservedAppPage } from './globals.js';
-import { t, applyStaticTranslations } from './i18n.js';
+import { t, applyStaticTranslations, formatWorkingDays } from './i18n.js';
 import { getPendingApprovalBannerHtml } from './uiHelpers.js';
 import { renderSpecialtyDropdown } from './helpers.js';
 
@@ -367,7 +367,7 @@ export async function loadTreasureDetails() {
                         })()}</p>
                         <p><strong>Measurements:</strong> ${prof.measurements || 'N/A'}</p>
                         <p><strong>Height:</strong> ${prof.height || 'N/A'}</p>
-                        <p><strong>Schedule:</strong> ${(prof.workingDays && prof.workingDays.length > 0) ? prof.workingDays.join(', ') : 'Everyday'}</p>
+                        <p><strong>${t('Days:')}</strong> ${formatWorkingDays(prof.workingDays)}</p>
                         <p><strong>Hours:</strong> ${(prof.workingHours && prof.workingHours.start) ? prof.workingHours.start + ' to ' + prof.workingHours.end : 'Anytime'}</p>
                     </div>
 

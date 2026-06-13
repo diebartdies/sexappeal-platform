@@ -138,8 +138,23 @@ const translations = {
         'Measurements:': 'Medidas:',
         'Height:': 'Estatura:',
         'Schedule:': 'Horario:',
+        'Days:': 'Días:',
         'Hours:': 'Horas:',
         'Everyday': 'Todos los días',
+        'Monday': 'Lunes',
+        'Tuesday': 'Martes',
+        'Wednesday': 'Miércoles',
+        'Thursday': 'Jueves',
+        'Friday': 'Viernes',
+        'Saturday': 'Sábado',
+        'Sunday': 'Domingo',
+        'Mon': 'Lun',
+        'Tue': 'Mar',
+        'Wed': 'Mié',
+        'Thu': 'Jue',
+        'Fri': 'Vie',
+        'Sat': 'Sáb',
+        'Sun': 'Dom',
         'Anytime': 'Cualquier horario',
         'No photos available.': 'No hay fotos disponibles.',
         'Could not find the specified treasure.': 'No se pudo encontrar el tesoro especificado.',
@@ -364,6 +379,18 @@ const translations = {
 const currentLang = localStorage.getItem('platform_lang') || 'es';
 
 export { currentLang };
+
+export const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+export function translateWeekday(day) {
+    if (!day) return '';
+    return t(String(day).trim());
+}
+
+export function formatWorkingDays(days) {
+    if (!days || days.length === 0) return t('Everyday');
+    return days.map((day) => translateWeekday(day)).join(', ');
+}
 
 export function t(text) {
     if (currentLang === 'en') return text;

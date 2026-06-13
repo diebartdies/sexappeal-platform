@@ -765,7 +765,7 @@ export async function loadDashboard() {
                         cb.checked = userDays.includes(day);
                         
                         lbl.appendChild(cb);
-                        lbl.appendChild(document.createTextNode(day.substring(0, 3))); // Mon, Tue...
+                        lbl.appendChild(document.createTextNode(t(day)));
                         daysContainer.appendChild(lbl);
                     });
                     availBlock.appendChild(daysContainer);
