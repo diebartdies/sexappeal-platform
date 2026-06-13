@@ -7,6 +7,15 @@ echo "==================================================="
 echo "[0/8] Navigating to the correct project directory (/root/SexAppeal-platform)..."
 cd /root/SexAppeal-platform || { echo "Project directory not found! Exiting."; exit 1; }
 
+echo "[0b/8] Disk housekeeping (aggressive — before full rebuild)..."
+if [ -f scripts/disk-housekeeping.sh ]; then
+    AGGRESSIVE=1 bash scripts/disk-housekeeping.sh "$(pwd)" || { echo "ERROR: Not enough disk space for rebuild."; exit 1; }
+else
+    echo "WARN: scripts/disk-housekeeping.sh missing — running basic prune..."
+    docker builder prune -af 2>/dev/null || true
+    docker system prune -f 2>/dev/null || true
+fi
+
 # 1. Ensure lsof is installed
 echo "[1/8] Checking for lsof utility..."
 if ! command -v lsof &> /dev/null; then
@@ -33,7 +42,8 @@ systemctl restart docker
 sleep 3
 
 echo "[5/8] Cleaning up dangling Docker resources..."
-docker system prune -f
+docker container prune -f 2>/dev/null || true
+docker image prune -f 2>/dev/null || true
 
 echo "[6/8] Rebuilding Docker images from scratch (no cache)..."
 docker-compose build --no-cache

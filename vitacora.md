@@ -1,5 +1,73 @@
 # Vitacora - SexAppeal Platform
 
+## [2026-06-13] - Production Deploy, SSL, Server Recovery, Disk Housekeeping
+
+### Context (production server `91.208.206.35`)
+- **Project path (deploy target)**: `/root/SexAppeal-platform` — used by `upload_to_server.bat`.
+- **Legacy Ansible path**: `/opt/sexappeal-platform` — old containers mounted nginx/certs from here. Symlink keeps both aligned:
+  ```bash
+  ln -sfn /root/SexAppeal-platform /opt/sexappeal-platform
+  ```
+- **MongoDB**: Server requires **4.4 only** — do not upgrade to 5.x/6.x/7.x (`docker-compose.yml`: `image: mongo:4.4`, `pull_policy: if_not_present`).
+- **Dual Docker installs**: Apt Docker (`/usr/bin/docker`) is production. Snap Docker (`/var/snap/docker`, ~17 GB) was unused legacy — safe to `snap remove docker` when `which docker` is `/usr/bin/docker` (no reinstall needed for deploys).
+
+### Added — deploy & SSL scripts (`scripts/`)
+| Script | Description |
+|--------|-------------|
+| **`deploy-extract.sh`** | Server-side: verify `upload_package.tar.gz` SHA256, extract, delete archive. Called from `upload_to_server.bat` step 5. LF line endings required. |
+| **`deploy-restart.sh`** | Server-side: LIGHT disk housekeeping → ensure mongo 4.4 up (`--no-recreate --pull never`) → `build app` → replace `sexappeal_app` only (kill/rm + `up --no-deps`) → restart/start nginx. Does **not** recreate mongo. |
+| **`disk-housekeeping.sh`** | Server-side disk cleanup. **LIGHT** (default): Docker build cache, stopped containers, dangling images, journal max 200M, `apt clean`, stale `upload_package.tar.gz`, old project `.archive` backups (>14 days). **AGGRESSIVE=1**: also `docker image prune -af`. Never removes Docker volumes (mongo data safe). Aborts if free space &lt; 2 GB after cleanup; warns if &lt; 5 GB. |
+| **`install-housekeeping-cron.sh`** | Installs `/etc/cron.d/sexappeal-housekeeping` — Sundays 03:15 UTC, LIGHT mode. Log: `/var/log/sexappeal_housekeeping.log`. Run once on server after script is deployed. |
+| **`sync-ssl-certs.ps1`** | Windows: copy Let's Encrypt `sexappeal.chain` / `sexappeal.key` → `fullchain.pem` / `privkey.pem` under `certbot/conf/live/sexappeal.drsrv.net.ar/` before deploy. |
+| **`sync-ssl-certs.sh`** | Linux/WSL variant of SSL cert sync (same purpose as `.ps1`). |
+
+### Added — Windows ops scripts (repo root)
+| Script | Description |
+|--------|-------------|
+| **`upload_to_server.bat` v2.3** | Full deploy pipeline: (1) SSL sync, (1b) LF-normalize shell scripts, (2) tar project, (3) SHA256 checksum, (4) scp tar + deploy/housekeeping scripts, (5) extract on server, (5b) **disk housekeeping**, (6) `deploy-restart.sh`, (7) git commit/push. Excludes `.env`, `node_modules`, `.git`, `docker-compose.override.yml`. |
+| **`disk_housekeeping.bat`** | Manual server cleanup via SSH. Default LIGHT; pass `aggressive` for unused-image prune. Uploads and runs `disk-housekeeping.sh`. |
+
+### Changed
+- **`server.js`**: `app.listen(PORT, '0.0.0.0', …)` — fixes nginx **504/502** when app listened on IPv6-only (`:::5000`) and nginx reached it over IPv4 on the Docker bridge.
+- **`docker-compose.yml`**: Comment + `pull_policy: if_not_present` on mongo 4.4; volume mounts for `./utils`, `./server.js` (and existing `./public`, `./controllers`).
+- **`rebuild_from_scratch.sh`**: Step **[0b/8]** runs `AGGRESSIVE=1 disk-housekeeping.sh` before full rebuild; step 5 uses targeted prune (no `docker system prune -a`).
+- **`security_audit.bat`**: Docker Scout target `mongo:4.4` (was incorrectly `mongo:6.0`).
+- **`.gitattributes`**: `*.sh text eol=lf` — prevents CRLF breaking bash on Linux after scp.
+- **Landing (`public/index.html`, `public/css/style.css`, `public/js/*`)**: Three-column landing (logo \| +18 \| login/register), Spanish default, inline login/recovery, dual-flag language switcher in `ui.js`.
+- **`controllers/authController.js`**: Distinct login errors (`USER_NOT_FOUND`, `INVALID_PASSWORD`).
+- **`public/js/discovery.js`**: Floating progress/menu UX tweaks.
+
+### Fixed (production incidents)
+- **Deploy step 5 CRLF**: `$'\r': command not found` — normalize LF before tar, `sed -i 's/\r$//'` after scp, re-run after extract (tar overwrote scripts).
+- **Deploy step 6 mongo permission denied**: `deploy-restart.sh` no longer runs full `compose up --build -d` (avoid recreating mongo 4.4).
+- **Stale app container / volume mount**: Host `server.js` patched but container still ran image-baked old file — required container recreate after reboot.
+- **nginx `/opt/.../nginx.conf` mount error**: Directory created instead of file when paths diverged — symlink `/opt` → `/root`, recreate nginx.
+- **Disk full (98%)**: Docker build cache (~12 GB) + Snap Docker (~17 GB) + duplicate images — `docker builder prune -af`, `docker image prune`, `snap remove docker` freed space; housekeeping automates prevention.
+
+### Ops — recommended server setup (one-time)
+```bash
+ln -sfn /root/SexAppeal-platform /opt/sexappeal-platform
+chmod +x /root/SexAppeal-platform/daily_backup.sh /root/SexAppeal-platform/scripts/*.sh
+bash /root/SexAppeal-platform/scripts/install-housekeeping-cron.sh   # after first deploy uploads it
+```
+
+**Existing cron** (user crontab): daily backup at 03:00 → `/var/log/sexappeal_daily_backup.log`.
+
+### Ops — when things break
+| Symptom | Action |
+|---------|--------|
+| `permission denied` stopping containers | `reboot`, then `docker rm -f $(docker ps -aq --filter name=sexappeal)` and `docker compose up -d` |
+| HTTPS 504 / 502 | Confirm `grep app.listen` **inside** container shows `'0.0.0.0'`; recreate app+nginx |
+| Deploy build hangs on “exporting layers” | Run `disk_housekeeping.bat` or `AGGRESSIVE=1` housekeeping; need ≥5 GB free |
+| SSL untrusted in browser | Run deploy (SSL sync step) so nginx mounts Let's Encrypt files, not self-signed |
+
+### Notes
+- **`.env` is not in deploy tar** — must exist on server at `/root/SexAppeal-platform/.env`.
+- **`GOOGLE_CLIENT_ID`** in `public/js/globals.js` still placeholder if Google login is needed.
+- **Do not** remove apt Docker (`docker-ce`) — only Snap Docker when confirmed unused.
+
+---
+
 ## [2026-06-11 / 2026-06-12] - Frontend Split, Photos, Navigation, Registration Overhaul
 
 ### Added

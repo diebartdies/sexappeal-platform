@@ -1,0 +1,100 @@
+#!/bin/bash
+# Server disk housekeeping for SexAppeal production.
+# Safe defaults: never removes Docker volumes (mongo data preserved).
+#
+# Usage:
+#   bash scripts/disk-housekeeping.sh [/root/SexAppeal-platform]
+#   AGGRESSIVE=1 bash scripts/disk-housekeeping.sh   # also prune unused images
+#   MIN_FREE_GB=5 bash scripts/disk-housekeeping.sh  # warn/abort thresholds
+#
+# Installed weekly via: bash scripts/install-housekeeping-cron.sh
+
+set -eu
+
+DEPLOY_DIR="${1:-/root/SexAppeal-platform}"
+MIN_FREE_GB="${MIN_FREE_GB:-5}"
+CRITICAL_FREE_GB="${CRITICAL_FREE_GB:-2}"
+AGGRESSIVE="${AGGRESSIVE:-0}"
+
+free_gb() {
+  df / | awk 'NR==2 {printf "%d", $4/1024/1024}'
+}
+
+echo "==================================================="
+echo "SexAppeal disk housekeeping"
+echo "Deploy dir: $DEPLOY_DIR"
+echo "Mode: $([ "$AGGRESSIVE" = "1" ] && echo AGGRESSIVE || echo LIGHT)"
+echo "==================================================="
+
+echo ""
+echo "Disk before:"
+df -h / | tail -1
+
+if command -v docker >/dev/null 2>&1; then
+  echo ""
+  echo "--- Docker (before) ---"
+  docker system df 2>/dev/null || true
+
+  echo ""
+  echo "Pruning Docker build cache..."
+  docker builder prune -af 2>/dev/null || true
+
+  echo "Pruning stopped containers..."
+  docker container prune -f 2>/dev/null || true
+
+  echo "Pruning dangling images..."
+  docker image prune -f 2>/dev/null || true
+
+  if [ "$AGGRESSIVE" = "1" ]; then
+    echo "Pruning unused images (AGGRESSIVE)..."
+    docker image prune -af 2>/dev/null || true
+  fi
+
+  echo ""
+  echo "--- Docker (after) ---"
+  docker system df 2>/dev/null || true
+else
+  echo "WARN: docker not found — skipping Docker cleanup"
+fi
+
+echo ""
+echo "Trimming systemd journal (max 200M)..."
+journalctl --vacuum-size=200M 2>/dev/null || true
+
+echo "Cleaning apt cache..."
+apt-get clean -y 2>/dev/null || apt clean 2>/dev/null || true
+
+if [ -d "$DEPLOY_DIR" ]; then
+  echo "Removing stale deploy artifacts in project dir..."
+  rm -f "$DEPLOY_DIR/upload_package.tar.gz" 2>/dev/null || true
+  find "$DEPLOY_DIR" -maxdepth 1 -name 'sexappeal_backup_*.archive' -mtime +14 -delete 2>/dev/null || true
+fi
+
+if [ -d /var/snap/docker ] && [ "$(du -sm /var/snap/docker 2>/dev/null | awk '{print $1}')" -gt 1024 ] 2>/dev/null; then
+  docker_bin="$(command -v docker || true)"
+  if [ "$docker_bin" = "/usr/bin/docker" ]; then
+    echo ""
+    echo "NOTE: /var/snap/docker uses >1GB but active docker is $docker_bin."
+    echo "      If compose works, reclaim ~17GB with: snap remove docker"
+  fi
+fi
+
+echo ""
+echo "Disk after:"
+df -h / | tail -1
+
+avail="$(free_gb)"
+echo ""
+echo "Free space: ${avail}GB (warn below ${MIN_FREE_GB}GB, abort below ${CRITICAL_FREE_GB}GB)"
+
+if [ "$avail" -lt "$CRITICAL_FREE_GB" ]; then
+  echo "ERROR: critically low disk — free at least ${CRITICAL_FREE_GB}GB before building."
+  echo "Try: AGGRESSIVE=1 bash $DEPLOY_DIR/scripts/disk-housekeeping.sh"
+  exit 1
+fi
+
+if [ "$avail" -lt "$MIN_FREE_GB" ]; then
+  echo "WARN: disk space is low. Builds may fail or be very slow."
+fi
+
+echo "Housekeeping complete."

@@ -1,7 +1,7 @@
 setlocal EnableExtensions EnableDelayedExpansion
 
 echo ===================================================
-echo 🚀 SexAppeal - Automated Deployment Script v2.2
+echo 🚀 SexAppeal - Automated Deployment Script v2.3
 echo ===================================================
 echo.
 
@@ -18,7 +18,7 @@ if %errorlevel% neq 0 (
 )
 
 echo [1b/7] Normalizing deploy script line endings (LF)...
-powershell -NoProfile -Command "$paths=@('%~dp0scripts\deploy-extract.sh','%~dp0scripts\deploy-restart.sh'); foreach($p in $paths){ $t=[IO.File]::ReadAllText($p) -replace \"`r`n\",\"`n\" -replace \"`r\",\"\"; [IO.File]::WriteAllText($p,$t,(New-Object System.Text.UTF8Encoding $false)) }"
+powershell -NoProfile -Command "$paths=@('%~dp0scripts\deploy-extract.sh','%~dp0scripts\deploy-restart.sh','%~dp0scripts\disk-housekeeping.sh'); foreach($p in $paths){ $t=[IO.File]::ReadAllText($p) -replace \"`r`n\",\"`n\" -replace \"`r\",\"\"; [IO.File]::WriteAllText($p,$t,(New-Object System.Text.UTF8Encoding $false)) }"
 
 echo [2/7] Compressing project files locally (ignoring heavy cache files)...
 tar -czvf upload_package.tar.gz --exclude=node_modules --exclude=.git --exclude=.cache --exclude=upload_package.tar.gz --exclude=docker-compose.override.yml --exclude=.env .
@@ -48,22 +48,30 @@ if %errorlevel% neq 0 (
     goto cleanup
 )
 ssh %SERVER_USER%@%SERVER_IP% "mkdir -p %SERVER_PATH%/scripts"
-scp "%~dp0scripts\deploy-extract.sh" "%~dp0scripts\deploy-restart.sh" %SERVER_USER%@%SERVER_IP%:%SERVER_PATH%/scripts/
+scp "%~dp0scripts\deploy-extract.sh" "%~dp0scripts\deploy-restart.sh" "%~dp0scripts\disk-housekeeping.sh" %SERVER_USER%@%SERVER_IP%:%SERVER_PATH%/scripts/
 if !errorlevel! neq 0 (
     echo ❌ ERROR: Failed to upload deploy helper scripts.
     goto cleanup
 )
-ssh %SERVER_USER%@%SERVER_IP% "sed -i 's/\r$//' %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh"
+ssh %SERVER_USER%@%SERVER_IP% "sed -i 's/\r$//' %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%/scripts/disk-housekeeping.sh"
 
 echo.
 echo [5/7] Verifying integrity and extracting on server...
-ssh %SERVER_USER%@%SERVER_IP% "chmod +x %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh && bash %SERVER_PATH%/scripts/deploy-extract.sh %LOCAL_CHECKSUM% %SERVER_PATH%"
+ssh %SERVER_USER%@%SERVER_IP% "chmod +x %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%/scripts/disk-housekeeping.sh && bash %SERVER_PATH%/scripts/deploy-extract.sh %LOCAL_CHECKSUM% %SERVER_PATH%"
 if !errorlevel! neq 0 (
     echo ❌ ERROR: Step 5 failed - checksum mismatch or extract error.
     goto cleanup
 )
 
-ssh %SERVER_USER%@%SERVER_IP% "sed -i 's/\r$//' %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh && chmod +x %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh"
+ssh %SERVER_USER%@%SERVER_IP% "sed -i 's/\r$//' %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%/scripts/disk-housekeeping.sh && chmod +x %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%/scripts/disk-housekeeping.sh"
+
+echo.
+echo [5b/7] Server disk housekeeping (before Docker build)...
+ssh %SERVER_USER%@%SERVER_IP% "bash %SERVER_PATH%/scripts/disk-housekeeping.sh %SERVER_PATH%"
+if !errorlevel! neq 0 (
+    echo ❌ ERROR: Disk critically low after cleanup. Run disk_housekeeping.bat aggressive on server, then retry.
+    goto cleanup
+)
 
 echo.
 echo [6/7] Building and restarting containers (app + nginx for SSL)...

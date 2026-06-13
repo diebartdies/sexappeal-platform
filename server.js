@@ -257,7 +257,7 @@ app.get('/', (req, res) => {
 
 const PORT = config.port;
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`\nServer running in ${config.env} mode on port ${PORT}`);
   console.log(`Access the application at http://localhost:${PORT}\n`);
 });
