@@ -26,6 +26,8 @@ services:
     volumes:
       - ./public:/app/public
       - ./controllers:/app/controllers
+      - ./utils:/app/utils
+      - ./server.js:/app/server.js
     depends_on:
       mongo:
         condition: service_healthy

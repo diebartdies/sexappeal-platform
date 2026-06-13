@@ -1,0 +1,834 @@
+import { BASE_ORIGIN, API_URL, CATEGORY_META, resolvePhotoSrc } from './globals.js';
+import { showAlert, getPendingApprovalBannerHtml } from './uiHelpers.js';
+import { t, applyStaticTranslations } from './i18n.js';
+import { renderSpecialtyDropdown, setupLocationDropdowns } from './helpers.js';
+
+// Update Profile
+const updateProfileForm = document.getElementById('updateProfileForm');
+if (updateProfileForm) {
+    let isSaving = false;
+    
+    window.saveProfessionalProfile = async (silent = false) => {
+        if (isSaving) return;
+        isSaving = true;
+        const alertEl = document.getElementById('updateAlert');
+        const formData = new FormData();
+
+        // Append all text fields
+        formData.append('firstName', document.getElementById('upFirstName')?.value || '');
+        formData.append('surname', document.getElementById('upSurname')?.value || '');
+        formData.append('middleName', document.getElementById('upMiddleName')?.value || '');
+        formData.append('idNumber', document.getElementById('upIdNumber')?.value || '');
+        formData.append('birthDate', document.getElementById('upBirthDate')?.value || '');
+        formData.append('mobilePhone', document.getElementById('upMobilePhone')?.value || '');
+        formData.append('street', document.getElementById('upStreet')?.value || '');
+        formData.append('number', document.getElementById('upStreetNumber')?.value || '');
+        formData.append('floor', document.getElementById('upFloor')?.value || '');
+        formData.append('apartment', document.getElementById('upApartment')?.value || '');
+
+        formData.append('alias', document.getElementById('upAlias').value);
+        formData.append('bio', document.getElementById('upBio').value);
+        formData.append('hasOwnApartment', document.getElementById('upOwnApartment').checked);
+        formData.append('hasFantasyWardrobe', document.getElementById('upFantasyWardrobe').checked);
+        formData.append('quality', document.getElementById('upQuality')?.value || '');
+        
+        const upIsExposed = document.getElementById('upIsExposed');
+        if (upIsExposed) formData.append('isExposed', upIsExposed.checked);
+
+        const upPaysMonthly = document.getElementById('upPaysMonthly');
+        if (upPaysMonthly) formData.append('paysMonthlyCharges', upPaysMonthly.checked);
+        
+        const dashboardSpecCbs = document.querySelectorAll('.dashboard-specialty-cb');
+        if (dashboardSpecCbs.length > 0) {
+            const selectedSpecs = Array.from(dashboardSpecCbs).filter(cb => cb.checked).map(cb => cb.value).join(',');
+            formData.set('services', selectedSpecs);
+        } else {
+            const upServicesEl = document.getElementById('upServices');
+            let servicesVal = '';
+            if (upServicesEl) {
+                if (upServicesEl.tagName === 'SELECT') {
+                    servicesVal = Array.from(upServicesEl.selectedOptions).map(opt => opt.value).join(',');
+                } else {
+                    servicesVal = upServicesEl.value;
+                }
+            }
+            formData.append('services', servicesVal);
+        }
+        
+        const upProv = document.getElementById('upProvince');
+        const upCity = document.getElementById('upCity');
+        const upNeigh = document.getElementById('upNeighborhood');
+        
+        if (upProv) {
+            formData.append('province', upProv.value);
+            if (upProv.value.trim().toLowerCase() === 'caba') {
+                formData.append('city', '');
+                if (upCity) formData.append('neighborhood', upCity.value);
+            } else {
+                if (upCity) formData.append('city', upCity.value);
+                if (upNeigh) formData.append('neighborhood', upNeigh.value);
+            }
+        }
+
+        formData.append('measurements', document.getElementById('upMeasurements').value);
+        formData.append('height', document.getElementById('upHeight').value);
+        formData.append('whatsappNumber', document.getElementById('upWhatsapp').value);
+
+        formData.append('postalCode', document.getElementById('upPostCode')?.value || '');
+        formData.append('instagram', document.getElementById('upInstagram')?.value || '');
+        formData.append('facebook', document.getElementById('upFacebook')?.value || '');
+        
+        const upWhStart = document.getElementById('upWorkingHoursStart');
+        const upWhEnd = document.getElementById('upWorkingHoursEnd');
+        const upWDays = document.getElementById('upWorkingDays');
+        if (upWhStart) formData.append('workingHoursStart', upWhStart.value);
+        if (upWhEnd) formData.append('workingHoursEnd', upWhEnd.value);
+        
+        formData.append('vacationStart', document.getElementById('upVacationStart')?.value || '');
+        formData.append('vacationEnd', document.getElementById('upVacationEnd')?.value || '');
+        if (upWDays) {
+            const dVal = upWDays.tagName === 'SELECT' ? Array.from(upWDays.selectedOptions).map(o => o.value).join(',') : upWDays.value;
+            formData.append('workingDays', dVal);
+        }
+
+        // Overwrite the FormData payload with values from the new Availability block if they exist
+        const availStart = document.getElementById('upAvailStart');
+        const availEnd = document.getElementById('upAvailEnd');
+        if (availStart) formData.set('workingHoursStart', availStart.value);
+        if (availEnd) formData.set('workingHoursEnd', availEnd.value);
+        
+        const availCbs = document.querySelectorAll('.avail-day-cb');
+        if (availCbs && availCbs.length > 0) {
+            const selectedDays = Array.from(availCbs).filter(cb => cb.checked).map(cb => cb.value).join(',');
+            formData.set('workingDays', selectedDays);
+        }
+
+        const existingPhotos = [];
+        const photoElements = document.querySelectorAll('#photoGrid .photo-item img');
+
+        photoElements.forEach(img => {
+            if (newFilesMap.has(img.src)) {
+                // It's a new file, append the File object for multer
+                formData.append('photos', newFilesMap.get(img.src));
+            } else {
+                // It's an existing photo URL that we want to keep
+                let photoUrl = img.getAttribute('data-original-url') || img.getAttribute('src');
+                if (photoUrl && photoUrl.startsWith('http')) {
+                    try {
+                        // Strip domain to only save the relative path if it's a local upload
+                        const urlObj = new URL(photoUrl);
+                        if (urlObj.pathname.startsWith('/uploads/')) {
+                            photoUrl = urlObj.pathname;
+                        }
+                    } catch(e) {}
+                }
+                existingPhotos.push(photoUrl);
+            }
+        });
+
+        // Append the list of existing photos as a JSON string (skip when only text fields changed)
+        if (photosDirty) {
+            formData.append('existingPhotos', JSON.stringify(existingPhotos));
+        } else {
+            formData.append('existingPhotos', '__preserve__');
+        }
+
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`${API_URL}/professionals/updateprofile`, {
+                method: 'PUT',
+                headers: { 
+                    'Authorization': `Bearer ${token}`
+                },
+                credentials: 'include',
+                body: formData
+            });
+            
+            if (!res.ok) {
+                if (res.status === 413) throw new Error("Payload Too Large. Nginx limit exceeded.");
+                if (res.status === 502) throw new Error("Bad Gateway. The server is restarting.");
+            }
+
+            const data = await res.json();
+            if (data.success && photosDirty) {
+                photosDirty = false;
+            }
+            if (!silent) {
+                if (data.success) {
+                    showAlert(alertEl, 'Profile updated successfully!', false);
+                } else {
+                    showAlert(alertEl, data.error || 'Update failed');
+                }
+            }
+        } catch (err) {
+            if (!silent) showAlert(alertEl, err.message || 'Server connection error');
+        } finally {
+            isSaving = false;
+        }
+    };
+
+    // Manual Submit Fallback
+    updateProfileForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        window.saveProfessionalProfile(false);
+    });
+
+    // Auto-Save Triggers
+    const formInputs = updateProfileForm.querySelectorAll('input, select, textarea');
+    formInputs.forEach(input => {
+        if (input.type === 'file') return; // Handled specially by addPhotoToGrid
+        input.addEventListener('blur', () => window.saveProfessionalProfile(true));
+        if (input.type === 'checkbox' || input.type === 'radio' || input.tagName === 'SELECT') {
+            input.addEventListener('change', () => window.saveProfessionalProfile(true));
+        }
+    });
+
+    window.addEventListener('beforeunload', () => {
+        window.saveProfessionalProfile(true);
+    });
+}
+
+// Upload Payment Receipt
+const receiptForm = document.getElementById('receiptForm');
+if (receiptForm) {
+    receiptForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const receiptFile = document.getElementById('receiptFile').files[0];
+        const alert = document.getElementById('receiptAlert');
+        
+        if (!receiptFile) {
+            showAlert(alert, 'Please select a file or photo to upload.', true);
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('receipt', receiptFile);
+        
+        try {
+            const token = localStorage.getItem('token');
+            const btn = receiptForm.querySelector('button[type="submit"]') || document.getElementById('btnUploadReceipt');
+            const originalText = btn ? btn.textContent : 'Upload';
+            if (btn) { btn.textContent = t('Uploading...'); btn.disabled = true; }
+            // Added credentials: 'include' to ensure auth cookie is sent
+            const res = await fetch(`${API_URL}/professionals/upload-receipt`, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${token}`
+                },
+                credentials: 'include',
+                body: formData
+            });
+            const data = await res.json();
+            
+            if (btn) { btn.textContent = originalText; btn.disabled = false; }
+            
+            if (data.success) {
+                showAlert(alert, 'Receipt uploaded successfully! Admin will review it shortly.', false);
+                receiptForm.reset();
+            } else {
+                showAlert(alert, data.error || 'Failed to upload receipt');
+            }
+        } catch (err) {
+            showAlert(alert, 'Server connection error');
+        }
+    });
+}
+
+// Acknowledge Rate
+const ackRateBtn = document.getElementById('ackRateBtn');
+if (ackRateBtn) {
+    ackRateBtn.addEventListener('click', async () => {
+        try {
+            const token = localStorage.getItem('token');
+            // Added credentials: 'include' to ensure auth cookie is sent
+            const res = await fetch(`${API_URL}/professionals/acknowledge-rate`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` },
+                credentials: 'include'
+            });
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('rateAlert').classList.add('hidden');
+            }
+        } catch (err) {
+            console.error('Failed to acknowledge rate');
+        }
+    });
+}
+
+export async function openPendingConnectionsModal() {
+    let modal = document.getElementById('pendingConnectionsModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'pendingConnectionsModal';
+        Object.assign(modal.style, {
+            position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.9)', zIndex: '3000', display: 'flex',
+            flexDirection: 'column', padding: '20px', overflowY: 'auto'
+        });
+
+        const closeBtn = document.createElement('button');
+        closeBtn.innerHTML = '&#8592; Back to Dashboard';
+        Object.assign(closeBtn.style, {
+            alignSelf: 'flex-start', marginBottom: '15px', padding: '8px 12px',
+            background: 'transparent', border: '1px solid var(--primary-gold)',
+            color: 'var(--primary-gold)', borderRadius: '4px', cursor: 'pointer'
+        });
+        closeBtn.onclick = () => modal.style.display = 'none';
+
+        const container = document.createElement('div');
+        Object.assign(container.style, {
+            backgroundColor: 'var(--dark-bg, #1a1a1a)', padding: '20px',
+            borderRadius: '8px', color: 'white', maxWidth: '1000px', margin: '0 auto', width: '100%'
+        });
+
+        container.innerHTML = `
+            <h2 class="gold-text" style="margin-bottom: 20px;">Pending Connection Requests</h2>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--primary-gold);">
+                            <th style="padding: 10px;">Date</th>
+                            <th style="padding: 10px;">Requester</th>
+                            <th style="padding: 10px;">Message</th>
+                            <th style="padding: 10px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="connectionsTableBody">
+                        <tr><td colspan="4" style="padding: 10px; text-align: center;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        modal.appendChild(closeBtn);
+        modal.appendChild(container);
+        document.body.appendChild(modal);
+        applyStaticTranslations(modal);
+    }
+
+    modal.style.display = 'flex';
+    loadPendingConnections();
+}
+
+export async function loadPendingConnections() {
+    const tbody = document.getElementById('connectionsTableBody');
+    tbody.innerHTML = '<tr><td colspan="4" style="padding: 10px; text-align: center;">Loading...</td></tr>';
+    
+    try {
+        const token = localStorage.getItem('token');
+        // Added credentials: 'include' to ensure auth cookie is sent
+        const res = await fetch(`${API_URL}/transactions/requests`, { 
+            headers: { 'Authorization': `Bearer ${token}` },
+            credentials: 'include'
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            tbody.innerHTML = '';
+            if (data.data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="padding: 10px; text-align: center;">No pending requests.</td></tr>';
+                return;
+            }
+            
+            data.data.forEach(req => {
+                const requesterName = req.requester ? (req.requester.name || req.requester.email) : 'Unknown User';
+                const message = req.message || 'No message provided';
+
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid #333';
+                tr.innerHTML = `
+                    <td style="padding: 10px;">${new Date(req.createdAt).toLocaleString()}</td>
+                    <td style="padding: 10px;">${requesterName}</td>
+                    <td style="padding: 10px;">${message}</td>
+                    <td style="padding: 10px; display: flex; gap: 5px;">
+                        <button class="accept-conn-btn" data-id="${req._id}" style="padding: 5px 10px; background: green; color: white; border: none; border-radius: 4px; cursor: pointer;">Accept</button>
+                        <button class="decline-conn-btn" data-id="${req._id}" style="padding: 5px 10px; background: red; color: white; border: none; border-radius: 4px; cursor: pointer;">Decline</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.querySelectorAll('.accept-conn-btn').forEach(btn => {
+                btn.onclick = () => updateConnectionStatus(btn.getAttribute('data-id'), 'accepted');
+            });
+            document.querySelectorAll('.decline-conn-btn').forEach(btn => {
+                btn.onclick = () => updateConnectionStatus(btn.getAttribute('data-id'), 'declined');
+            });
+            applyStaticTranslations(tbody);
+
+        } else {
+            tbody.innerHTML = `<tr><td colspan="4" style="padding: 10px; color: var(--accent-red);">Error: ${data.error}</td></tr>`;
+        }
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="4" style="padding: 10px; color: var(--accent-red);">Network Error</td></tr>`;
+    }
+}
+
+export async function updateConnectionStatus(id, status) {
+    try {
+        const token = localStorage.getItem('token');
+        // Added credentials: 'include' to ensure auth cookie is sent
+        const res = await fetch(`${API_URL}/transactions/requests/${id}`, {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            credentials: 'include',
+            body: JSON.stringify({ status })
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert(`Request ${status} successfully.`);
+            loadPendingConnections(); 
+        } else {
+            alert(data.error || 'Failed to update status');
+        }
+    } catch (err) {
+        alert('Server connection error');
+    }
+}
+
+
+// This map will hold the mapping from blob URLs to the actual File objects
+const newFilesMap = new Map();
+let photosDirty = false;
+
+function markPhotosDirty() {
+    photosDirty = true;
+}
+
+export function addPhotoToGrid(fileOrUrl) {
+    const grid = document.getElementById('photoGrid');
+    if (!grid) return;
+
+    let imageUrl;
+    let isNew = false;
+
+    if (typeof fileOrUrl === 'string') {
+        // This is an existing photo URL from the server
+        let sanitizedUrl = fileOrUrl;
+        if (sanitizedUrl.startsWith('http')) {
+            try {
+                const urlObj = new URL(sanitizedUrl);
+                if (urlObj.pathname.startsWith('/uploads/')) {
+                    sanitizedUrl = urlObj.pathname;
+                }
+            } catch (e) {}
+        }
+        imageUrl = sanitizedUrl.startsWith('/') && window.location.protocol === 'file:' ? `${BASE_ORIGIN}${sanitizedUrl}` : resolvePhotoSrc(sanitizedUrl);
+    } else {
+        // This is a new File object from the user's computer
+        imageUrl = URL.createObjectURL(fileOrUrl);
+        newFilesMap.set(imageUrl, fileOrUrl);
+        isNew = true;
+        markPhotosDirty();
+    }
+
+    const item = document.createElement('div');
+    item.className = 'photo-item';
+    Object.assign(item.style, {
+        position: 'relative',
+        width: '120px',
+            height: '160px',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        boxShadow: '0 2px 5px rgba(0,0,0,0.5)',
+        display: 'inline-block'
+    });
+    
+    const img = document.createElement('img');
+    img.src = imageUrl;
+    if (typeof fileOrUrl === 'string') img.setAttribute('data-original-url', imageUrl); // Save the sanitized relative URL
+    img.alt = 'User Photo';
+    Object.assign(img.style, {
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover'
+    });
+    img.onerror = () => {
+        if (isNew) {
+            URL.revokeObjectURL(imageUrl);
+            item.remove();
+            const alertEl = document.getElementById('photoUpdateAlert');
+            if (alertEl) {
+                showAlert(alertEl, `Could not load image from URL.`);
+                setTimeout(() => alertEl.classList.add('hidden'), 3000);
+            }
+            return;
+        }
+        img.src = 'https://via.placeholder.com/120x160?text=Photo';
+    };
+
+    const overlay = document.createElement('div');
+    overlay.className = 'remove-overlay';
+    overlay.innerHTML = '&times;'; // 'x' symbol for remove
+    Object.assign(overlay.style, {
+        position: 'absolute',
+        top: '5px',
+        right: '5px',
+        background: 'rgba(200, 0, 0, 0.8)',
+        color: 'white',
+        width: '24px',
+        height: '24px',
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        fontWeight: 'bold',
+        fontSize: '16px'
+    });
+
+    item.appendChild(img);
+    item.appendChild(overlay);
+
+    // --- Drag and Drop Logic ---
+    item.draggable = true;
+    item.addEventListener('dragstart', function(e) {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', img.src); // Required for Firefox
+        item.classList.add('dragging');
+        setTimeout(() => item.style.opacity = '0.5', 0);
+    });
+    item.addEventListener('dragend', function() {
+        item.classList.remove('dragging');
+        item.style.opacity = '1';
+    });
+    item.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    });
+    item.addEventListener('dragenter', function(e) {
+        e.preventDefault();
+        if (this !== document.querySelector('.dragging')) this.style.transform = 'scale(1.05)';
+    });
+    item.addEventListener('dragleave', function() {
+        this.style.transform = 'scale(1)';
+    });
+    item.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.style.transform = 'scale(1)';
+        const draggedItem = document.querySelector('.dragging');
+        if (draggedItem && draggedItem !== this) {
+            let allItems = [...grid.querySelectorAll('.photo-item')];
+            let draggedIndex = allItems.indexOf(draggedItem);
+            let targetIndex = allItems.indexOf(this);
+            if (draggedIndex < targetIndex) this.after(draggedItem);
+            else this.before(draggedItem);
+            markPhotosDirty();
+            const explicitSaveBtn = document.getElementById('explicitSaveBtn');
+            if (explicitSaveBtn) {
+                explicitSaveBtn.classList.remove('hidden');
+                explicitSaveBtn.click();
+            } else if (typeof window.saveProfessionalProfile === 'function') {
+                window.saveProfessionalProfile(true);
+            }
+        }
+    });
+
+    overlay.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevents accidental dragging interference
+        if (confirm('Are you sure you want to remove this photo from your gallery?')) {
+            if (newFilesMap.has(img.src)) {
+                URL.revokeObjectURL(img.src);
+                newFilesMap.delete(img.src);
+            }
+            item.remove();
+            markPhotosDirty();
+            const explicitSaveBtn = document.getElementById('explicitSaveBtn');
+            if (explicitSaveBtn) {
+                explicitSaveBtn.classList.remove('hidden');
+                explicitSaveBtn.click();
+            } else if (typeof window.saveProfessionalProfile === 'function') {
+                window.saveProfessionalProfile(true);
+            }
+        }
+    });
+
+    const frame = grid.querySelector('.add-photo-frame');
+    if (frame) grid.insertBefore(item, frame);
+    else grid.appendChild(item);
+}
+
+const newPhotoInput = document.getElementById('newPhotoInput');
+if (newPhotoInput) {
+    newPhotoInput.addEventListener('change', (e) => {
+        if (e.target.files) {
+            for (const file of e.target.files) {
+                if (!file.type.startsWith('image/')) {
+                    alert('Please select valid image files only.');
+                    continue;
+                }
+                addPhotoToGrid(file);
+            }
+            setTimeout(() => {
+                const explicitSaveBtn = document.getElementById('explicitSaveBtn');
+                if (explicitSaveBtn) {
+                    explicitSaveBtn.classList.remove('hidden');
+                    explicitSaveBtn.click();
+                } else if (typeof window.saveProfessionalProfile === 'function') {
+                    window.saveProfessionalProfile(true);
+                }
+            }, 100);
+        }
+    });
+}
+
+// --- Professional Dedicated 5-Block Editing Dashboard ---
+
+export async function loadProfDashboard() {
+    const formObj = document.getElementById('updateProfileForm');
+    const loader = document.getElementById('loader');
+    const content = document.getElementById('profDashboardContent');
+    if (!formObj || !content) return;
+
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/professionals/me?_=${new Date().getTime()}`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+            credentials: 'include'
+        });
+        const data = await res.json();
+
+        if (data.success && data.data.role === 'professional') {
+            photosDirty = false;
+            const user = data.data;
+            const prof = user.professionalProfile || {};
+            const stats = data.stats || { photoCount: 0, whatsappcCount: 0, callCount: 0 };
+            const isApproved = user.verificationStatus === 'approved';
+
+            // Make the form naturally wider to utilize the extra space
+            formObj.style.maxWidth = '1200px';
+            formObj.style.width = '100%';
+            formObj.style.margin = '0 auto';
+
+            formObj.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 class="gold-text" style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                        Professional Dashboard <span style="font-size: 1.5rem; text-shadow: 0 0 5px rgba(212,175,55,0.5);">✏️</span>
+                    </h2>
+                    <button type="button" onclick="window.history.back()" onmouseover="this.style.background='rgba(212, 175, 55, 0.1)'" onmouseout="this.style.background='transparent'" style="padding: 6px 12px; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold); border-radius: 4px; cursor: pointer; transition: background 0.3s ease; font-weight: bold; font-size: 0.85rem;">&#8592; Back</button>
+                </div>
+
+                ${!isApproved ? getPendingApprovalBannerHtml() : ''}
+                
+                <!-- 1. Statistics Top Frame -->
+                <div class="card fileteado-section" style="margin-bottom: 20px; border: 1px solid var(--primary-gold);">
+                    <h3 class="gold-text" style="margin-bottom: 15px;">Statistics</h3>
+                    <div style="display: flex; gap: 20px; justify-content: space-around; text-align: center; flex-wrap: wrap;">
+                        <div><div style="font-size: 2.5rem; color: var(--primary-gold);">${stats.photoCount || 0}</div><div style="font-size: 0.9rem; color: #ccc;">Dashboard Photo Clicks</div></div>
+                        <div><div style="font-size: 2.5rem; color: var(--primary-gold);">${stats.whatsappcCount || 0}</div><div style="font-size: 0.9rem; color: #ccc;">WhatsApp Button Pushes</div></div>
+                        <div><div style="font-size: 2.5rem; color: var(--primary-gold);">${stats.callCount || 0}</div><div style="font-size: 0.9rem; color: #ccc;">Call Button Pushes</div></div>
+                        <div><div style="font-size: 2.5rem; color: var(--primary-gold);">0</div><div style="font-size: 0.9rem; color: #ccc;">Hourly Hits (Peak Time)</div></div>
+                    </div>
+                </div>
+                
+                <input type="hidden" id="upIdNumber" value="${prof.idNumber || ''}">
+                <input type="hidden" id="upBirthDate" value="${prof.birthDate ? new Date(prof.birthDate).toISOString().split('T')[0] : ''}">
+                <input type="hidden" id="upMobilePhone" value="${prof.mobilePhone || ''}">
+                <textarea id="upBio" style="display:none;">${prof.bio || ''}</textarea>
+                <input type="checkbox" id="upIsExposed" style="display:none;" ${prof.isExposed !== false ? 'checked' : ''}>
+                <input type="checkbox" id="upPaysMonthly" style="display:none;" ${prof.paysMonthlyCharges !== false ? 'checked' : ''}>
+                <input type="hidden" id="upWhatsapp" value="${prof.whatsappNumber || ''}">
+                <input type="hidden" id="upInstagram" value="${prof.instagram || ''}">
+                <input type="hidden" id="upFacebook" value="${prof.facebook || ''}">
+
+                <!-- 2. Personal Information -->
+                <div class="card fileteado-section" style="margin-bottom: 20px; border: 1px solid var(--primary-gold);">
+                    <h3 class="gold-text" style="margin-bottom: 15px;">Personal Information</h3>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <div style="flex: 1; min-width: 150px;"><label>Name</label><input type="text" id="upFirstName" value="${prof.firstName || ''}" style="width: 100%; padding: 8px; background: #333; color: #888; border: 1px solid #444; border-radius: 4px;" disabled></div>
+                        <div style="flex: 1; min-width: 150px;"><label>Surname</label><input type="text" id="upSurname" value="${prof.surname || ''}" style="width: 100%; padding: 8px; background: #333; color: #888; border: 1px solid #444; border-radius: 4px;" disabled></div>
+                        <div style="flex: 1; min-width: 150px;"><label>Middle Name</label><input type="text" id="upMiddleName" value="${prof.middleName || ''}" style="width: 100%; padding: 8px; background: #333; color: #888; border: 1px solid #444; border-radius: 4px;" disabled></div>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <div style="flex: 1; min-width: 150px;"><label>Alias</label><input type="text" id="upAlias" value="${prof.alias || ''}" style="width: 100%; padding: 8px; background: #333; color: #888; border: 1px solid #444; border-radius: 4px;" disabled></div>
+                        <div style="flex: 1; min-width: 150px;"><label>Birth Date</label><input type="date" id="upBirthDate" value="${prof.birthDate ? new Date(prof.birthDate).toISOString().split('T')[0] : ''}" style="width: 100%; padding: 8px; background: #333; color: #888; border: 1px solid #444; border-radius: 4px; cursor: not-allowed;" disabled></div>
+                        <div style="flex: 1; min-width: 150px;"><label>Height</label><input type="text" id="upHeight" value="${prof.height || ''}" style="width: 100%; padding: 8px; background: #333; color: #888; border: 1px solid #444; border-radius: 4px;" disabled></div>
+                        <div style="flex: 1; min-width: 150px;"><label>Measures</label><input type="text" id="upMeasurements" value="${prof.measurements || ''}" style="width: 100%; padding: 8px; background: #333; color: #888; border: 1px solid #444; border-radius: 4px;" disabled></div>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 150px;">
+                            <label>Category</label>
+                            <select id="upQuality" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid var(--primary-gold); border-radius: 4px;">
+                                <option value="Elite" ${prof.quality === 'Elite' ? 'selected' : ''}>Elite</option>
+                                <option value="Premium" ${prof.quality === 'Premium' ? 'selected' : ''}>Premium</option>
+                                <option value="Gold" ${prof.quality === 'Gold' ? 'selected' : ''}>Gold</option>
+                                <option value="Silver" ${prof.quality === 'Silver' ? 'selected' : ''}>Silver</option>
+                                <option value="Standard" ${prof.quality === 'Standard' ? 'selected' : ''}>Standard</option>
+                            </select>
+                        </div>
+                        <div style="flex: 2; min-width: 250px;">
+                            <label>Specialties</label>
+                            <div id="specsContainer" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px;"></div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 15px; border-top: 1px solid #444; padding-top: 15px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #ccc; font-size: 0.9rem;">
+                            <input type="checkbox" id="upOwnApartment" ${prof.hasOwnApartment ? 'checked' : ''}>
+                            ${t('Has own apartment')}
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #ccc; font-size: 0.9rem;">
+                            <input type="checkbox" id="upFantasyWardrobe" ${prof.hasFantasyWardrobe ? 'checked' : ''}>
+                            ${t('Has fantasy wardrobe')} (sexy costumes, high heels)
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 3. Address -->
+                <div class="card fileteado-section" style="margin-bottom: 20px; border: 1px solid var(--primary-gold);">
+                    <h3 class="gold-text" style="margin-bottom: 15px;">Address</h3>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <div style="flex: 2; min-width: 200px;"><label>Street</label><input type="text" id="upStreet" value="${prof.location?.street || ''}" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                        <div style="flex: 1; min-width: 100px;"><label>Number</label><input type="text" id="upStreetNumber" value="${prof.location?.number || ''}" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                        <div style="flex: 1; min-width: 80px;"><label>Floor</label><input type="text" id="upFloor" value="${prof.location?.floor || ''}" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                        <div style="flex: 1; min-width: 80px;"><label>Appartment</label><input type="text" id="upApartment" value="${prof.location?.apartment || ''}" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                        <div style="flex: 1; min-width: 100px;"><label>Postal Code</label><input type="text" id="upPostCode" value="${prof.location?.postalCode || ''}" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 150px;"><label>Province</label><select id="upProvince" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></select></div>
+                        <div style="flex: 1; min-width: 150px;"><label>Ciudad-Barrio (City)</label><select id="upCity" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></select></div>
+                        <div style="flex: 1; min-width: 150px;"><label>Ciudad-Barrio (Neighborhood)</label><input type="text" id="upNeighborhood" value="${prof.location?.neighborhood || ''}" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;" placeholder="Neighborhood..."></div>
+                    </div>
+                </div>
+
+                <!-- 4. Availability -->
+                <div class="card fileteado-section" style="margin-bottom: 20px; border: 1px solid var(--primary-gold);">
+                    <h3 class="gold-text" style="margin-bottom: 15px;">Availability</h3>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
+                        <div style="flex: 1; min-width: 150px;"><label>Avail-start</label><input type="time" id="upAvailStart" value="${prof.workingHours?.start || '00:00'}" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                        <div style="flex: 1; min-width: 150px;"><label>Avail-end</label><input type="time" id="upAvailEnd" value="${prof.workingHours?.end || '23:59'}" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                        <div style="flex: 1; min-width: 150px;"><label>Vac-start</label><input type="date" id="upVacationStart" value="${prof.vacation?.startDate ? new Date(prof.vacation.startDate).toISOString().split('T')[0] : ''}" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                        <div style="flex: 1; min-width: 150px;"><label>Vac-end</label><input type="date" id="upVacationEnd" value="${prof.vacation?.endDate ? new Date(prof.vacation.endDate).toISOString().split('T')[0] : ''}" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
+                    </div>
+                    <div id="daysContainer" style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px;"></div>
+                </div>
+
+                <!-- 5. Photos -->
+                <div class="card fileteado-section" style="margin-bottom: 20px; border: 1px solid var(--primary-gold);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 class="gold-text" style="margin: 0;">Photos</h3>
+                        <button type="button" id="btnUploadPhoto" style="padding: 8px 16px; background: var(--primary-gold); color: #111; font-weight: bold; border: none; border-radius: 4px; cursor: pointer;">Upload</button>
+                    </div>
+                    <p style="font-size: 0.85rem; color: #ccc; margin-bottom: 15px;">Admin upload, update, remove actions. Drag photos to reorder.</p>
+                    <input type="file" id="newPhotoInput" accept="image/png, image/jpeg, image/jpg, image/webp" multiple style="display: none;">
+                    <div id="photoGrid" style="display: flex; flex-wrap: wrap; gap: 15px;">
+                        <label class="add-photo-frame" style="width: 120px; height: 160px; border: 2px dashed var(--primary-gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--primary-gold); font-size: 2rem; background: rgba(212, 175, 55, 0.05); transition: background 0.3s ease; flex-shrink: 0;">
+                            <span>+</span>
+                        </label>
+                    </div>
+                    <p id="photoApprovalMsg" style="color: var(--accent-red); font-size: 0.85rem; margin-top: 10px; display: ${isApproved ? 'none' : 'block'};">Profile photos can only be uploaded after your account is approved.</p>
+                </div>
+                
+                <div id="updateAlert" class="alert hidden" style="padding: 10px; border-radius: 4px; border: 1px solid transparent; margin-bottom: 20px;"></div>
+                <button type="button" id="explicitSaveBtn" class="hidden" style="background: #25D366; color: white; font-weight: bold; width: 100%; padding: 12px; border-radius: 4px; border: none; cursor: pointer; margin-bottom: 15px;">💾 Save Changes</button>
+                <button type="button" id="bottomBackBtn" style="background: var(--primary-gold); color: var(--dark-bg); font-weight: bold; width: 100%; padding: 12px; border-radius: 4px; border: none; cursor: pointer;">&#8592; Back to Main Dashboard</button>
+            `;
+
+            // Logic to populate the components
+            const specsContainer = document.getElementById('specsContainer');
+            const specs = [
+                { name: 'Love Alchemy', tooltip: 'Sex' }, { name: 'Massage', tooltip: 'Conventional massage' },
+                { name: 'Virtual Connection', tooltip: 'Virtual call' }, { name: 'Media Content', tooltip: 'Share hot content pics or videos' },
+                { name: 'Streaming Kisses', tooltip: 'Live streaming kisses' }
+            ];
+            const userServices = prof.services || [];
+            specs.forEach(spec => {
+                const lbl = document.createElement('label');
+                lbl.title = spec.tooltip;
+                lbl.style.cssText = 'display:flex; align-items:center; gap:5px; cursor:pointer; padding:8px 12px; background:rgba(212,175,55,0.1); border-radius:4px; border:1px solid rgba(212,175,55,0.3); font-size:0.9rem;';
+                const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = spec.name; cb.className = 'dashboard-specialty-cb';
+                cb.checked = userServices.includes(spec.name) || userServices.includes(spec.name.toLowerCase());
+                lbl.appendChild(cb); lbl.appendChild(document.createTextNode(t(spec.name)));
+                specsContainer.appendChild(lbl);
+            });
+
+            const daysContainer = document.getElementById('daysContainer');
+            const fullDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            const shortDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            const userDays = prof.workingDays || fullDays;
+            fullDays.forEach((day, i) => {
+                const lbl = document.createElement('label');
+                lbl.style.cssText = 'display:flex; align-items:center; gap:5px; cursor:pointer;';
+                const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = day; cb.className = 'avail-day-cb';
+                cb.checked = userDays.includes(day);
+                lbl.appendChild(cb); lbl.appendChild(document.createTextNode(shortDays[i]));
+                daysContainer.appendChild(lbl);
+            });
+
+            setupLocationDropdowns('upProvince', 'upCity', 'upNeighborhood', false, prof.location || {});
+
+            const photoGrid = document.getElementById('photoGrid');
+            const newPhotoInput = document.getElementById('newPhotoInput');
+            const btnUploadPhoto = document.getElementById('btnUploadPhoto');
+            
+            if (newPhotoInput) {
+                if (!isApproved) {
+                    newPhotoInput.disabled = true; btnUploadPhoto.disabled = true; btnUploadPhoto.style.opacity = '0.5';
+                    photoGrid.style.opacity = '0.3'; photoGrid.style.pointerEvents = 'none';
+                }
+                btnUploadPhoto.onclick = () => newPhotoInput.click();
+                const frameLabel = photoGrid.querySelector('.add-photo-frame');
+                if (frameLabel) frameLabel.appendChild(newPhotoInput);
+                (prof.photos || []).forEach(url => addPhotoToGrid(url));
+                newPhotoInput.addEventListener('change', (e) => {
+                    if (e.target.files) {
+                        for (const file of e.target.files) {
+                            if (!file.type.startsWith('image/')) continue;
+                            addPhotoToGrid(file);
+                        }
+                    const explicitSaveBtn = document.getElementById('explicitSaveBtn');
+                    if (explicitSaveBtn) { explicitSaveBtn.classList.remove('hidden'); explicitSaveBtn.click(); }
+                    }
+                });
+            }
+
+            if (!isApproved) {
+                formObj.querySelectorAll('input:not([type="hidden"]), select, textarea, button').forEach(el => {
+                    if (el.id === 'bottomBackBtn') return;
+                    el.disabled = true;
+                    if (el.type === 'checkbox') el.parentElement.style.opacity = '0.6';
+                });
+                formObj.querySelectorAll('label').forEach(lbl => {
+                    if (!lbl.querySelector('#bottomBackBtn')) lbl.style.cursor = 'not-allowed';
+                });
+            }
+
+            // Show Save Button on any form modification to avoid focus-out issues
+            const markDirty = (e) => {
+                if (e.target.matches('input, select, textarea')) {
+                    document.getElementById('explicitSaveBtn').classList.remove('hidden');
+                }
+            };
+            formObj.addEventListener('input', markDirty);
+            formObj.addEventListener('change', markDirty);
+
+            document.getElementById('explicitSaveBtn').onclick = async () => {
+                if (typeof window.saveProfessionalProfile === 'function') {
+                    const btn = document.getElementById('explicitSaveBtn');
+                    btn.textContent = 'Saving...';
+                    btn.style.opacity = '0.7';
+                    await window.saveProfessionalProfile(false); // False = show success alert to the user
+                    btn.textContent = '💾 Save Changes';
+                    btn.style.opacity = '1';
+                    btn.classList.add('hidden'); // Hide the button again until next change
+                }
+            };
+
+            document.getElementById('bottomBackBtn').onclick = async () => {
+                if (typeof window.saveProfessionalProfile === 'function') await window.saveProfessionalProfile(true);
+                window.location.href = '/perfil/' + encodeURIComponent(prof.alias || '');
+            };
+
+            loader.classList.add('hidden');
+            content.classList.remove('hidden');
+            applyStaticTranslations(content);
+        } else {
+            window.location.href = '/index.html';
+        }
+    } catch (err) {
+        if(loader) loader.innerHTML = '<p class="alert">Server connection error.</p>';
+    }
+}

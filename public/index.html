@@ -1,14 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="alternate icon" href="/favicon.ico">
     <title>SexAppeal - Living Treasures</title>
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=6.5">
+    <link rel="stylesheet" href="/css/style.css?v=7.3">
+    <meta name="description" content="SexAppeal - The Architecture of Intimacy. Directorio exclusivo de acompañantes VIP y Living Treasures.">
+    <meta property="og:title" content="SexAppeal Platform">
+    <meta property="og:description" content="El santuario definitivo para conexiones de alto nivel y discreción absoluta.">
+    <meta property="og:image" content="https://sexappeal.drsrv.net.ar/SexAppeal_logo_black.png">
+    <meta property="og:url" content="https://sexappeal.drsrv.net.ar">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#D4AF37">
+
     <!-- SEO & Open Graph Tags -->
     <meta name="description" content="SexAppeal - The Architecture of Intimacy. Directorio exclusivo de acompañantes VIP y Living Treasures.">
     <meta property="og:title" content="SexAppeal Platform">
@@ -18,38 +28,52 @@
     <meta property="og:type" content="website">
     <meta name="theme-color" content="#D4AF37">
 </head>
-<body>
-    <div class="container">
-        <header>
-            <a href="index.html" class="logo"><img src="/SexAppeal_logo_black.png" alt="SexAppeal Logo" style="height: 400px; width: auto;"></a>
-            <div id="loginStatus"></div>
-        </header>
-
-        <section class="hero" id="landing">
-            <h1>Elegance Defined</h1>
-            <p>Discover our veiled collection of Living Treasures.</p>
-            <div class="card" style="width: 100%; max-width: 400px;">
-                <div style="text-align: center; margin-bottom: 30px;">
-                    <img src="/SexAppeal_logo_black.png" alt="SexAppeal Logo" style="height: 120px; width: auto; border-radius: 8px; padding: 12px;">
+<body class="landing-page">
+    <div class="container landing-container">
+        <section class="hero landing-triple" id="landing">
+            <div class="landing-frame landing-frame-logo">
+                <div class="landing-frame-inner">
+                    <img class="landing-logo" src="/SexAppeal_logo_black.png" alt="SexAppeal Logo">
                 </div>
+            </div>
 
-                <h3 class="gold-text">Entrance</h3>
-                <p style="color: #ccc; font-size: 0.95rem; margin-bottom: 20px;">You must be 18 years or older to enter this sanctuary.</p>
+            <div class="landing-frame landing-frame-access">
+                <div class="landing-frame-inner">
+                    <h1 class="landing-title">Elegance Defined</h1>
+                    <p class="landing-tagline">Discover our veiled collection of Living Treasures.</p>
+                    <p class="landing-age-disclaimer">You must be 18 years or older to enter this sanctuary.</p>
+                    <div class="landing-age-gate">
+                        <button type="button" id="btn-enter" class="landing-btn landing-btn-enter">I AM +18 - ENTER</button>
+                        <button type="button" id="btn-exit" class="landing-btn landing-btn-exit">Exit</button>
+                    </div>
+                </div>
+            </div>
 
-                <button id="btn-enter" onclick="window.location.href='categories.html'" style="width: 100%; margin-bottom: 10px;">I AM +18 - ENTER</button>
-                <button id="btn-exit" style="width: 100%; background-color: #222; color: #888;">Exit</button>
-                
-                <div style="margin-top: 25px; text-align: center; font-size: 0.9rem;">
-                    <p style="color: #ccc; margin-bottom: 10px; font-size: 0.85rem;">Professional Access:</p>
-                    <a href="login.html" style="color: var(--primary-gold); text-decoration: none; opacity: 0.9;">Login</a>
-                    <span style="color: #444; margin: 0 10px;">|</span>
-                    <a href="register.html" style="color: var(--primary-gold); text-decoration: none; opacity: 0.9;">Register</a>
+            <div class="landing-frame landing-frame-auth landing-login-card">
+                <div class="landing-frame-inner landing-auth-inner">
+                    <h2 class="gold-text landing-login-heading">Professional Login</h2>
+                    <p class="landing-login-sub">Sign in with your professional account email.</p>
+
+                    <form id="loginForm" class="landing-login-form">
+                        <div id="loginAlert" class="alert hidden"></div>
+                        <input type="email" id="email" placeholder="Email Address" required autocomplete="username">
+                        <input type="password" id="password" placeholder="Password" required autocomplete="current-password">
+                        <button type="submit" class="landing-btn landing-btn-login">Enter Sanctuary</button>
+                    </form>
+
+                    <p class="landing-forgot">
+                        <a href="/recover.html" data-open-password-recovery id="landingForgotLink">Forgot Password?</a>
+                    </p>
+
+                    <div class="landing-pro-links">
+                        <button type="button" class="landing-pro-link landing-pro-link-login" id="landingFocusLogin">Login</button>
+                        <a href="/register.html" class="landing-pro-link landing-pro-link-register">Professional Registration</a>
+                    </div>
                 </div>
             </div>
         </section>
     </div>
 
-    <!-- All javascript logic is now in app.js?v=6.5 -->
-    <script src="js/app.js?v=6.5"></script>
+    <script src="/js/app.js?v=7.3" type="module"></script>
 </body>
 </html>

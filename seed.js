@@ -42,12 +42,8 @@ async function getCompressedFileFromUrl(url, index) {
             .resize({ width: 1080, withoutEnlargement: true })
             .jpeg({ quality: 75 })
             .toBuffer();
-        
-        const filename = `seed_photo_${Date.now()}_${index}.jpg`;
-        const filepath = path.join(__dirname, 'public', 'uploads', 'photos', filename);
-        fs.writeFileSync(filepath, compressedBuffer);
-        
-        return `/uploads/photos/${filename}`;
+
+        return `data:image/jpeg;base64,${compressedBuffer.toString('base64')}`;
     } catch (err) {
         console.error(`Error compressing ${url}:`, err.message);
         return url; // Fallback to URL if compression fails
@@ -157,14 +153,8 @@ const seedData = async () => {
         }
 
         console.log('Seeding new verified professionals...');
-        const photoSet = [
-            'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=1961&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1611601322175-28e659d4d484?q=80&w=1887&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1542206395-9feb3edaa68d?q=80&w=1964&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1604004555489-723a93d6ce74?q=80&w=1887&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=1887&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1589466725882-6cf1b8957b37?q=80&w=1887&auto=format&fit=crop'
-        ];
+        const { WORKING_SAMPLE_PHOTO_URLS } = require('./utils/photoUtils');
+        const photoSet = WORKING_SAMPLE_PHOTO_URLS;
 
         console.log('Downloading and compressing sample photos (this may take a moment)...');
         const compressedPhotoSet = [];

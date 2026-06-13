@@ -52,6 +52,13 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
+// Favicon (browsers request /favicon.ico by default)
+app.get('/favicon.ico', (req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=2592000');
+  res.type('image/svg+xml');
+  res.sendFile(path.join(__dirname, 'public', 'favicon.svg'));
+});
+
 // Set static folder
 const path = require('path');
 app.use(express.static(path.join(__dirname, 'public'), {
@@ -135,12 +142,30 @@ app.post('/api/v1/feedback', protect, feedbackController.submitFeedback);
 app.get('/api/v1/locations/provinces', locationController.getProvinces);
 app.get('/api/v1/locations/provinces/:provinceId/sublocations', locationController.getSublocations);
 
+app.get('/api/v1/public/category-pricing', async (req, res) => {
+  try {
+    const adminUser = await User.findOne({ role: 'admin' });
+    const pricing = adminUser?.adminSettings?.pricing || {
+      Elite: 50000, Premium: 40000, Gold: 30000, Silver: 20000, Standard: 15000
+    };
+    res.status(200).json({ success: true, data: pricing });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Professional Dashboard Routes (Private) - Must be declared before /:alias
 app.get('/api/v1/professionals/me', protect, authorize('professional', 'admin'), async (req, res, next) => {
     try {
         const userId = req.user.id || req.user._id;
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ success: false, error: 'Professional not found' });
+
+        const { resolvePhotosForClient } = require('./utils/photoUtils');
+        const userObj = user.toObject();
+        if (userObj.professionalProfile && userObj.professionalProfile.photos) {
+            userObj.professionalProfile.photos = resolvePhotosForClient(userObj.professionalProfile.photos);
+        }
         
         const adminUser = await User.findOne({ role: 'admin' });
         const globalPricing = adminUser?.adminSettings?.pricing || { Elite: 50000, Premium: 40000, Gold: 30000, Silver: 20000, Standard: 15000 };
@@ -169,7 +194,7 @@ app.get('/api/v1/professionals/me', protect, authorize('professional', 'admin'),
 
         res.status(200).json({
             success: true,
-            data: user,
+            data: userObj,
             stats: { photoCount, whatsappcCount, callCount },
             globalPricing,
             isReadyForTransactions
@@ -185,7 +210,9 @@ app.get('/api/v1/professionals', professionalController.getProfessionals);
 app.get('/api/v1/professionals/specialties', professionalController.getSpecialties);
 app.get('/api/v1/professionals/:alias', professionalController.getProfessionalByAlias);
 app.get('/api/v1/specialties/users', specialtyController.getUsersBySpecialty);
+app.post('/api/v1/professionals/:alias/track-photo-click', professionalController.trackDashboardPhotoClick);
 app.get('/api/v1/professionals/:alias/whatsapp', professionalController.contactWhatsApp);
+app.get('/api/v1/professionals/:alias/phone', professionalController.contactPhone);
 
 // Review Routes
 const reviewsController = require('./controllers/reviewsController');
@@ -212,6 +239,15 @@ if (process.env.NODE_ENV !== 'production') {
 
 // SEO-Friendly Profile URLs (e.g., /perfil/AliasDeLaChica)
 app.get('/perfil/:alias', (req, res) => {
+  const alias = String(req.params.alias || '').toLowerCase();
+  const reservedPages = [
+    'login.html', 'register.html', 'recover.html', 'verify.html', 'index.html',
+    'categories.html', 'dashboard.html', 'profDashboard.html', 'treasure.html',
+    'discover.html', 'home.html', 'services.html', 'admin.html', 'admin-potentials.html'
+  ];
+  if (reservedPages.includes(alias)) {
+    return res.redirect(301, `/${req.params.alias}`);
+  }
   res.sendFile(path.join(__dirname, 'public', 'treasure.html'));
 });
 

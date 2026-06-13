@@ -91,9 +91,9 @@ fs.readdirSync(publicDir).forEach(file => {
     if (file.endsWith('.html')) {
         updateFile(path.join(publicDir, file), [
             { search: /(sexappel_logo_logo|SexAppeal_logo|sexappeal_logo_logo_black)\.(svg|png)/g, replace: 'SexAppeal_logo_black.png' },
-            // Replace any hardcoded old logo images in the HTML body with the new logo
             { search: /src="[^"]*\blogo\.(svg|png|jpg)"/gi, replace: 'src="/SexAppeal_logo_black.png"' },
-            { search: /(?:\s*<!-- SEO & Open Graph Tags -->[\s\S]*?)?<\/head>/i, replace: seoTags }
+            { search: /(?:\s*<!-- SEO & Open Graph Tags -->[\s\S]*?)?<\/head>/i, replace: seoTags },
+            { search: /<script src="(?:js\/|\/js\/)?app\.js(\?[^"]*)?"(?: type="[^"]*")?><\/script>/gi, replace: '<script src="js/app.js$1" type="module"></script>', ignoreIfContains: 'type="module"' }
         ]);
     }
 });

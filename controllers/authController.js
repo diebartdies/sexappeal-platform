@@ -16,7 +16,8 @@ exports.register = async (req, res, next) => {
     let { 
       email, password, role, alias, bio, hasOwnApartment, hasFantasyWardrobe, 
       province, city, neighborhood, measurements, height, services, verificationGesture,
-      firstName, surname, middleName, idNumber, birthDate, mobilePhone, street, number, floor, apartment, postalCode
+      firstName, surname, middleName, idNumber, birthDate, mobilePhone, street, number, floor, apartment, postalCode,
+      originCountry, instagram, facebook, quality
     } = req.body;
 
     // Normalize email to prevent case-sensitive duplicate accounts
@@ -26,17 +27,49 @@ exports.register = async (req, res, next) => {
     if (birthDate) {
         const dob = new Date(birthDate);
         age = Math.abs(new Date(Date.now() - dob.getTime()).getUTCFullYear() - 1970);
+        if (role === 'professional' && age < 18) {
+          return res.status(400).json({ success: false, error: 'You must be at least 18 years old to register as a professional.' });
+        }
+    } else if (role === 'professional') {
+      return res.status(400).json({ success: false, error: 'Birth date is required for professional registration.' });
     }
+
+    if (role === 'professional') {
+      const required = [
+        ['firstName', firstName], ['surname', surname], ['alias', alias], ['idNumber', idNumber],
+        ['street', street], ['number', number], ['province', province], ['city', city],
+        ['originCountry', originCountry], ['mobilePhone', mobilePhone], ['quality', quality]
+      ];
+      for (const [label, val] of required) {
+        if (!val || !String(val).trim()) {
+          return res.status(400).json({ success: false, error: `Missing required field: ${label}` });
+        }
+      }
+      const allowedQualities = ['Standard', 'Silver', 'Gold', 'Premium', 'Elite'];
+      if (!allowedQualities.includes(String(quality).trim())) {
+        return res.status(400).json({ success: false, error: 'Please select a valid category.' });
+      }
+      if (!req.files || req.files.length < 3) {
+        return res.status(400).json({ success: false, error: 'All three verification photos are required.' });
+      }
+    }
+
+    const allowedQualities = ['Standard', 'Silver', 'Gold', 'Premium', 'Elite'];
+    const selectedQuality = role === 'professional'
+      ? String(quality).trim()
+      : (allowedQualities.includes(String(quality || '').trim()) ? String(quality).trim() : 'Standard');
 
     // Reconstruct the professionalProfile object
     const professionalProfile = role === 'professional' ? {
       firstName, surname, middleName, idNumber, birthDate: birthDate ? new Date(birthDate) : undefined, age, mobilePhone,
-      alias, bio,
+      instagram, facebook,
+      alias, bio: bio || '',
       hasOwnApartment: hasOwnApartment === 'true',
       hasFantasyWardrobe: hasFantasyWardrobe === 'true',
-      location: { province, city, neighborhood, street, number, floor, apartment, postalCode },
+      location: { province, city, neighborhood, street, number, floor, apartment, postalCode, country: originCountry },
       measurements, height,
-      services: services ? services.split(',').map(s => s.trim()).filter(Boolean) : []
+      services: services ? services.split(',').map(s => s.trim()).filter(Boolean) : [],
+      quality: selectedQuality
     } : undefined;
 
     // Check if user already exists
@@ -67,24 +100,7 @@ exports.register = async (req, res, next) => {
     // Set expiration to 10 minutes from now
     const verificationCodeExpire = new Date(Date.now() + 10 * 60 * 1000);
 
-    // Calculate Category (Quality) automatically if professionalProfile is provided
-    if (role === 'professional' && professionalProfile) {
-      let score = 0;
-      if (professionalProfile.hasOwnApartment === 'true' || professionalProfile.hasOwnApartment === true) score += 2;
-      if (professionalProfile.hasFantasyWardrobe === 'true' || professionalProfile.hasFantasyWardrobe === true) score += 2;
-      
-      const nbhd = (professionalProfile.location?.neighborhood || '').trim().toLowerCase();
-      if (['recoleta', 'puerto madero', 'palermo'].includes(nbhd)) score += 3;
-      else if (['belgrano', 'caballito', 'san telmo'].includes(nbhd)) score += 2;
-      else if (nbhd !== '') score += 1;
-
-      if (score >= 8) professionalProfile.quality = 'Elite';
-      else if (score >= 6) professionalProfile.quality = 'Premium';
-      else if (score >= 4) professionalProfile.quality = 'Gold';
-      else if (score >= 2) professionalProfile.quality = 'Silver';
-      else professionalProfile.quality = 'Standard';
-    }
-
+    // Category chosen at registration (admin pricing table); legacy auto-score removed.
     // Convert uploaded files to Base64 strings to store directly in the database
     const verificationDocuments = [];
     if (req.files) {
@@ -248,7 +264,8 @@ exports.login = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        error: 'Invalid credentials'
+        code: 'USER_NOT_FOUND',
+        error: 'No account found with this email address'
       });
     }
 
@@ -258,7 +275,8 @@ exports.login = async (req, res, next) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        error: 'Invalid credentials'
+        code: 'INVALID_PASSWORD',
+        error: 'Incorrect password. Please try again.'
       });
     }
 

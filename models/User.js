@@ -46,6 +46,10 @@ const UserSchema = new mongoose.Schema({
     type: String,
     enum: ['1 finger', '2 fingers', '3 fingers', 'thumbs up', '1FU', '2FU', '3FU', 'TU', 'OS']
   },
+  verificationDocuments: {
+    type: [String],
+    select: false
+  },
   isAnonymous: {
     type: Boolean,
     default: false

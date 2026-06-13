@@ -4,6 +4,7 @@ const ActivityLog = require('../models/ActivityLog');
 const sendEmail = require('../sendEmail');
 const Specialty = require('../models/Specialty');
 const Statistic = require('../models/Statistic');
+const { resolvePhotoForClient, resolvePhotosForClient, normalizePhotosForStorage, resolveFirstPhotoForClient } = require('../utils/photoUtils');
 
 // Simple in-memory cache setup
 const cache = new Map();
@@ -135,9 +136,10 @@ exports.getProfessionals = async (req, res, next) => {
       },
       data: professionals.map(p => {
         const profObj = p.toObject ? p.toObject() : (p._doc || p);
-        // Only send the first photo to the client grid to prevent massive Base64 payloads
-        if (profObj.professionalProfile && profObj.professionalProfile.photos && profObj.professionalProfile.photos.length > 0) {
-          profObj.professionalProfile.photos = [profObj.professionalProfile.photos[0]];
+        // Grid thumbnail: first photo only, always as DB-stored data URI (not /uploads/ paths)
+        if (profObj.professionalProfile && profObj.professionalProfile.photos) {
+          const first = resolveFirstPhotoForClient(profObj.professionalProfile.photos);
+          profObj.professionalProfile.photos = first ? [first] : [];
         }
         return {
           ...profObj,
@@ -185,6 +187,9 @@ exports.getProfessionalByAlias = async (req, res, next) => {
     delete profObj.professionalProfile.whatsappNumber;
     profObj.professionalProfile.hasWhatsapp = hasWhatsapp;
     profObj.isActiveNow = checkIsActive(profObj.professionalProfile);
+    if (profObj.professionalProfile && profObj.professionalProfile.photos) {
+      profObj.professionalProfile.photos = resolvePhotosForClient(profObj.professionalProfile.photos);
+    }
 
     // Track the Profile View Activity
     try {
@@ -197,12 +202,6 @@ exports.getProfessionalByAlias = async (req, res, next) => {
         isGuest: false
       });
 
-      const today = new Date().toISOString().split('T')[0];
-      await Statistic.findOneAndUpdate(
-        { professionalId: professional._id, date: today },
-        { $inc: { photoCount: 1 }, $set: { time: new Date() } },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
     } catch(err) { console.error('Activity log error:', err.message); }
 
     // Fetch dynamic pricing
@@ -220,6 +219,34 @@ exports.getProfessionalByAlias = async (req, res, next) => {
       success: false,
       error: error.message
     });
+  }
+};
+
+// @desc    Track dashboard photo click (categories grid thumbnail)
+// @route   POST /api/v1/professionals/:alias/track-photo-click
+// @access  Public
+exports.trackDashboardPhotoClick = async (req, res, next) => {
+  try {
+    const aliasRegex = new RegExp(`^${req.params.alias}$`, 'i');
+    const professional = await User.findOne({
+      'professionalProfile.alias': aliasRegex,
+      role: 'professional'
+    }).select('_id');
+
+    if (!professional) {
+      return res.status(404).json({ success: false, error: 'Professional not found' });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    await Statistic.findOneAndUpdate(
+      { professionalId: professional._id, date: today },
+      { $inc: { photoCount: 1 }, $set: { time: new Date() } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
   }
 };
 
@@ -428,7 +455,7 @@ exports.notifyRateChange = async (req, res, next) => {
       sendEmail({
         email: p.email,
         subject: 'SexAppeal Platform - Price Rate Change',
-        message: `Hello ${p.professionalProfile.alias || 'Professional'},\n\nThere has been a change in the price rates. You must acknowledge this change in your dashboard before you can continue with transactions.\n\nThank you!`
+        message: `Hello ${p.professionalProfile.alias || 'Professional'},\n\nThere has been a change in monthly category pricing on SexAppeal. Starting next month, your invoice will reflect the updated rate for your category (${p.professionalProfile.quality || 'Standard'}).\n\nPlease log in to your dashboard and acknowledge the new pricing before continuing with transactions.\n\nThank you!`
       }).catch(err => console.error(`Failed to send email to ${p.email}:`, err))
     );
 
@@ -460,8 +487,15 @@ exports.updateProfile = async (req, res, next) => {
         return res.status(200).json({ success: true, data: currentUser });
     }
 
+    const oldProf = currentUser.professionalProfile || {};
+
     // Get existing photos from the form (sent as a JSON string)
-    const existingPhotos = req.body.existingPhotos ? JSON.parse(req.body.existingPhotos) : [];
+    let existingPhotos;
+    if (req.body.existingPhotos === '__preserve__') {
+      existingPhotos = oldProf.photos || [];
+    } else {
+      existingPhotos = req.body.existingPhotos ? JSON.parse(req.body.existingPhotos) : [];
+    }
 
     // Check metadata for new photos to validate they are recent (within 1 year)
     let lastPhotoUpdate = undefined;
@@ -492,13 +526,15 @@ exports.updateProfile = async (req, res, next) => {
       }
     }
 
-    // Combine old and new photo URLs
-    const allPhotos = [...existingPhotos, ...newPhotoUrls];
+    // Store photos in MongoDB as base64 data URIs (not file paths)
+    const allPhotos = normalizePhotosForStorage(
+      [...existingPhotos, ...newPhotoUrls],
+      oldProf.photos || []
+    );
 
     const rawDays = req.body.workingDays;
     const parsedDays = rawDays ? rawDays.split(',').map(s => s.trim()).filter(s => s) : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-    const oldProf = currentUser.professionalProfile || {};
     const isApproved = currentUser.verificationStatus === 'approved';
 
     let identityFields = {};

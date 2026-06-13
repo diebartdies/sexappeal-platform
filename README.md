@@ -25,10 +25,16 @@ Once deployed to your server:
 
 **Steps for External Visibility:**
 1.  **Port Forwarding:** Forward ports **80** and **443** on your router to the IP address of this machine.
-2.  **SSL Certificates:** 
-    *   Place your `fullchain.pem` and `privkey.pem` files in:
-        `D:\SexAppeal-platform\certbot\conf\live\sexappeal.drsrv.net.ar\`
-    *   Nginx is pre-configured to look for these exact paths.
+2.  **SSL Certificates:** Nginx reads `fullchain.pem` and `privkey.pem` from:
+    `certbot/conf/live/sexappeal.drsrv.net.ar/`
+
+    After renewing Let's Encrypt files (`sexappeal.cer`, `sexappeal.chain`, `sexappeal.key`), sync them into the nginx filenames:
+
+    ```powershell
+    powershell -File scripts\sync-ssl-certs.ps1
+    ```
+
+    `upload_to_server.bat` runs this automatically before each deploy.
 3.  **Start Platform:**
     ```bash
     docker-compose up --build -d

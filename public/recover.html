@@ -1,11 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="alternate icon" href="/favicon.ico">
     <title>SexAppeal - Recover Access</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="/css/style.css?v=7.2">
+    <meta name="description" content="SexAppeal - The Architecture of Intimacy. Directorio exclusivo de acompañantes VIP y Living Treasures.">
+    <meta property="og:title" content="SexAppeal Platform">
+    <meta property="og:description" content="El santuario definitivo para conexiones de alto nivel y discreción absoluta.">
+    <meta property="og:image" content="https://sexappeal.drsrv.net.ar/SexAppeal_logo_black.png">
+    <meta property="og:url" content="https://sexappeal.drsrv.net.ar">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#D4AF37">
     <!-- SEO & Open Graph Tags -->
     <meta name="description" content="SexAppeal - The Architecture of Intimacy. Directorio exclusivo de acompañantes VIP y Living Treasures.">
     <meta property="og:title" content="SexAppeal Platform">
@@ -17,40 +26,38 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <a href="index.html" class="logo"><img src="/SexAppeal_logo_black.png" alt="SexAppeal Logo" style="height: 400px; width: auto;"></a>
-        </header>
-
         <section style="display: flex; justify-content: center; padding-bottom: 100px;">
-            <div class="card" style="width: 100%; max-width: 400px; text-align: center;">
+            <div class="card password-recovery-page" style="width: 100%; max-width: 440px; text-align: center;">
                 <h2 class="gold-text" style="margin-bottom: 30px;">Recover Access</h2>
-                
-                <!-- Forgot Password Form -->
-                <form id="forgotPasswordForm">
-                    <p style="margin-bottom: 20px;">Enter your email to receive a recovery code.</p>
+
+                <div style="text-align: center; margin-bottom: 25px;">
+        <img src="/SexAppeal_logo_black.png" alt="SexAppeal Logo" style="height: 70px; width: auto; background-color: #000; border-radius: 8px; padding: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.5);">
+    </div>
+    <form id="forgotPasswordForm">
+                    <p class="recovery-step-text">Confirm your email to receive a recovery code.</p>
                     <div id="forgotAlert" class="alert hidden"></div>
-                    <input type="email" placeholder="Email" required id="forgotEmail">
-                    <button type="submit" style="width: 100%; margin-top: 10px;">Send Code</button>
+                    <input type="email" placeholder="Email Address" required id="forgotEmail" autocomplete="username">
+                    <button type="submit" class="landing-btn landing-btn-login" style="width:100%; margin-top:10px;">Send recovery code</button>
                 </form>
 
-                <!-- Reset Password Form (Hidden by default) -->
                 <form id="resetPasswordForm" class="hidden">
-                    <p style="margin-bottom: 10px;">Recovering access for:</p>
-                    <p id="displayEmail" class="gold-text" style="margin-bottom: 20px; font-weight: bold;"></p>
+                    <p class="recovery-step-text">Recovery code sent to:</p>
+                    <p id="displayEmail" class="gold-text recovery-email-display"></p>
                     <div id="resetAlert" class="alert hidden"></div>
                     <input type="hidden" id="resetEmail">
-                    <input type="text" placeholder="6-Digit Code" required id="resetCode" maxlength="6" style="text-align: center; font-size: 1.5rem; letter-spacing: 5px;">
-                    <input type="password" placeholder="New Password (Min 6 chars)" required id="resetNewPassword" minlength="6">
-                    <button type="submit" style="width: 100%; margin-top: 20px;">Reset Password</button>
+                    <input type="text" placeholder="6-Digit Code" required id="resetCode" maxlength="6" inputmode="numeric" autocomplete="one-time-code" class="recovery-code-input">
+                    <input type="password" placeholder="New Password (Min 6 chars)" required id="resetNewPassword" minlength="6" autocomplete="new-password">
+                    <input type="password" placeholder="Confirm Password" required id="resetConfirmPassword" minlength="6" autocomplete="new-password">
+                    <button type="submit" class="landing-btn landing-btn-login" style="width:100%; margin-top:20px;">Reset Password</button>
                 </form>
 
                 <p style="margin-top: 20px;">
-                    Back to <a href="index.html" style="color: var(--primary-gold);">Entrance</a>
+                    <a href="/index.html" style="color: var(--primary-gold);">Back to login</a>
                 </p>
             </div>
         </section>
     </div>
 
-    <script src="js/app.js"></script>
+    <script src="/js/app.js?v=7.2" type="module"></script>
 </body>
 </html>

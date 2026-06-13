@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const ActivityLog = require('../models/ActivityLog');
 const sendEmail = require('../sendEmail');
+const { resolvePhotoForClient, resolvePhotosForClient, resolveFirstPhotoForClient } = require('../utils/photoUtils');
 
 // @desc    Get all professionals
 // @route   GET /api/v1/admin/professionals
@@ -26,8 +27,8 @@ exports.getAllProfessionals = async (req, res, next) => {
     const professionalsData = professionals.map(p => {
         const obj = p.toObject();
         if (obj.professionalProfile && obj.professionalProfile.photos) {
-            obj.professionalProfile.photos = obj.professionalProfile.photos.length > 0 ? [obj.professionalProfile.photos[0]] : [];
-            obj.professionalProfile.photos = obj.professionalProfile.photos.length > 0 ? [obj.professionalProfile.photos[0]] : [];
+            const first = resolveFirstPhotoForClient(obj.professionalProfile.photos);
+            obj.professionalProfile.photos = first ? [first] : [];
         }
         return obj;
     });
@@ -64,11 +65,7 @@ exports.getPendingVerifications = async (req, res, next) => {
     const pendingData = pending.map(p => {
         const obj = p.toObject();
         if (obj.professionalProfile && obj.professionalProfile.photos) {
-            obj.professionalProfile.photos = obj.professionalProfile.photos.map(photo => {
-                if (typeof photo === 'string') return photo;
-                if (photo.url) return photo.url;
-                return `/api/v1/professionals/photo/${obj._id}/${photo._id}`;
-            });
+            obj.professionalProfile.photos = resolvePhotosForClient(obj.professionalProfile.photos);
         }
         return obj;
     });
@@ -200,6 +197,20 @@ exports.verifyProfessional = async (req, res, next) => {
     user.isVerified = status === 'approved';
     await user.save();
 
+    if (status === 'approved') {
+      sendEmail({
+        email: user.email,
+        subject: 'SexAppeal - Your Profile Has Been Approved!',
+        message: `Hello ${user.professionalProfile?.alias || 'Professional'},\n\nGreat news! Your SexAppeal profile has been approved by our team.\n\nYou can now edit your profile, upload gallery photos, and appear in the public directory.\n\nPlease log in to your Professional Dashboard to complete your profile.\n\nWelcome to the Architecture of Intimacy.`
+      }).catch(err => console.error(`Failed to send approval email to ${user.email}:`, err.message));
+    } else if (status === 'rejected') {
+      sendEmail({
+        email: user.email,
+        subject: 'SexAppeal - Profile Verification Update',
+        message: `Hello ${user.professionalProfile?.alias || 'Professional'},\n\nWe have reviewed your registration documents. Unfortunately, your profile could not be approved at this time.\n\nPlease contact our support team if you have questions or would like to submit updated documents.`
+      }).catch(err => console.error(`Failed to send rejection email to ${user.email}:`, err.message));
+    }
+
     const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket ? req.socket.remoteAddress : req.ip);
     await ActivityLog.create({
       professional: user._id,
@@ -329,11 +340,7 @@ exports.updateProfessionalProfile = async (req, res, next) => {
 
     const responseUser = user.toObject();
     if (responseUser.professionalProfile && responseUser.professionalProfile.photos) {
-        responseUser.professionalProfile.photos = responseUser.professionalProfile.photos.map(photo => {
-            if (typeof photo === 'string') return photo;
-            if (photo.url) return photo.url;
-            return `/api/v1/professionals/photo/${responseUser._id}/${photo._id}`;
-        });
+        responseUser.professionalProfile.photos = resolvePhotosForClient(responseUser.professionalProfile.photos);
     }
 
     res.status(200).json({
