@@ -14,9 +14,13 @@ function redirectAfterLogin(user) {
     if (intended) {
         window.location.href = intended;
     } else if (user.role === 'professional') {
-        window.location.href = user.professionalProfile?.alias
-            ? '/perfil/' + encodeURIComponent(user.professionalProfile.alias)
-            : appPath('profDashboard.html');
+        if (user.allowResubmission) {
+            window.location.href = appPath('profDashboard.html');
+        } else if (user.professionalProfile?.alias) {
+            window.location.href = '/perfil/' + encodeURIComponent(user.professionalProfile.alias);
+        } else {
+            window.location.href = appPath('profDashboard.html');
+        }
     } else if (user.role === 'admin') {
         window.location.href = appPath('dashboard.html');
     } else {

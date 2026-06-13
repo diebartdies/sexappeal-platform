@@ -1,0 +1,325 @@
+/* SexAppeal - Mobile & tablet responsive layer (v7.4) */
+
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+}
+
+/* Logo sizing — overrides large inline heights on page headers */
+.page-logo,
+.logo img,
+header img[src*="SexAppeal_logo"],
+header .logo img {
+    height: auto !important;
+    max-height: clamp(64px, 18vw, 120px);
+    width: auto;
+    max-width: min(85vw, 280px);
+    object-fit: contain;
+}
+
+.landing-page .landing-logo {
+    max-height: min(50vh, 360px);
+}
+
+/* Page headers & navigation */
+.page-header,
+header {
+    padding: 20px 0 24px;
+    margin-bottom: 30px;
+}
+
+.page-nav,
+header nav {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 12px;
+    margin-top: 12px !important;
+}
+
+.page-nav a,
+header nav a {
+    margin: 0 !important;
+    padding: 10px 14px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.container {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+}
+
+button,
+a.landing-btn,
+.landing-btn,
+input[type="submit"],
+.admin-nav-btn {
+    min-height: 44px;
+}
+
+/* Admin shell (dashboard.html + admin.js) */
+.admin-shell,
+.admin-grid-layout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.admin-sidebar,
+.admin-grid-sidebar,
+#adminPanelSection {
+    width: 100%;
+    max-width: 320px;
+}
+
+.admin-main,
+.admin-grid-main,
+#adminGridContainer {
+    flex: 1 1 300px;
+    min-width: 0;
+}
+
+/* Professional dashboard */
+.prof-dash-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+#photoGrid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.add-photo-frame {
+    width: 120px;
+    height: 160px;
+}
+
+.table-scroll-wrap,
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+table {
+    max-width: 100%;
+}
+
+#regCategoryTable {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.landing-login-card,
+.password-recovery-page {
+    max-width: 100% !important;
+}
+
+.reg-page {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+}
+
+#privacyShield {
+    left: max(12px, env(safe-area-inset-left));
+    bottom: max(12px, env(safe-area-inset-bottom));
+    max-width: calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right));
+}
+
+body:not(.landing-page) {
+    padding-top: max(55px, calc(55px + env(safe-area-inset-top)));
+}
+
+body.has-global-topbar {
+    padding-top: max(55px, calc(55px + env(safe-area-inset-top))) !important;
+}
+
+.landing-page {
+    padding-top: env(safe-area-inset-top);
+}
+
+#treasureContent h2.gold-text {
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+@media (max-width: 480px) {
+    #treasureContent h2.gold-text {
+        font-size: 1.25rem;
+        padding-right: 70px;
+    }
+
+    #treasureContent .card > button[style*="position: absolute"] {
+        top: 12px !important;
+        right: 12px !important;
+        padding: 8px 10px !important;
+    }
+
+    #treasureContent .card {
+        padding: 16px !important;
+    }
+}
+
+.admin-modal-panel {
+    width: 100%;
+    max-width: 900px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+#treasureDetail .container {
+    padding-top: 80px;
+    padding-bottom: max(80px, env(safe-area-inset-bottom));
+}
+
+@media (max-width: 900px) {
+    .admin-sidebar,
+    .admin-grid-sidebar,
+    #adminPanelSection {
+        position: static !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+
+    .admin-shell,
+    .admin-grid-layout {
+        flex-direction: column;
+    }
+
+    .admin-nav-btn {
+        padding: 12px 15px;
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 12px;
+        margin-top: 24px;
+    }
+
+    #sponsors .grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    header {
+        padding: 16px 0 20px;
+        margin-bottom: 24px;
+    }
+
+    h2.gold-text {
+        font-size: 1.35rem;
+    }
+
+    .hero h1 {
+        font-size: 2.2rem;
+    }
+
+    .admin-potentials-wrap {
+        padding: 12px !important;
+    }
+
+    .admin-potentials-wrap .container {
+        padding: 16px !important;
+    }
+}
+
+@media (max-width: 640px) {
+    .prof-dash-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .prof-dash-header h2 {
+        font-size: 1.25rem;
+        text-align: center;
+    }
+
+    .prof-dash-header button {
+        width: 100%;
+    }
+
+    #photoGrid {
+        justify-content: center;
+    }
+
+    #photoGrid .add-photo-frame,
+    #photoGrid label.add-photo-frame {
+        width: 100px !important;
+        height: 133px !important;
+    }
+
+    .admin-modal-panel {
+        max-width: 100%;
+        padding: 16px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .container {
+        padding-left: max(12px, env(safe-area-inset-left));
+        padding-right: max(12px, env(safe-area-inset-right));
+    }
+
+    header {
+        margin-bottom: 20px;
+    }
+
+    .card:hover {
+        transform: none;
+    }
+
+    #privacyShield {
+        padding: 8px 12px;
+    }
+
+    #privacyShield strong {
+        font-size: 0.8rem;
+    }
+
+    .five-column-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 400px) {
+    .five-column-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 900px) and (orientation: landscape) {
+    .page-logo,
+    .logo img,
+    header img[src*="SexAppeal_logo"] {
+        max-height: 72px;
+    }
+
+    header {
+        padding: 12px 0;
+        margin-bottom: 16px;
+    }
+}

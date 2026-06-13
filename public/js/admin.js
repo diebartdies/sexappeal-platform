@@ -1,5 +1,5 @@
 import { BASE_ORIGIN, API_URL, CATEGORY_META, getVerificationGesture, appPath } from './globals.js';
-import { showAlert, getPendingApprovalBannerHtml } from './uiHelpers.js';
+import { showAlert, getPendingApprovalBannerHtml, getResubmissionBannerHtml, getGeneralRejectionBannerHtml } from './uiHelpers.js';
 import { t, applyStaticTranslations } from './i18n.js';
 import { renderSpecialtyDropdown, setupLocationDropdowns } from './helpers.js';
 import { addPhotoToGrid, openPendingConnectionsModal } from './professional.js';
@@ -7,8 +7,8 @@ import { addPhotoToGrid, openPendingConnectionsModal } from './professional.js';
 export async function renderAdminGrid(container) {
     container.innerHTML = `
         <h3 class="gold-text" style="margin-bottom: 15px; font-size: 1.5rem; border-bottom: 1px solid rgba(212, 175, 55, 0.3); padding-bottom: 10px;">${t('Professionals Directory')}</h3>
-        <div style="display: flex; gap: 20px; align-items: flex-start; flex-direction: row; flex-wrap: wrap;">
-            <div class="card" style="width: 100%; max-width: 250px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; position: sticky; top: 70px;">
+        <div class="admin-grid-layout" style="display: flex; gap: 20px; align-items: flex-start; flex-direction: row; flex-wrap: wrap;">
+            <div class="card admin-grid-sidebar" style="width: 100%; max-width: 250px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; position: sticky; top: 70px;">
                 <h4 class="gold-text" style="margin-bottom: 5px;">${t('Filters')}</h4>
                 <select id="adminFilterProv" class="form-select" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"><option value="">${t('All Provinces')}</option></select>
                 <select id="adminFilterCity" class="form-select" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"><option value="">${t('All Cities')}</option></select>
@@ -31,7 +31,7 @@ export async function renderAdminGrid(container) {
                 </select>
                 <button id="adminFilterBtn" style="padding: 8px 20px; width: 100%;">${t('Filter')}</button>
             </div>
-            <div id="adminGridContent" style="flex-grow: 1; min-width: 300px;">Loading...</div>
+            <div id="adminGridContent" class="admin-grid-main" style="flex-grow: 1; min-width: 300px;">Loading...</div>
         </div>
     `;
 
@@ -252,6 +252,8 @@ export async function loadDashboard() {
                 content.innerHTML = ''; // Clear out the professional profile form
                 
                 const adminLayout = document.createElement('div');
+                adminLayout.id = 'adminLayout';
+                adminLayout.className = 'admin-shell';
                 adminLayout.style.display = 'flex';
                 adminLayout.style.gap = '20px';
                 adminLayout.style.alignItems = 'flex-start';
@@ -259,7 +261,7 @@ export async function loadDashboard() {
 
                 const adminPanel = document.createElement('div');
                 adminPanel.id = 'adminPanelSection';
-                adminPanel.className = 'card';
+                adminPanel.className = 'card admin-sidebar';
                 adminPanel.style.marginBottom = '20px';
                 adminPanel.style.border = '1px solid var(--primary-gold)';
                 adminPanel.style.width = '320px';
@@ -313,6 +315,7 @@ export async function loadDashboard() {
                 
                 const gridContainer = document.createElement('div');
                 gridContainer.id = 'adminGridContainer';
+                gridContainer.className = 'admin-main';
                 gridContainer.style.flexGrow = '1';
                 gridContainer.style.minWidth = '300px';
                 
@@ -390,10 +393,13 @@ export async function loadDashboard() {
 
                 let alertsHtml = '';
                 
-                if (user.verificationStatus === 'pending') {
+                if (user.allowResubmission) {
+                    alertsHtml += getResubmissionBannerHtml(user).replace('id="resubmissionSection"', 'id="dashboardResubmissionNotice"');
+                    alertsHtml += `<div style="margin-bottom: 10px;"><a href="${appPath('profDashboard.html')}" style="display:inline-block;padding:10px 16px;background:var(--primary-gold);color:var(--dark-bg);text-decoration:none;font-weight:bold;border-radius:4px;">${t('Open profile editor to fix verification')}</a></div>`;
+                } else if (user.verificationStatus === 'pending') {
                     alertsHtml += `<div style="background: rgba(255,165,0,0.12); border-left: 4px solid orange; padding: 12px 15px; margin-bottom: 10px; line-height: 1.5;">⏳ <strong>${t('Pending Admin Approval')}</strong><br><span style="font-size: 0.9rem; color: #ddd;">${t('Your profile is under review (typically up to 48 hours). Profile changes can only be made after admin approval. You will receive an email when your account is approved — please check your Spam folder too.')}</span></div>`;
                 } else if (user.verificationStatus === 'rejected') {
-                    alertsHtml += `<div style="background: rgba(255,0,0,0.1); border-left: 4px solid var(--accent-red); padding: 10px; margin-bottom: 10px;">❌ <strong>Verification Rejected:</strong> Your profile was not approved. Please contact support.</div>`;
+                    alertsHtml += getGeneralRejectionBannerHtml(user.rejectionDetails);
                 }
 
                 if (isApproved && (!prof.photos || prof.photos.length === 0)) {
@@ -1638,7 +1644,7 @@ export async function loadPendingVerifications() {
                 btn.onclick = () => updateVerificationStatus(btn.getAttribute('data-id'), 'approved');
             });
             document.querySelectorAll('.reject-btn').forEach(btn => {
-                btn.onclick = () => updateVerificationStatus(btn.getAttribute('data-id'), 'rejected');
+                btn.onclick = () => openRejectVerificationModal(btn.getAttribute('data-id'));
             });
             document.querySelectorAll('.view-doc-btn').forEach(btn => {
                 btn.onclick = () => {
@@ -1660,10 +1666,92 @@ export async function loadPendingVerifications() {
     }
 }
 
-export async function updateVerificationStatus(id, status) {
+export function openRejectVerificationModal(professionalId) {
+    let modal = document.getElementById('rejectVerificationModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'rejectVerificationModal';
+        Object.assign(modal.style, {
+            position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.9)', zIndex: '3500', display: 'none',
+            alignItems: 'center', justifyContent: 'center', padding: '20px',
+            overflowY: 'auto', boxSizing: 'border-box'
+        });
+
+        modal.innerHTML = `
+            <div class="card admin-modal-panel" style="max-width: 520px; width: 100%; padding: 24px; color: white;">
+                <h3 class="gold-text" style="margin-top: 0;">${t('Reject registration')}</h3>
+                <p style="font-size: 0.9rem; color: #ccc; margin-bottom: 20px;">${t('Select a rejection reason and describe which photos or details need correction. An email will be sent to the professional.')}</p>
+                <div style="margin-bottom: 16px;">
+                    <label for="rejectReasonSelect" style="display: block; margin-bottom: 6px; color: var(--primary-gold);">${t('Rejection reason')}</label>
+                    <select id="rejectReasonSelect" class="form-select" style="width: 100%; padding: 10px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
+                        <option value="">${t('Select a reason...')}</option>
+                        <option value="photos_unclear">${t('Photos are not clear enough to validate information')}</option>
+                        <option value="photo_info_mismatch">${t('Photo information doesnt match registration info.')}</option>
+                        <option value="general_failure">${t('General failure')}</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label for="rejectDetailsInput" style="display: block; margin-bottom: 6px; color: var(--primary-gold);">${t('Rejection details')}</label>
+                    <textarea id="rejectDetailsInput" rows="5" placeholder="${t('e.g. ID Front, ID Back, Selfie — specify which pictures need to be re-uploaded')}" style="width: 100%; box-sizing: border-box; padding: 10px; background: #111; color: white; border: 1px solid rgba(212,175,55,0.45); border-radius: 4px; resize: vertical;"></textarea>
+                </div>
+                <div id="rejectModalAlert" class="alert hidden" style="margin-bottom: 12px;"></div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;">
+                    <button type="button" id="rejectModalCancelBtn" style="padding: 10px 20px; background: #555; color: white; border: none; border-radius: 4px; cursor: pointer;">${t('Cancel')}</button>
+                    <button type="button" id="rejectModalConfirmBtn" style="padding: 10px 20px; background: var(--accent-red); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">${t('Send rejection email')}</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById('rejectModalCancelBtn').addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.style.display = 'none';
+        });
+        applyStaticTranslations(modal);
+    }
+
+    modal.dataset.professionalId = professionalId;
+    document.getElementById('rejectReasonSelect').value = '';
+    document.getElementById('rejectDetailsInput').value = '';
+    const alertEl = document.getElementById('rejectModalAlert');
+    alertEl.classList.add('hidden');
+    alertEl.textContent = '';
+
+    const confirmBtn = document.getElementById('rejectModalConfirmBtn');
+    confirmBtn.onclick = async () => {
+        const rejectionReason = document.getElementById('rejectReasonSelect').value;
+        const rejectionDetails = document.getElementById('rejectDetailsInput').value.trim();
+
+        if (!rejectionReason) {
+            showAlert(alertEl, t('Please select a rejection reason.'));
+            return;
+        }
+        if (!rejectionDetails) {
+            showAlert(alertEl, t('Please provide rejection details in the text field.'));
+            return;
+        }
+
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = t('Sending...');
+
+        try {
+            await updateVerificationStatus(professionalId, 'rejected', { rejectionReason, rejectionDetails });
+            modal.style.display = 'none';
+        } finally {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = t('Send rejection email');
+        }
+    };
+
+    modal.style.display = 'flex';
+}
+
+export async function updateVerificationStatus(id, status, extra = {}) {
     try {
         const token = localStorage.getItem('token');
-        // Added credentials: 'include' to ensure auth cookie is sent
         const res = await fetch(`${API_URL}/admin/verifications/${id}`, {
             method: 'PUT',
             headers: { 
@@ -1671,11 +1759,11 @@ export async function updateVerificationStatus(id, status) {
                 'Authorization': `Bearer ${token}`
             },
             credentials: 'include',
-            body: JSON.stringify({ status })
+            body: JSON.stringify({ status, ...extra })
         });
         const data = await res.json();
         if (data.success) {
-            alert(`Professional ${status} successfully.`);
+            alert(status === 'rejected' ? t('Rejection email sent successfully.') : `Professional ${status} successfully.`);
             loadPendingVerifications(); 
             if (document.getElementById('adminFilterBtn')) {
                 loadAdminGridData(); 

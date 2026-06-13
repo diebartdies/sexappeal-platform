@@ -1,8 +1,24 @@
 import { BASE_ORIGIN, API_URL, appPath } from './globals.js';
 import { t } from './i18n.js';
 
+function ensureResponsiveCss() {
+    if (document.getElementById('sexappeal-responsive-css')) return;
+    const link = document.createElement('link');
+    link.id = 'sexappeal-responsive-css';
+    link.rel = 'stylesheet';
+    link.href = '/css/responsive.css?v=7.4';
+    document.head.appendChild(link);
+
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport && !viewport.content.includes('viewport-fit')) {
+        viewport.content = `${viewport.content}, viewport-fit=cover`;
+    }
+}
+
 // --- Inject Global Dynamic Styles ---
 export function injectGlobalStyles() {
+    ensureResponsiveCss();
+
     if (!document.getElementById('sexappeal-global-styles')) {
         const style = document.createElement('style');
         style.id = 'sexappeal-global-styles';
@@ -259,7 +275,7 @@ export function initGlobalTopBar() {
     topBar.appendChild(rightGroup);
 
     document.body.prepend(topBar);
-    document.body.style.paddingTop = '45px';
+    document.body.classList.add('has-global-topbar');
 }
 
 export function initPrivacyShield() {

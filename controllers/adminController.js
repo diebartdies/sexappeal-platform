@@ -1,7 +1,9 @@
 const User = require('../models/User');
 const ActivityLog = require('../models/ActivityLog');
 const sendEmail = require('../sendEmail');
+const { isValidRejectionReason, buildRejectionEmail } = require('../utils/rejectionMessages');
 const { resolvePhotoForClient, resolvePhotosForClient, resolveFirstPhotoForClient } = require('../utils/photoUtils');
+const { getProfessionalIdNumberError, normalizeProfessionalIdNumber } = require('../utils/idNumber');
 
 // @desc    Get all professionals
 // @route   GET /api/v1/admin/professionals
@@ -175,13 +177,28 @@ exports.getActivityLogs = async (req, res, next) => {
 // @access  Private/Admin
 exports.verifyProfessional = async (req, res, next) => {
   try {
-    const { status } = req.body;
+    const { status, rejectionReason, rejectionDetails } = req.body;
 
     if (!['approved', 'rejected'].includes(status)) {
       return res.status(400).json({
         success: false,
         error: 'Please provide a valid status (approved or rejected)'
       });
+    }
+
+    if (status === 'rejected') {
+      if (!isValidRejectionReason(rejectionReason)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Please select a valid rejection reason.'
+        });
+      }
+      if (!rejectionDetails || !String(rejectionDetails).trim()) {
+        return res.status(400).json({
+          success: false,
+          error: 'Please provide rejection details in the text field.'
+        });
+      }
     }
 
     const user = await User.findById(req.params.id);
@@ -195,6 +212,18 @@ exports.verifyProfessional = async (req, res, next) => {
 
     user.verificationStatus = status;
     user.isVerified = status === 'approved';
+
+    if (status === 'approved') {
+      user.rejectionReason = null;
+      user.rejectionDetails = null;
+      user.allowResubmission = false;
+    } else {
+      const details = String(rejectionDetails).trim();
+      user.rejectionReason = rejectionReason;
+      user.rejectionDetails = details;
+      user.allowResubmission = rejectionReason === 'photos_unclear' || rejectionReason === 'photo_info_mismatch';
+    }
+
     await user.save();
 
     if (status === 'approved') {
@@ -203,11 +232,16 @@ exports.verifyProfessional = async (req, res, next) => {
         subject: 'SexAppeal - Your Profile Has Been Approved!',
         message: `Hello ${user.professionalProfile?.alias || 'Professional'},\n\nGreat news! Your SexAppeal profile has been approved by our team.\n\nYou can now edit your profile, upload gallery photos, and appear in the public directory.\n\nPlease log in to your Professional Dashboard to complete your profile.\n\nWelcome to the Architecture of Intimacy.`
       }).catch(err => console.error(`Failed to send approval email to ${user.email}:`, err.message));
-    } else if (status === 'rejected') {
+    } else {
+      const emailMessage = buildRejectionEmail({
+        alias: user.professionalProfile?.alias,
+        reason: rejectionReason,
+        details: String(rejectionDetails).trim()
+      });
       sendEmail({
         email: user.email,
         subject: 'SexAppeal - Profile Verification Update',
-        message: `Hello ${user.professionalProfile?.alias || 'Professional'},\n\nWe have reviewed your registration documents. Unfortunately, your profile could not be approved at this time.\n\nPlease contact our support team if you have questions or would like to submit updated documents.`
+        message: emailMessage
       }).catch(err => console.error(`Failed to send rejection email to ${user.email}:`, err.message));
     }
 
@@ -218,7 +252,11 @@ exports.verifyProfessional = async (req, res, next) => {
       ipAddress: clientIp,
       userAgent: req.headers['user-agent'],
       isGuest: false,
-      details: { adminId: req.user.id }
+      details: {
+        adminId: req.user.id,
+        rejectionReason: status === 'rejected' ? rejectionReason : undefined,
+        rejectionDetails: status === 'rejected' ? String(rejectionDetails).trim() : undefined
+      }
     });
 
     res.status(200).json({
@@ -227,7 +265,8 @@ exports.verifyProfessional = async (req, res, next) => {
         id: user._id,
         email: user.email,
         verificationStatus: user.verificationStatus,
-        isVerified: user.isVerified
+        isVerified: user.isVerified,
+        allowResubmission: user.allowResubmission
       }
     });
   } catch (error) {
@@ -308,6 +347,14 @@ exports.updateProfessionalProfile = async (req, res, next) => {
     }
 
     if (req.body.professionalProfile) {
+      if (req.body.professionalProfile.idNumber !== undefined) {
+        const idNumberError = getProfessionalIdNumberError(req.body.professionalProfile.idNumber);
+        if (idNumberError) {
+          return res.status(400).json({ success: false, error: idNumberError });
+        }
+        req.body.professionalProfile.idNumber = normalizeProfessionalIdNumber(req.body.professionalProfile.idNumber);
+      }
+
       if (req.body.professionalProfile.photos) {
           const remainingUrls = req.body.professionalProfile.photos;
           const keptPhotos = (user.professionalProfile.photos || []).filter(p => {

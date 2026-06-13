@@ -43,7 +43,18 @@
         a { color: #66b3ff; text-decoration: none; }
         a:hover { text-decoration: underline; }
         .pagination { margin-top: 20px; display: flex; align-items: center; gap: 15px; }
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            .container { padding: 16px; }
+            .filters { flex-direction: column; align-items: stretch; }
+            .filters a { margin-left: 0 !important; text-align: center; padding: 10px; }
+            .filters select, .filters .btn { width: 100%; min-height: 44px; }
+            table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            th, td { white-space: nowrap; }
+            .pagination { flex-wrap: wrap; justify-content: center; }
+        }
     </style>
+    <link rel="stylesheet" href="/css/responsive.css?v=7.4">
     <!-- SEO & Open Graph Tags -->
     <meta name="description" content="SexAppeal - The Architecture of Intimacy. Directorio exclusivo de acompañantes VIP y Living Treasures.">
     <meta property="og:title" content="SexAppeal Platform">
@@ -53,7 +64,7 @@
     <meta property="og:type" content="website">
     <meta name="theme-color" content="#D4AF37">
 </head>
-<body>
+<body class="admin-potentials-wrap">
     <div class="container">
         <h1>Manage Potential Professionals</h1>
         

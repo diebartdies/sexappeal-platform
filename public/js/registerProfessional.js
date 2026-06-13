@@ -2,6 +2,11 @@ import { API_URL, appPath, CATEGORY_META, VERIFICATION_GESTURES } from './global
 import { showAlert } from './uiHelpers.js';
 import { t, applyStaticTranslations } from './i18n.js';
 import { setupLocationDropdowns } from './helpers.js';
+import {
+    getProfessionalIdNumberError,
+    normalizeProfessionalIdNumber,
+    setupProfessionalIdNumberInput
+} from './idNumber.js';
 
 const REG_SPECIALTIES = ['Love Alchemy', 'Massage', 'Virtual Connection', 'Media Content', 'Streaming Kisses'];
 
@@ -193,6 +198,15 @@ function validateRegistrationForm(form) {
         return false;
     }
 
+    const idInput = document.getElementById('regIdNumber');
+    const idError = getProfessionalIdNumberError(idInput?.value);
+    if (idError) {
+        highlightField(idInput, true);
+        showAlert(document.getElementById('registerAlert'), t(idError));
+        return false;
+    }
+    if (idInput) idInput.value = normalizeProfessionalIdNumber(idInput.value);
+
     return true;
 }
 
@@ -226,6 +240,11 @@ export function initProfessionalRegistration() {
 
     setupInstructions();
     setupBirthDateField();
+    setupProfessionalIdNumberInput('regIdNumber');
+    const idHint = document.getElementById('regIdNumberHint');
+    if (idHint) {
+        idHint.textContent = t('ID Number format hint');
+    }
     setupCountrySelect();
     setupCategoryBlock();
     setupSpecialtyCheckboxes();
@@ -260,7 +279,7 @@ export function initProfessionalRegistration() {
         formData.append('middleName', document.getElementById('regMiddleName').value.trim());
         formData.append('surname', document.getElementById('regSurname').value.trim());
         formData.append('alias', document.getElementById('regAlias').value.trim());
-        formData.append('idNumber', document.getElementById('regIdNumber').value.trim());
+        formData.append('idNumber', normalizeProfessionalIdNumber(document.getElementById('regIdNumber').value));
         formData.append('birthDate', document.getElementById('regBirthDate').value);
         formData.append('quality', document.getElementById('regQuality').value);
         formData.append('province', document.getElementById('regProvince').value);

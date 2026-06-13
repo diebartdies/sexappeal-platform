@@ -5,6 +5,7 @@ const sendEmail = require('../sendEmail');
 const Specialty = require('../models/Specialty');
 const Statistic = require('../models/Statistic');
 const { resolvePhotoForClient, resolvePhotosForClient, normalizePhotosForStorage, resolveFirstPhotoForClient } = require('../utils/photoUtils');
+const { getProfessionalIdNumberError, normalizeProfessionalIdNumber } = require('../utils/idNumber');
 
 // Simple in-memory cache setup
 const cache = new Map();
@@ -542,7 +543,13 @@ exports.updateProfile = async (req, res, next) => {
       if (req.body.firstName !== undefined) identityFields.firstName = req.body.firstName;
       if (req.body.surname !== undefined) identityFields.surname = req.body.surname;
       if (req.body.middleName !== undefined) identityFields.middleName = req.body.middleName;
-      if (req.body.idNumber !== undefined) identityFields.idNumber = req.body.idNumber;
+      if (req.body.idNumber !== undefined) {
+        const idNumberError = getProfessionalIdNumberError(req.body.idNumber);
+        if (idNumberError) {
+          return res.status(400).json({ success: false, error: idNumberError });
+        }
+        identityFields.idNumber = normalizeProfessionalIdNumber(req.body.idNumber);
+      }
       if (req.body.birthDate) {
         identityFields.birthDate = new Date(req.body.birthDate);
         identityFields.age = Math.abs(new Date(Date.now() - identityFields.birthDate.getTime()).getUTCFullYear() - 1970);
@@ -690,6 +697,69 @@ exports.updateProfile = async (req, res, next) => {
       success: false,
       error: error.message
     });
+  }
+};
+
+// @desc    Resubmit verification documents after admin rejection (photos_unclear / photo_info_mismatch)
+// @route   POST /api/v1/professionals/resubmit-verification
+// @access  Private/Professional
+exports.resubmitVerification = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user || user.role !== 'professional') {
+      return res.status(404).json({ success: false, error: 'Professional not found' });
+    }
+    if (!user.allowResubmission) {
+      return res.status(400).json({ success: false, error: 'Resubmission is not allowed for your account.' });
+    }
+    if (!req.files || req.files.length < 3) {
+      return res.status(400).json({ success: false, error: 'All three verification photos are required (ID front, ID back, selfie).' });
+    }
+
+    const fs = require('fs');
+    const verificationDocuments = [];
+    for (const file of req.files) {
+      const base64Data = fs.readFileSync(file.path, 'base64');
+      verificationDocuments.push(`data:${file.mimetype};base64,${base64Data}`);
+      if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+    }
+
+    user.verificationDocuments = verificationDocuments;
+    user.verificationStatus = 'pending';
+    user.allowResubmission = false;
+    user.isVerified = false;
+    await user.save();
+
+    try {
+      const adminEmail = config.payment && config.payment.adminEmail ? config.payment.adminEmail : 'admin@drsrv.net.ar';
+      await sendEmail({
+        email: adminEmail,
+        subject: 'SexAppeal - Verification Documents Resubmitted',
+        message: `Professional "${user.professionalProfile?.alias || user.email}" has resubmitted verification documents after rejection (${user.rejectionReason || 'n/a'}).\n\nPlease review in Pending Approvals.`
+      });
+    } catch (err) {
+      console.error('Failed to notify admin of resubmission:', err.message);
+    }
+
+    const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket ? req.socket.remoteAddress : req.ip);
+    await ActivityLog.create({
+      professional: user._id,
+      action: 'resubmit_verification',
+      ipAddress: clientIp,
+      userAgent: req.headers['user-agent'],
+      isGuest: false
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Verification documents submitted. Our team will review them shortly.',
+      data: {
+        verificationStatus: user.verificationStatus,
+        allowResubmission: user.allowResubmission
+      }
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
   }
 };
 

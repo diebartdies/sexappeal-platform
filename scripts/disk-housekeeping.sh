@@ -70,12 +70,12 @@ if [ -d "$DEPLOY_DIR" ]; then
   find "$DEPLOY_DIR" -maxdepth 1 -name 'sexappeal_backup_*.archive' -mtime +14 -delete 2>/dev/null || true
 fi
 
-if [ -d /var/snap/docker ] && [ "$(du -sm /var/snap/docker 2>/dev/null | awk '{print $1}')" -gt 1024 ] 2>/dev/null; then
-  docker_bin="$(command -v docker || true)"
-  if [ "$docker_bin" = "/usr/bin/docker" ]; then
+if [ -d /var/snap/docker ] && command -v snap >/dev/null 2>&1 && snap list docker >/dev/null 2>&1; then
+  snap_docker_mb="$(du -sm /var/snap/docker 2>/dev/null | awk '{print $1}')"
+  if [ "${snap_docker_mb:-0}" -gt 1024 ] && [ "$(command -v docker || true)" = "/usr/bin/docker" ]; then
     echo ""
-    echo "NOTE: /var/snap/docker uses >1GB but active docker is $docker_bin."
-    echo "      If compose works, reclaim ~17GB with: snap remove docker"
+    echo "NOTE: /var/snap/docker uses >1GB but active docker is /usr/bin/docker."
+    echo "      Reclaim space with: snap remove docker --purge"
   fi
 fi
 

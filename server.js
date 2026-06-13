@@ -202,6 +202,7 @@ app.get('/api/v1/professionals/me', protect, authorize('professional', 'admin'),
     } catch (err) { next(err); }
 });
 app.put('/api/v1/professionals/updateprofile', protect, authorize('professional'), upload.array('photos', 10), professionalController.updateProfile);
+app.post('/api/v1/professionals/resubmit-verification', protect, authorize('professional'), upload.array('verificationDocuments', 3), professionalController.resubmitVerification);
 app.put('/api/v1/professionals/acknowledge-rate', protect, authorize('professional'), professionalController.acknowledgeRateChange);
 app.post('/api/v1/professionals/upload-receipt', protect, authorize('professional'), upload.single('receipt'), paymentController.uploadReceipt);
 

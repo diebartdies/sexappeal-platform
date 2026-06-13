@@ -45,6 +45,31 @@ export function getPendingApprovalBannerHtml() {
     </div>`;
 }
 
+export function getResubmissionBannerHtml(user) {
+    const reason = user?.rejectionReason;
+    const details = user?.rejectionDetails || '';
+    let message = details;
+
+    if (reason === 'photos_unclear') {
+        message = t('Resubmission photos unclear intro') + (details ? `\n\n${details}` : '');
+    } else if (reason === 'photo_info_mismatch') {
+        message = t('Resubmission photo mismatch intro') + (details ? `\n\n${details}` : '');
+    }
+
+    return `<div id="resubmissionSection" style="background: rgba(212,175,55,0.1); border: 1px solid var(--primary-gold); border-left: 4px solid var(--primary-gold); padding: 15px 18px; margin-bottom: 20px; border-radius: 6px; line-height: 1.5;">
+        <strong style="color: var(--primary-gold); display: block; margin-bottom: 8px;">📋 ${t('Action required: update your verification')}</strong>
+        <p style="margin: 0 0 12px; font-size: 0.9rem; color: #eee; white-space: pre-wrap;">${message}</p>
+        <p style="margin: 0; font-size: 0.85rem; color: #ccc;">${t('Use the verification upload section below to replace your ID photos and selfie, and correct any registration details if needed.')}</p>
+    </div>`;
+}
+
+export function getGeneralRejectionBannerHtml(details) {
+    return `<div style="background: rgba(255,0,0,0.1); border-left: 4px solid var(--accent-red); padding: 12px 15px; margin-bottom: 20px; border-radius: 6px; line-height: 1.5;">
+        <strong style="color: var(--accent-red); display: block; margin-bottom: 6px;">❌ ${t('Verification Rejected')}</strong>
+        <p style="margin: 0; font-size: 0.9rem; color: #eee; white-space: pre-wrap;">${details || t('Your profile was not approved. Please contact support.')}</p>
+    </div>`;
+}
+
 /**
  * DevTools helper: paste diagnoseImageElement(document.querySelector('.treasure-img')) in console.
  * naturalWidth/Height 0 + complete = broken URL or invalid image bytes (not CSS hiding).

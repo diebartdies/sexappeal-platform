@@ -6,6 +6,7 @@ const fs = require('fs');
 const ActivityLog = require('../models/ActivityLog');
 const { OAuth2Client } = require('google-auth-library');
 const Specialty = require('../models/Specialty');
+const { getProfessionalIdNumberError, normalizeProfessionalIdNumber } = require('../utils/idNumber');
 
 // @desc    Register user
 // @route   POST /api/v1/auth/register
@@ -52,6 +53,11 @@ exports.register = async (req, res, next) => {
       if (!req.files || req.files.length < 3) {
         return res.status(400).json({ success: false, error: 'All three verification photos are required.' });
       }
+      const idNumberError = getProfessionalIdNumberError(idNumber);
+      if (idNumberError) {
+        return res.status(400).json({ success: false, error: idNumberError });
+      }
+      idNumber = normalizeProfessionalIdNumber(idNumber);
     }
 
     const allowedQualities = ['Standard', 'Silver', 'Gold', 'Premium', 'Elite'];

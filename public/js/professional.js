@@ -1,5 +1,5 @@
-import { BASE_ORIGIN, API_URL, CATEGORY_META, resolvePhotoSrc } from './globals.js';
-import { showAlert, getPendingApprovalBannerHtml } from './uiHelpers.js';
+import { BASE_ORIGIN, API_URL, CATEGORY_META, resolvePhotoSrc, appPath } from './globals.js';
+import { showAlert, getPendingApprovalBannerHtml, getResubmissionBannerHtml, getGeneralRejectionBannerHtml } from './uiHelpers.js';
 import { t, applyStaticTranslations } from './i18n.js';
 import { renderSpecialtyDropdown, setupLocationDropdowns } from './helpers.js';
 
@@ -598,21 +598,43 @@ export async function loadProfDashboard() {
             const prof = user.professionalProfile || {};
             const stats = data.stats || { photoCount: 0, whatsappcCount: 0, callCount: 0 };
             const isApproved = user.verificationStatus === 'approved';
+            const allowResubmission = user.allowResubmission === true;
 
-            // Make the form naturally wider to utilize the extra space
+            let statusBannerHtml = '';
+            if (allowResubmission) {
+                statusBannerHtml = getResubmissionBannerHtml(user);
+            } else if (!isApproved && user.verificationStatus === 'pending') {
+                statusBannerHtml = getPendingApprovalBannerHtml();
+            } else if (user.verificationStatus === 'rejected') {
+                statusBannerHtml = getGeneralRejectionBannerHtml(user.rejectionDetails);
+            }
+
+            const resubmitSectionHtml = allowResubmission ? `
+                <div class="card fileteado-section" id="verificationResubmitSection" style="margin-bottom: 20px; border: 1px solid var(--primary-gold);">
+                    <h3 class="gold-text" style="margin-bottom: 12px;">${t('Re-upload verification photos')}</h3>
+                    <p style="font-size: 0.85rem; color: #ccc; margin-bottom: 16px;">${t('Upload clear replacements for ID front, ID back, and selfie with gesture.')}</p>
+                    <div class="reg-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                        <div><label>${t('ID Front photo')}</label><input type="file" id="resubmitIdFront" accept="image/*" class="reg-input" style="padding: 8px;"></div>
+                        <div><label>${t('ID Back photo')}</label><input type="file" id="resubmitIdBack" accept="image/*" class="reg-input" style="padding: 8px;"></div>
+                    </div>
+                    <div style="margin-bottom: 16px;"><label>${t('Selfie photo')}</label><input type="file" id="resubmitSelfie" accept="image/*" class="reg-input" style="padding: 8px; width: 100%; box-sizing: border-box;"></div>
+                    <button type="button" id="btnResubmitVerification" style="width: 100%; padding: 12px; background: var(--primary-gold); color: #111; font-weight: bold; border: none; border-radius: 4px; cursor: pointer;">${t('Submit verification for review')}</button>
+                </div>
+            ` : '';
             formObj.style.maxWidth = '1200px';
             formObj.style.width = '100%';
             formObj.style.margin = '0 auto';
 
             formObj.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div class="prof-dash-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2 class="gold-text" style="margin: 0; display: flex; align-items: center; gap: 10px;">
                         Professional Dashboard <span style="font-size: 1.5rem; text-shadow: 0 0 5px rgba(212,175,55,0.5);">✏️</span>
                     </h2>
                     <button type="button" onclick="window.history.back()" onmouseover="this.style.background='rgba(212, 175, 55, 0.1)'" onmouseout="this.style.background='transparent'" style="padding: 6px 12px; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold); border-radius: 4px; cursor: pointer; transition: background 0.3s ease; font-weight: bold; font-size: 0.85rem;">&#8592; Back</button>
                 </div>
 
-                ${!isApproved ? getPendingApprovalBannerHtml() : ''}
+                ${statusBannerHtml}
+                ${resubmitSectionHtml}
                 
                 <!-- 1. Statistics Top Frame -->
                 <div class="card fileteado-section" style="margin-bottom: 20px; border: 1px solid var(--primary-gold);">
@@ -785,7 +807,7 @@ export async function loadProfDashboard() {
                 });
             }
 
-            if (!isApproved) {
+            if (!isApproved && !allowResubmission) {
                 formObj.querySelectorAll('input:not([type="hidden"]), select, textarea, button').forEach(el => {
                     if (el.id === 'bottomBackBtn') return;
                     el.disabled = true;
@@ -794,6 +816,71 @@ export async function loadProfDashboard() {
                 formObj.querySelectorAll('label').forEach(lbl => {
                     if (!lbl.querySelector('#bottomBackBtn')) lbl.style.cursor = 'not-allowed';
                 });
+            }
+
+            if (allowResubmission) {
+                ['upFirstName', 'upSurname', 'upMiddleName', 'upAlias', 'upBirthDate', 'upHeight', 'upMeasurements',
+                    'upStreet', 'upStreetNumber', 'upFloor', 'upApartment', 'upPostCode', 'upProvince', 'upCity', 'upNeighborhood', 'upQuality',
+                    'upAvailStart', 'upAvailEnd', 'upVacationStart', 'upVacationEnd'
+                ].forEach((id) => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.disabled = false;
+                    el.style.background = '#222';
+                    el.style.color = 'white';
+                });
+                formObj.querySelectorAll('.dashboard-specialty-cb, .avail-day-cb, #upOwnApartment, #upFantasyWardrobe').forEach((el) => {
+                    el.disabled = false;
+                    if (el.parentElement) el.parentElement.style.opacity = '1';
+                });
+
+                const resubmitBtn = document.getElementById('btnResubmitVerification');
+                if (resubmitBtn) {
+                    resubmitBtn.addEventListener('click', async () => {
+                        const front = document.getElementById('resubmitIdFront');
+                        const back = document.getElementById('resubmitIdBack');
+                        const selfie = document.getElementById('resubmitSelfie');
+                        const alertEl = document.getElementById('updateAlert');
+                        if (!front?.files?.[0] || !back?.files?.[0] || !selfie?.files?.[0]) {
+                            showAlert(alertEl, t('All three verification photos are required (ID front, ID back, selfie).'));
+                            return;
+                        }
+                        resubmitBtn.disabled = true;
+                        resubmitBtn.textContent = t('Submitting...');
+                        try {
+                            if (typeof window.saveProfessionalProfile === 'function') {
+                                await window.saveProfessionalProfile(true);
+                            }
+                            const formData = new FormData();
+                            formData.append('verificationDocuments', front.files[0]);
+                            formData.append('verificationDocuments', back.files[0]);
+                            formData.append('verificationDocuments', selfie.files[0]);
+                            const token = localStorage.getItem('token');
+                            const res = await fetch(`${API_URL}/professionals/resubmit-verification`, {
+                                method: 'POST',
+                                headers: { 'Authorization': `Bearer ${token}` },
+                                credentials: 'include',
+                                body: formData
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                                showAlert(alertEl, data.message || t('Verification submitted for review.'), false);
+                                setTimeout(() => { window.location.href = appPath('dashboard.html'); }, 1500);
+                            } else {
+                                showAlert(alertEl, data.error || t('Submission failed'));
+                            }
+                        } catch {
+                            showAlert(alertEl, t('Server connection error'));
+                        } finally {
+                            resubmitBtn.disabled = false;
+                            resubmitBtn.textContent = t('Submit verification for review');
+                        }
+                    });
+                }
+
+                setTimeout(() => {
+                    document.getElementById('verificationResubmitSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 400);
             }
 
             // Show Save Button on any form modification to avoid focus-out issues

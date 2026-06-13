@@ -42,6 +42,17 @@ const UserSchema = new mongoose.Schema({
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
   },
+  rejectionReason: {
+    type: String,
+    enum: ['photos_unclear', 'photo_info_mismatch', 'general_failure']
+  },
+  rejectionDetails: {
+    type: String
+  },
+  allowResubmission: {
+    type: Boolean,
+    default: false
+  },
   verificationGesture: {
     type: String,
     enum: ['1 finger', '2 fingers', '3 fingers', 'thumbs up', '1FU', '2FU', '3FU', 'TU', 'OS']
