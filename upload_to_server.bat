@@ -21,7 +21,7 @@ echo [1b/7] Normalizing deploy script line endings (LF)...
 powershell -NoProfile -Command "$paths=@('%~dp0scripts\deploy-extract.sh','%~dp0scripts\deploy-restart.sh','%~dp0scripts\disk-housekeeping.sh','%~dp0scripts\install-housekeeping-cron.sh'); foreach($p in $paths){ $t=[IO.File]::ReadAllText($p) -replace \"`r`n\",\"`n\" -replace \"`r\",\"\"; [IO.File]::WriteAllText($p,$t,(New-Object System.Text.UTF8Encoding $false)) }"
 
 echo [2/7] Compressing project files locally (ignoring heavy cache files)...
-tar -czvf upload_package.tar.gz --exclude=node_modules --exclude=.git --exclude=.cache --exclude=upload_package.tar.gz --exclude=docker-compose.override.yml --exclude=.env .
+tar -czvf upload_package.tar.gz --exclude=node_modules --exclude=.git --exclude=.cache --exclude=upload_package.tar.gz --exclude=docker-compose.override.yml --exclude=.env --exclude=*.archive --exclude=*.tar.gz --exclude=certbot --exclude=app_bak.js --exclude=sexappeal_local_after_embed.archive .
 if %errorlevel% neq 0 (
     echo ❌ ERROR: Failed to create archive.
     goto end
@@ -75,7 +75,8 @@ if !errorlevel! neq 0 (
 
 echo.
 echo [6/7] Building and restarting containers (app + nginx for SSL)...
-ssh %SERVER_USER%@%SERVER_IP% "bash %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%"
+echo     This step takes about 4-8 minutes (npm install + image export). Do NOT press Ctrl+C.
+ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=120 %SERVER_USER%@%SERVER_IP% "bash %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%"
 if !errorlevel! neq 0 (
     echo ❌ ERROR: Step 6 failed - docker build/start error.
     goto cleanup
