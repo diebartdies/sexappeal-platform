@@ -377,7 +377,8 @@ export async function loadTreasureDetails() {
                     </div>
 
                     <div style="margin-top: 0;">
-                        <p><strong>Location:</strong> ${(() => {
+                        <p><strong>${t('Country')}:</strong> ${prof.location?.country || 'N/A'}</p>
+                        <p><strong>${t('Location')}:</strong> ${(() => {
                             if (!prof.location) return 'N/A';
                             const p = prof.location.province || '';
                             const c = prof.location.city || '';

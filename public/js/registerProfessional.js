@@ -52,9 +52,82 @@ function bindFileInput(inputId, labelId) {
     const input = document.getElementById(inputId);
     const label = document.getElementById(labelId);
     if (!input || !label) return;
+    label.textContent = t('No file chosen');
     input.addEventListener('change', () => {
         label.textContent = input.files?.[0]?.name || t('No file chosen');
     });
+}
+
+function setRegLabel(forId, key, required = false) {
+    const label = document.querySelector(`label[for="${forId}"]`);
+    if (!label) return;
+    label.replaceChildren();
+    label.appendChild(document.createTextNode(t(key)));
+    if (required) {
+        label.appendChild(document.createTextNode(' '));
+        const star = document.createElement('span');
+        star.className = 'required-star';
+        star.textContent = '*';
+        label.appendChild(star);
+    }
+}
+
+function applyRegistrationPageLabels() {
+    const main = document.getElementById('registerMain');
+    if (!main) return;
+
+    document.title = `SexAppeal - ${t('Professional Registration')}`;
+
+    const h1 = main.querySelector(':scope > h1');
+    if (h1) h1.textContent = t('Professional Registration');
+
+    const intro = main.querySelector(':scope > p');
+    if (intro) {
+        intro.textContent = t('Join SexAppeal as a Living Treasure. Complete every required field and upload your verification photos. Admin review typically takes up to 48 hours.');
+    }
+
+    main.querySelectorAll('.reg-block > h4').forEach((h4) => {
+        h4.textContent = t(h4.textContent.trim());
+    });
+
+    setRegLabel('regFirstName', 'Name', true);
+    setRegLabel('regMiddleName', 'Middle Name');
+    setRegLabel('regSurname', 'Surname', true);
+    setRegLabel('regAlias', 'Alias', true);
+    setRegLabel('regIdNumber', 'ID Number', true);
+    setRegLabel('regBirthDate', 'Birth date', true);
+    setRegLabel('regStreet', 'Street', true);
+    setRegLabel('regStreetNumber', 'Number', true);
+    setRegLabel('regFloor', 'Floor');
+    setRegLabel('regApartment', 'Apartment');
+    setRegLabel('regPostCode', 'Post Code');
+    setRegLabel('regProvince', 'Province', true);
+    setRegLabel('regCity', 'City / Neighborhood', true);
+    setRegLabel('regOriginCountry', 'Country', true);
+    setRegLabel('regEmail', 'Email', true);
+    setRegLabel('regPassword', 'Password (min 6)', true);
+    setRegLabel('regMobilePhone', 'Mobile phone', true);
+    setRegLabel('regInstagram', 'Instagram');
+    setRegLabel('regFacebook', 'Facebook');
+    setRegLabel('regQuality', 'Category', true);
+    setRegLabel('regIdPhotoFront', 'Photo of your ID (Front)', true);
+    setRegLabel('regIdPhotoBack', 'Photo of your ID (Back)', true);
+    setRegLabel('regSelfiePhoto', 'Selfie holding your ID', true);
+
+    const specialtiesLabel = document.querySelector('#regSpecialties')?.closest('.form-group')?.querySelector('label:not([for])');
+    if (specialtiesLabel) specialtiesLabel.textContent = t('Specialties');
+
+    document.querySelectorAll('#regCategoryTable th').forEach((th) => {
+        th.textContent = t(th.textContent.trim());
+    });
+
+    const submitBtn = document.querySelector('#registerForm button[type="submit"]');
+    if (submitBtn) submitBtn.textContent = t('Submit Registration');
+
+    const footer = main.querySelector('.card > p:last-of-type');
+    if (footer) {
+        footer.innerHTML = `${t('Already registered?')} <a href="/login.html" style="color:var(--primary-gold);">${t('Login here')}</a> &nbsp;|&nbsp; <a href="/index.html" style="color:#888;">${t('Back to entrance')}</a>`;
+    }
 }
 
 function showUnderageModal(onLeave, onChangeDate) {
@@ -84,7 +157,7 @@ function setupBirthDateField() {
     const input = document.getElementById('regBirthDate');
     if (!input) return;
 
-    const lang = localStorage.getItem('platform_lang') || 'en';
+    const lang = localStorage.getItem('platform_lang') || 'es';
     document.documentElement.lang = lang === 'es' ? 'es-AR' : 'en-US';
 
     const today = new Date();
@@ -107,7 +180,8 @@ function setupBirthDateField() {
 function setupCountrySelect() {
     const sel = document.getElementById('regOriginCountry');
     if (!sel) return;
-    sel.innerHTML = COUNTRIES.map((c) => `<option value="${c}"${c === 'Argentina' ? ' selected' : ''}>${c}</option>`).join('');
+    const placeholder = `<option value="">${t('Select country...')}</option>`;
+    sel.innerHTML = placeholder + COUNTRIES.map((c) => `<option value="${c}">${c}</option>`).join('');
 }
 
 function setupCategoryBlock() {
@@ -118,7 +192,7 @@ function setupCategoryBlock() {
     const order = ['Elite', 'Premium', 'Gold', 'Silver', 'Standard'];
     sel.innerHTML = `<option value="">${t('Select a category...')}</option>` + order.map((key) => {
         const meta = CATEGORY_META[key];
-        return `<option value="${key}">${meta.name} (${meta.alias})</option>`;
+        return `<option value="${key}">${t(meta.name)} (${meta.alias})</option>`;
     }).join('');
 
     const renderTable = (pricing = {}) => {
@@ -126,7 +200,7 @@ function setupCategoryBlock() {
             const meta = CATEGORY_META[key];
             const price = pricing[key] ?? meta.monthlyPrice;
             return `<tr>
-                <td>${meta.name.replace(/^[^\s]+\s/, '')}</td>
+                <td>${t(meta.name)}</td>
                 <td>${meta.alias}</td>
                 <td>${formatPrice(price)}</td>
                 <td>${meta.priceUnit || 'ARS'}</td>
@@ -146,7 +220,7 @@ function setupSpecialtyCheckboxes() {
     if (!host) return;
     host.innerHTML = REG_SPECIALTIES.map((name) => `
         <label class="reg-check-label">
-            <input type="checkbox" class="reg-specialty-cb" value="${name}"> ${name}
+            <input type="checkbox" class="reg-specialty-cb" value="${name}"> ${t(name)}
         </label>
     `).join('');
 }
@@ -167,7 +241,7 @@ function validateRegistrationForm(form) {
         { id: 'regStreetNumber', label: t('Number') },
         { id: 'regProvince', label: t('Province') },
         { id: 'regCity', label: t('City / Neighborhood') },
-        { id: 'regOriginCountry', label: t('Origin country') },
+        { id: 'regOriginCountry', label: t('Country') },
         { id: 'regEmail', label: t('Email') },
         { id: 'regPassword', label: t('Password') },
         { id: 'regMobilePhone', label: t('Mobile phone') },
@@ -238,6 +312,7 @@ export function initProfessionalRegistration() {
     const form = document.getElementById('registerForm');
     if (!form) return;
 
+    applyRegistrationPageLabels();
     setupInstructions();
     setupBirthDateField();
     setupProfessionalIdNumberInput('regIdNumber');
@@ -317,4 +392,5 @@ export function initProfessionalRegistration() {
     });
 
     applyStaticTranslations(form);
+    applyRegistrationPageLabels();
 }

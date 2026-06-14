@@ -39,6 +39,7 @@
         #regCategoryTable th, #regCategoryTable td { border: 1px solid rgba(212,175,55,0.25); padding: 8px; text-align: left; }
         #regCategoryTable th { background: rgba(212,175,55,0.1); color: var(--primary-gold); }
         #regInstructions { background: rgba(212,175,55,0.08); border: 1px solid rgba(212,175,55,0.35); border-radius: 8px; padding: 18px; margin-bottom: 24px; }
+        body.register-page .reg-page { padding-top: 8px; }
     </style>
     <!-- SEO & Open Graph Tags -->
     <meta name="description" content="SexAppeal - The Architecture of Intimacy. Directorio exclusivo de acompañantes VIP y Living Treasures.">
@@ -49,15 +50,19 @@
     <meta property="og:type" content="website">
     <meta name="theme-color" content="#D4AF37">
 </head>
-<body>
-    <div class="container reg-page">
-        <header style="text-align:center;margin-bottom:10px;">
-            <a href="/index.html" class="logo"><img src="/SexAppeal_logo_black.png" alt="SexAppeal Logo" style="height: 100px; width: auto;"></a>
-        </header>
+<body class="register-page">
+    <main id="registerMain" class="container reg-page">
+        <h1 class="gold-text" style="text-align:center;font-size:1.6rem;margin:0 0 8px;">Professional Registration</h1>
+        <p style="text-align:center;color:#aaa;font-size:0.95rem;margin:0 0 20px;max-width:640px;margin-left:auto;margin-right:auto;">
+            Join SexAppeal as a Living Treasure. Complete every required field and upload your verification photos. Admin review typically takes up to 48 hours.
+        </p>
 
         <section>
             <div class="card">
-                <div id="regInstructions"></div>
+                <div id="regInstructions">
+                    <h3 class="gold-text" style="margin-top:0;">Professional registration</h3>
+                    <p style="font-size:0.95rem;line-height:1.5;">To ensure the safety and authenticity of our community, please complete every mandatory field and upload the three verification photos.</p>
+                </div>
 
                 <form id="registerForm" novalidate>
                     <input type="hidden" id="regRole" value="professional">
@@ -141,8 +146,10 @@
         <option value="">Loading...</option>
     </select>
                         <div class="form-group">
-                            <label for="regOriginCountry">Origin Country <span class="required-star">*</span></label>
-                            <select id="regOriginCountry" class="reg-select" required></select>
+                            <label for="regOriginCountry">Country <span class="required-star">*</span></label>
+                            <select id="regOriginCountry" class="reg-select" required>
+                                <option value="">Select country...</option>
+                            </select>
                         </div>
                     </div>
 
@@ -221,7 +228,7 @@
                 </p>
             </div>
         </section>
-    </div>
+    </main>
     <script src="/js/app.js?v=7.5" type="module"></script>
 </body>
 </html>

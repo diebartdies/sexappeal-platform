@@ -13,6 +13,7 @@ import {
 } from './discovery.js';
 import { loadDashboard } from './admin.js';
 import { loadProfDashboard } from './professional.js';
+import { initProfessionalRegistration } from './registerProfessional.js';
 
 function initRelativeLinkFixer() {
     document.addEventListener('click', (e) => {
@@ -161,7 +162,12 @@ export function initBootstrap() {
 
             if (!currentAncestorCode && (hasToken || isFromOurSite) && (effectivePage === 'categories.html' || effectivePage === 'treasure.html' || effectivePage === 'dashboard.html' || effectivePage === 'profDashboard.html')) {
                 sessionStorage.setItem('ancestor_code', 'index.html');
-            } else if (allowed && (!currentAncestorCode || !allowed.includes(currentAncestorCode))) {
+            }
+
+            const publicAuthPages = new Set(['login.html', 'register.html', 'verify.html', 'recover.html']);
+            const skipAncestorCheck = isPublicPage && publicAuthPages.has(effectivePage);
+
+            if (!skipAncestorCheck && allowed && (!currentAncestorCode || !allowed.includes(currentAncestorCode))) {
                 console.warn(`[Flow Guardian] Access denied. Invalid ancestor code for ${effectivePage}. Redirecting to start.`);
                 window.location.replace('/index.html');
                 return;
@@ -177,6 +183,10 @@ export function initBootstrap() {
         applyStaticTranslations();
         applyPendingScrollRestore();
         document.documentElement.lang = currentLang === 'es' ? 'es' : 'en';
+
+        if (document.getElementById('registerForm')) {
+            initProfessionalRegistration();
+        }
 
         if (document.getElementById('landing')) {
             const landingStyles = document.createElement('style');
