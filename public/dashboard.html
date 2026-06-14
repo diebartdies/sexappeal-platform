@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="alternate icon" href="/favicon.ico">
-    <title>SexAppeal - Professional Dashboard</title>
+    <title>SexAppeal - Admin Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css?v=7.5">
     <link rel="stylesheet" href="/css/responsive.css?v=7.5">
@@ -17,7 +17,6 @@
     <meta property="og:url" content="https://sexappeal.drsrv.net.ar">
     <meta property="og:type" content="website">
     <meta name="theme-color" content="#D4AF37">
-    <script>document.documentElement.classList.add('page-pending');</script>
 </head>
 <body>
     <div class="container">
@@ -32,45 +31,6 @@
         </header>
 
         <main id="dashboardContent" class="hidden" aria-live="polite"></main>
-
-        <div id="dashboardOverlays" class="hidden">
-            <div id="rateAlert" class="card hidden" style="border-color: var(--accent-red); background: rgba(139, 0, 0, 0.1); margin-top: 20px;">
-                <h3 style="color: var(--accent-red);">Action Required: Rate Change</h3>
-                <p>The platform price rates have been updated. You must acknowledge this change to continue with transactions.</p>
-                <button id="ackRateBtn" style="margin-top: 15px;">Acknowledge Change</button>
-            </div>
-
-            <div class="card hidden" id="paymentSection" style="margin-top: 40px;">
-                <h3 class="gold-text" style="margin-bottom: 12px;">Pago mensual</h3>
-                <p style="color: #ccc; font-size: 0.9rem; margin-bottom: 16px;">Cuando recibas tu factura, registrá el comprobante de transferencia o Mercado Pago.</p>
-                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                    <button type="button" id="btnOpenPaymentModal" style="flex: 1; min-width: 160px;">Pago mensual</button>
-                    <button type="button" id="btnHowToPay" style="flex: 1; min-width: 160px; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold);">Cómo pagar</button>
-                </div>
-            </div>
-
-            <div id="paymentModalOverlay" class="hidden payment-modal-overlay" aria-hidden="true">
-                <div class="card payment-modal-panel">
-                    <button type="button" id="closePaymentModal" class="payment-modal-close" aria-label="Cerrar">&times;</button>
-                    <h3 class="gold-text" style="margin-bottom: 20px;">Registrar comprobante de pago</h3>
-                    <form id="receiptForm" style="display: flex; flex-direction: column; gap: 15px;">
-                        <div id="receiptAlert" class="alert hidden" style="padding: 10px; border-radius: 4px; border: 1px solid transparent;"></div>
-                        <label>Subí foto o PDF del comprobante</label>
-                        <input type="file" id="receiptFile" accept="image/*,.pdf,application/pdf" style="padding: 10px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
-                        <button type="submit" id="btnUploadReceipt">Enviar comprobante</button>
-                    </form>
-                </div>
-            </div>
-
-            <div id="howToPayOverlay" class="hidden payment-modal-overlay" aria-hidden="true">
-                <div class="card payment-modal-panel">
-                    <button type="button" id="closeHowToPayModal" class="payment-modal-close" aria-label="Cerrar">&times;</button>
-                    <h3 class="gold-text" style="margin-bottom: 16px;">Cómo pagar</h3>
-                    <div id="howToPayContent" style="color: #ccc; line-height: 1.7; font-size: 0.95rem;"></div>
-                    <button type="button" id="btnCloseHowToPayFooter" style="margin-top: 20px; width: 100%; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold);">Cerrar</button>
-                </div>
-            </div>
-        </div>
 
         <div id="loader" style="text-align: center; padding: 50px;">
             <p>Unlocking your vault...</p>

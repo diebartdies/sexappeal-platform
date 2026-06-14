@@ -1,7 +1,8 @@
 import { API_URL, BASE_ORIGIN, GOOGLE_CLIENT_ID, appPath } from './globals.js';
 import { showAlert } from './uiHelpers.js';
-import { t } from './i18n.js';
+import { t, applyStaticTranslations } from './i18n.js';
 import { openInlinePasswordRecovery, initRecoverPage, bindForgotPasswordTriggers } from './passwordRecovery.js';
+import { pushReturnPoint, clearReturnStack } from './navReturn.js';
 
 function redirectAfterLogin(user) {
     let intended = sessionStorage.getItem('intended_destination');
@@ -12,19 +13,19 @@ function redirectAfterLogin(user) {
     }
 
     if (intended) {
-        window.location.href = intended;
+        window.location.replace(intended);
     } else if (user.role === 'professional') {
         if (user.allowResubmission) {
-            window.location.href = appPath('profDashboard.html');
+            window.location.replace(appPath('profDashboard.html'));
         } else if (user.professionalProfile?.alias) {
-            window.location.href = '/perfil/' + encodeURIComponent(user.professionalProfile.alias);
+            window.location.replace('/perfil/' + encodeURIComponent(user.professionalProfile.alias));
         } else {
-            window.location.href = appPath('profDashboard.html');
+            window.location.replace(appPath('profDashboard.html'));
         }
     } else if (user.role === 'admin') {
-        window.location.href = appPath('dashboard.html');
+        window.location.replace(appPath('dashboard.html'));
     } else {
-        window.location.href = appPath('categories.html');
+        window.location.replace(appPath('categories.html'));
     }
 }
 
@@ -159,13 +160,13 @@ export function injectGoogleLogin(container) {
                 }
 
                 if (intended) {
-                    window.location.href = intended;
+                    window.location.replace(intended);
                 } else if (data.user.role === 'professional') {
-                    window.location.href = '/perfil/' + encodeURIComponent(data.user.professionalProfile?.alias || '');
+                    window.location.replace('/perfil/' + encodeURIComponent(data.user.professionalProfile?.alias || ''));
                 } else if (data.user.role === 'admin') {
-                    window.location.href = '/dashboard.html';
+                    window.location.replace('/dashboard.html');
                 } else {
-                    window.location.href = '/categories.html';
+                    window.location.replace('/categories.html');
                 }
             } else {
                 showAlert(document.getElementById('loginAlert'), t(data.error || 'Google login failed'));
@@ -190,7 +191,25 @@ export function injectGoogleLogin(container) {
     }, 100);
 }
 
+const LANDING_ENTER_LABEL = 'I AM +18 - ENTER';
+
+export function resetLandingEnterButton() {
+    const btn = document.getElementById('btn-enter');
+    if (!btn) return;
+    btn.textContent = t(LANDING_ENTER_LABEL);
+    btn.style.pointerEvents = '';
+    btn.style.opacity = '';
+    btn.disabled = false;
+}
+
 export function setupLandingPageAgeGate() {
+window.addEventListener('pageshow', () => {
+    if (!document.getElementById('landing')) return;
+    document.documentElement.classList.remove('page-pending');
+    resetLandingEnterButton();
+    applyStaticTranslations(document.getElementById('landing') || document.body);
+});
+
 // Runs in the "Capture" phase to override ANY inline onclick attributes (e.g. onclick="window.location...")
 // that might be redirecting the page before the JS age-gate token is safely saved.
 document.addEventListener('click', (e) => {
@@ -247,11 +266,13 @@ document.addEventListener('click', (e) => {
             const intended = sessionStorage.getItem('intended_destination');
             if (intended) {
                 sessionStorage.removeItem('intended_destination');
+                pushReturnPoint();
                 window.location.href = intended;
             } else {
                 const targetUrl = (btn.getAttribute('href') && btn.getAttribute('href') !== '#' && !href.startsWith('javascript'))
                     ? appPath(btn.getAttribute('href'))
                     : appPath('categories.html');
+                pushReturnPoint();
                 window.location.href = targetUrl;
             }
         }
@@ -339,13 +360,13 @@ if (verifyForm) {
                 }
 
                 if (intended) {
-                    window.location.href = intended;
+                    window.location.replace(intended);
                 } else if (data.user.role === 'professional') {
-                    window.location.href = '/profDashboard.html';
+                    window.location.replace('/profDashboard.html');
                 } else if (data.user.role === 'admin') {
-                    window.location.href = '/dashboard.html';
+                    window.location.replace('/dashboard.html');
                 } else {
-                    window.location.href = '/categories.html';
+                    window.location.replace('/categories.html');
                 }
             } else {
                 showAlert(alert, data.error || 'Invalid code');
@@ -379,7 +400,7 @@ if (logoutBtn) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             localStorage.removeItem('is18Plus');
-            // Added credentials: 'include' to ensure auth cookie is sent
+            clearReturnStack();
             window.location.href = appPath('index.html');
         }
     });

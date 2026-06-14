@@ -91,26 +91,33 @@ function waitForClientReady() {
   });
 }
 
-async function processLeads(leads) {
+async function processTargets(targets, options = {}) {
+  const { customMessage } = options;
   state.phase = 'sending';
   state.qr = null;
 
-  for (const lead of leads) {
-    state.currentLead = lead.alias || lead.phone;
+  for (const target of targets) {
+    state.currentLead = target.alias || target.phone;
 
     try {
-      const cleanPhone = normalizeWhatsAppPhone(lead.phone);
+      const cleanPhone = normalizeWhatsAppPhone(target.phone);
       if (!cleanPhone) {
         state.skipped += 1;
         continue;
       }
 
       const chatId = `${cleanPhone}@c.us`;
-      const messageToSend = buildProfessionalInviteMessage(lead.alias);
+      const alias = (target.alias && String(target.alias).trim()) || 'hermosa';
+      const messageToSend = customMessage
+        ? String(customMessage).replace(/\{alias\}/gi, alias)
+        : buildProfessionalInviteMessage(alias);
       await client.sendMessage(chatId, messageToSend);
 
-      lead.status = 'contacted';
-      await lead.save();
+      if (target.leadDoc) {
+        target.leadDoc.status = 'contacted';
+        await target.leadDoc.save();
+      }
+
       state.sent += 1;
 
       const delay = Math.floor(Math.random() * (30000 - 15000 + 1) + 15000);
@@ -124,6 +131,11 @@ async function processLeads(leads) {
   state.currentLead = null;
   state.phase = 'complete';
   state.finishedAt = new Date();
+}
+
+async function processLeads(leads) {
+  const targets = leads.map((lead) => ({ phone: lead.phone, alias: lead.alias, leadDoc: lead }));
+  await processTargets(targets);
 }
 
 async function startBulkOutreach() {
@@ -170,8 +182,82 @@ function startBulkOutreachBackground() {
   return getStatus();
 }
 
+async function resolveTargetedRecipients({ leadIds = [], professionalIds = [] }) {
+  const User = require('../models/User');
+  const { resolveWhatsappNumber } = require('../utils/contactNumber');
+  const targets = [];
+
+  if (leadIds.length) {
+    const leads = await PotentialProfessional.find({ _id: { $in: leadIds } });
+    leads.forEach((lead) => {
+      targets.push({ phone: lead.phone, alias: lead.alias, leadDoc: lead });
+    });
+  }
+
+  if (professionalIds.length) {
+    const professionals = await User.find({ _id: { $in: professionalIds }, role: 'professional' });
+    professionals.forEach((user) => {
+      const phone = resolveWhatsappNumber(user.professionalProfile || {});
+      if (phone) {
+        targets.push({
+          phone,
+          alias: user.professionalProfile?.alias || user.email
+        });
+      }
+    });
+  }
+
+  return targets;
+}
+
+async function startTargetedOutreach({ leadIds = [], professionalIds = [], message = '' } = {}) {
+  if (BUSY_PHASES.has(state.phase)) {
+    return getStatus();
+  }
+
+  const targets = await resolveTargetedRecipients({ leadIds, professionalIds });
+
+  if (targets.length === 0) {
+    state.phase = 'complete';
+    state.lastError = 'No valid WhatsApp recipients found';
+    state.total = 0;
+    state.finishedAt = new Date();
+    return getStatus();
+  }
+
+  resetRunCounters(targets.length);
+  state.phase = 'initializing';
+
+  try {
+    await waitForClientReady();
+    await processTargets(targets, { customMessage: message && String(message).trim() ? String(message).trim() : null });
+  } catch (err) {
+    state.phase = 'error';
+    state.lastError = err.message;
+    state.finishedAt = new Date();
+  }
+
+  return getStatus();
+}
+
+function startTargetedOutreachBackground(options) {
+  if (BUSY_PHASES.has(state.phase)) {
+    return getStatus();
+  }
+
+  startTargetedOutreach(options).catch((err) => {
+    state.phase = 'error';
+    state.lastError = err.message;
+    state.finishedAt = new Date();
+  });
+
+  return getStatus();
+}
+
 module.exports = {
   getStatus,
   startBulkOutreach,
-  startBulkOutreachBackground
+  startBulkOutreachBackground,
+  startTargetedOutreach,
+  startTargetedOutreachBackground
 };

@@ -1,9 +1,105 @@
-import { BASE_ORIGIN, API_URL, CATEGORY_META, getVerificationGesture, appPath } from './globals.js';
+import { BASE_ORIGIN, API_URL, CATEGORY_META, getVerificationGesture, appPath, resolvePhotoSrc } from './globals.js';
 import { showAlert, getPendingApprovalBannerHtml, getResubmissionBannerHtml, getGeneralRejectionBannerHtml } from './uiHelpers.js';
 import { t, applyStaticTranslations } from './i18n.js';
 import { beginDashboardLoad, finishDashboardLoad, failDashboardLoad } from './dashboardShell.js';
 import { renderSpecialtyDropdown, setupLocationDropdowns } from './helpers.js';
 import { addPhotoToGrid, openPendingConnectionsModal, bindProfessionalProfileForm, hideProfessionalPaymentOverlays, renderProfessionalMainDashboardShell, injectProfessionalDashboardGuides } from './professional.js';
+import { buildCategoryQueue, resetLazyCategoryLoader, startLazyCategoryLoader } from './lazyCategoryLoader.js';
+import { beginModalSession, endModalSession } from './navReturn.js';
+
+const ADMIN_CATEGORY_ORDER = ['Elite', 'Premium', 'Gold', 'Silver', 'Standard', 'Uncategorized'];
+
+function openAdminOverlay(modal) {
+    if (!modal) return;
+    beginModalSession();
+    modal.style.display = 'flex';
+}
+
+function closeAdminOverlay(modal, afterClose) {
+    if (!modal) return;
+    modal.style.display = 'none';
+    endModalSession();
+    if (typeof afterClose === 'function') afterClose();
+}
+
+function renderAdminCategorySection(content, cat, items, eagerImages = false) {
+    const meta = CATEGORY_META[cat];
+
+    const catSection = document.createElement('div');
+    catSection.className = 'fileteado-section admin-prof-category';
+    catSection.style.marginBottom = '25px';
+    catSection.style.border = '14px solid transparent';
+    catSection.style.borderImage = 'url("data:image/svg+xml;utf8,<svg width=\'40\' height=\'40\' viewBox=\'0 0 40 40\' xmlns=\'http://www.w3.org/2000/svg\'><rect x=\'1\' y=\'1\' width=\'38\' height=\'38\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1\'/><path d=\'M1 12 Q 12 12 12 1\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M28 1 Q 28 12 39 12\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M39 28 Q 28 28 28 39\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M12 39 Q 12 28 1 28\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M4 6 Q 6 4 8 6 Q 6 8 4 6\' fill=\'%232e7d32\'/><path d=\'M36 6 Q 34 4 32 6 Q 34 8 36 6\' fill=\'%232e7d32\'/><path d=\'M36 34 Q 34 36 32 34 Q 34 32 36 34\' fill=\'%232e7d32\'/><path d=\'M4 34 Q 6 36 8 34 Q 6 32 4 34\' fill=\'%232e7d32\'/><circle cx=\'6\' cy=\'6\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'34\' cy=\'6\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'34\' cy=\'34\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'6\' cy=\'34\' r=\'1.5\' fill=\'%23b81d1d\'/></svg>") 12 stretch';
+    catSection.style.padding = '22px 26px';
+    catSection.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 1px solid rgba(212, 175, 55, 0.3); padding-bottom: 10px;">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div style="color: var(--primary-gold); width: 24px; text-align: center;">${meta.logo}</div>
+                <div>
+                    <h4 style="color: var(--primary-gold); margin: 0;">
+                        ${t(meta.name)} <span style="font-size: 0.8rem; color: #aaa; font-weight: normal; font-family: sans-serif;">${t(meta.desc)}</span>
+                    </h4>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const grid = document.createElement('div');
+    grid.className = 'five-column-grid admin-prof-grid';
+
+    items.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'admin-prof-card';
+        card.style.background = '#222';
+        card.style.padding = '10px';
+        card.style.borderRadius = '8px';
+        card.style.textAlign = 'center';
+        card.style.border = '1px solid #333';
+
+        const alias = p.professionalProfile?.alias || 'No Alias';
+        const photo = (p.professionalProfile?.photos && p.professionalProfile.photos.length > 0) ? p.professionalProfile.photos[0] : 'https://via.placeholder.com/150?text=No+Photo';
+        const vStatus = p.verificationStatus || 'pending';
+        const statusColor = vStatus === 'approved' ? 'green' : (vStatus === 'rejected' ? 'red' : 'orange');
+        const thumbWrap = document.createElement('div');
+        thumbWrap.className = 'admin-prof-thumb';
+        thumbWrap.style.cssText = 'width: 100%; aspect-ratio: 1/1; overflow: hidden; border-radius: 4px; margin-bottom: 10px; position: relative;';
+        const thumbImg = document.createElement('img');
+        thumbImg.src = photo;
+        thumbImg.className = 'admin-prof-thumb-img';
+        thumbImg.style.cssText = 'width: 100%; height: 100%; object-fit: cover; display: block;';
+        if (!eagerImages) thumbImg.loading = 'lazy';
+        const statusBadge = document.createElement('div');
+        statusBadge.style.cssText = `position: absolute; top: 5px; right: 5px; font-size: 0.55rem; padding: 2px 6px; border-radius: 10px; background: ${statusColor}; color: white; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.5);`;
+        statusBadge.textContent = vStatus.toUpperCase();
+        thumbWrap.appendChild(thumbImg);
+        thumbWrap.appendChild(statusBadge);
+
+        const aliasEl = document.createElement('div');
+        aliasEl.style.cssText = 'font-weight: bold; margin-bottom: 5px; color: var(--primary-gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.8rem;';
+        aliasEl.textContent = alias;
+        const emailEl = document.createElement('div');
+        emailEl.style.cssText = 'font-size: 0.65rem; color: #aaa; margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
+        emailEl.textContent = p.email;
+        const editBtn = document.createElement('button');
+        editBtn.className = 'edit-btn';
+        editBtn.style.cssText = 'width: 100%; padding: 6px; font-size: 0.7rem; cursor: pointer; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold);';
+        editBtn.textContent = '✏️ Edit';
+
+        card.appendChild(thumbWrap);
+        card.appendChild(aliasEl);
+        card.appendChild(emailEl);
+        card.appendChild(editBtn);
+
+        editBtn.onclick = () => {
+            openEditProfessionalModal(p);
+        };
+
+        grid.appendChild(card);
+    });
+
+    catSection.appendChild(grid);
+    content.appendChild(catSection);
+}
 
 export async function renderAdminGrid(container) {
     container.innerHTML = `
@@ -48,19 +144,21 @@ export async function renderAdminGrid(container) {
 
 export async function loadAdminGridData() {
     const content = document.getElementById('adminGridContent');
+    resetLazyCategoryLoader();
     content.innerHTML = '<p>Loading...</p>';
     try {
         const token = localStorage.getItem('token');
         
         let url;
         url = new URL(`${API_URL}/admin/professionals`);
+        url.searchParams.set('limit', '0');
         url.searchParams.set('_', new Date().getTime());
         let res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
         
         if (!res.ok) {
             // Fallback to public endpoint if the custom admin route isn't available
             url = new URL(`${API_URL}/professionals`);
-            url.searchParams.set('limit', 100);
+            url.searchParams.set('limit', '0');
             res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
         }
         const data = await res.json();
@@ -118,103 +216,28 @@ export async function loadAdminGridData() {
 
         content.innerHTML = '';
 
-        let isFirstAdminCategoryRendered = true;
-
-        for (const [cat, items] of Object.entries(categories)) {
-            if (items.length === 0) continue;
-
-            const meta = CATEGORY_META[cat];
-
-            // Mathematically fair shuffle (Fisher-Yates) for admin categories
-            for (let i = items.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [items[i], items[j]] = [items[j], items[i]];
-            }
-
-            const catSection = document.createElement('div');
-            catSection.className = 'fileteado-section admin-prof-category';
-            catSection.style.marginBottom = '25px';
-            catSection.style.border = '14px solid transparent';
-            catSection.style.borderImage = 'url("data:image/svg+xml;utf8,<svg width=\'40\' height=\'40\' viewBox=\'0 0 40 40\' xmlns=\'http://www.w3.org/2000/svg\'><rect x=\'1\' y=\'1\' width=\'38\' height=\'38\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1\'/><path d=\'M1 12 Q 12 12 12 1\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M28 1 Q 28 12 39 12\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M39 28 Q 28 28 28 39\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M12 39 Q 12 28 1 28\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M4 6 Q 6 4 8 6 Q 6 8 4 6\' fill=\'%232e7d32\'/><path d=\'M36 6 Q 34 4 32 6 Q 34 8 36 6\' fill=\'%232e7d32\'/><path d=\'M36 34 Q 34 36 32 34 Q 34 32 36 34\' fill=\'%232e7d32\'/><path d=\'M4 34 Q 6 36 8 34 Q 6 32 4 34\' fill=\'%232e7d32\'/><circle cx=\'6\' cy=\'6\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'34\' cy=\'6\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'34\' cy=\'34\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'6\' cy=\'34\' r=\'1.5\' fill=\'%23b81d1d\'/></svg>") 12 stretch';
-            catSection.style.padding = '22px 26px';
-            catSection.innerHTML = `
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 1px solid rgba(212, 175, 55, 0.3); padding-bottom: 10px;">
-                    <div style="display: flex; align-items: center; gap: 15px;">
-                        <div style="color: var(--primary-gold); width: 24px; text-align: center;">${meta.logo}</div>
-                        <div>
-                            <h4 style="color: var(--primary-gold); margin: 0;">
-                                ${t(meta.name)} <span style="font-size: 0.8rem; color: #aaa; font-weight: normal; font-family: sans-serif;">${t(meta.desc)}</span>
-                            </h4>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            const grid = document.createElement('div');
-            grid.className = 'five-column-grid admin-prof-grid';
-
-            items.forEach(p => {
-                const card = document.createElement('div');
-                card.className = 'admin-prof-card';
-                card.style.background = '#222';
-                card.style.padding = '10px';
-                card.style.borderRadius = '8px';
-                card.style.textAlign = 'center';
-                card.style.border = '1px solid #333';
-                
-                const alias = p.professionalProfile?.alias || 'No Alias';
-                const photo = (p.professionalProfile?.photos && p.professionalProfile.photos.length > 0) ? p.professionalProfile.photos[0] : 'https://via.placeholder.com/150?text=No+Photo';
-                const vStatus = p.verificationStatus || 'pending';
-                const statusColor = vStatus === 'approved' ? 'green' : (vStatus === 'rejected' ? 'red' : 'orange');
-                const thumbWrap = document.createElement('div');
-                thumbWrap.className = 'admin-prof-thumb';
-                thumbWrap.style.cssText = 'width: 100%; aspect-ratio: 1/1; overflow: hidden; border-radius: 4px; margin-bottom: 10px; position: relative;';
-                const thumbImg = document.createElement('img');
-                thumbImg.src = photo;
-                thumbImg.className = 'admin-prof-thumb-img';
-                thumbImg.style.cssText = 'width: 100%; height: 100%; object-fit: cover; display: block;';
-                if (!isFirstAdminCategoryRendered) thumbImg.loading = 'lazy';
-                const statusBadge = document.createElement('div');
-                statusBadge.style.cssText = `position: absolute; top: 5px; right: 5px; font-size: 0.55rem; padding: 2px 6px; border-radius: 10px; background: ${statusColor}; color: white; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.5);`;
-                statusBadge.textContent = vStatus.toUpperCase();
-                thumbWrap.appendChild(thumbImg);
-                thumbWrap.appendChild(statusBadge);
-
-                const aliasEl = document.createElement('div');
-                aliasEl.style.cssText = 'font-weight: bold; margin-bottom: 5px; color: var(--primary-gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.8rem;';
-                aliasEl.textContent = alias;
-                const emailEl = document.createElement('div');
-                emailEl.style.cssText = 'font-size: 0.65rem; color: #aaa; margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
-                emailEl.textContent = p.email;
-                const editBtn = document.createElement('button');
-                editBtn.className = 'edit-btn';
-                editBtn.style.cssText = 'width: 100%; padding: 6px; font-size: 0.7rem; cursor: pointer; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold);';
-                editBtn.textContent = '✏️ Edit';
-
-                card.appendChild(thumbWrap);
-                card.appendChild(aliasEl);
-                card.appendChild(emailEl);
-                card.appendChild(editBtn);
-                
-                editBtn.onclick = () => {
-                    openEditProfessionalModal(p);
-                };
-
-                grid.appendChild(card);
-            });
-
-            catSection.appendChild(grid);
-            content.appendChild(catSection);
-            
-            isFirstAdminCategoryRendered = false;
-        }
-
         if (profs.length === 0) {
             content.innerHTML = '<p>No professionals match your filters.</p>';
+            applyStaticTranslations(content);
+            return;
         }
-        applyStaticTranslations(content);
+
+        const queue = buildCategoryQueue(categories, ADMIN_CATEGORY_ORDER);
+
+        startLazyCategoryLoader(
+            content,
+            queue,
+            (entry, ctx) => {
+                renderAdminCategorySection(content, entry.cat, entry.items, ctx.eagerImages);
+                applyStaticTranslations(content);
+            },
+            {
+                onAllComplete: () => applyStaticTranslations(content)
+            }
+        );
 
     } catch (err) {
+        resetLazyCategoryLoader();
         content.innerHTML = `<p style="color: var(--accent-red);">${t('Error connecting to the vault:')} ${err.message}</p>`;
     }
 }
@@ -246,6 +269,12 @@ export async function loadDashboard() {
         if (data.success) {
             const user = data.data;
             localStorage.setItem('user', JSON.stringify(user)); // Ensure local storage is synced
+
+            if (user.role === 'professional') {
+                window.location.replace(appPath('profDashboard.html'));
+                return;
+            }
+
             const stats = data.stats || { photoCount: 0, whatsappcCount: 0, callCount: 0 };
 
             // Apply global dynamic pricing
@@ -299,6 +328,7 @@ export async function loadDashboard() {
                         <div class="admin-menu-section" style="margin-bottom: 25px;">
                             <h4 style="color: #888; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; padding-left: 10px;">Communications</h4>
                             <div style="display: flex; flex-direction: column; gap: 5px;">
+                                <button id="btnApplyInvitations" class="admin-nav-btn">📨 ${t('Apply Invitations')}</button>
                                 <button id="btnMailSpecial" class="admin-nav-btn">📧 Mail: Special Messages</button>
                                 <button id="btnMailBroadcast" class="admin-nav-btn">📢 Mail: Broadcast Messages</button>
                                 <button id="btnWaSpecial" class="admin-nav-btn">💬 WA: Special Messages</button>
@@ -319,7 +349,6 @@ export async function loadDashboard() {
                             <h4 style="color: #888; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; padding-left: 10px;">System Settings</h4>
                             <div style="display: flex; flex-direction: column; gap: 5px;">
                                 <button id="btnEditPricing" class="admin-nav-btn" style="color: var(--primary-gold); border-color: rgba(212, 175, 55, 0.3);">💰 ${t('Change prices')}</button>
-                                <button id="btnViewLeads" class="admin-nav-btn">📞 View Scraped Leads</button>
                             </div>
                         </div>
                     </div>
@@ -339,7 +368,7 @@ export async function loadDashboard() {
                 document.getElementById('btnViewLogs').addEventListener('click', () => openActivityLogsModal());
                 document.getElementById('btnGuestTraffic').addEventListener('click', () => openActivityLogsModal('Guest Traffic', { isGuest: 'true' }));
                 document.getElementById('btnTreasuresSteps').addEventListener('click', () => openActivityLogsModal('Treasures Steps', { isGuest: 'false' }));
-                document.getElementById('btnViewLeads').addEventListener('click', openViewLeadsModal);
+                document.getElementById('btnApplyInvitations').addEventListener('click', openViewLeadsModal);
                 document.getElementById('btnPendingApprovals').addEventListener('click', openPendingVerificationsModal);
                 document.getElementById('btnPaymentVerifications').addEventListener('click', openPaymentVerificationsModal);
                 
@@ -347,11 +376,14 @@ export async function loadDashboard() {
                     document.getElementById('adminGridContainer').scrollIntoView({ behavior: 'smooth' });
                 });
 
-                ['btnDashboardConfig', 'btnMailSpecial', 'btnWaSpecial', 'btnWaBroadcast'].forEach(id => {
+                ['btnDashboardConfig'].forEach(id => {
                     document.getElementById(id).addEventListener('click', () => alert('Feature coming soon!'));
                 });
 
+                document.getElementById('btnMailSpecial').addEventListener('click', openMailSpecialModal);
                 document.getElementById('btnMailBroadcast').addEventListener('click', openMailBroadcastModal);
+                document.getElementById('btnWaSpecial').addEventListener('click', openWaSpecialModal);
+                document.getElementById('btnWaBroadcast').addEventListener('click', openViewLeadsModal);
 
                 renderAdminGrid(gridContainer);
                 
@@ -1081,7 +1113,7 @@ export async function openActivityLogsModal(title = 'Activity Logs', baseFilters
         closeBtn.textContent = t('Close');
         closeBtn.style.alignSelf = 'flex-end';
         closeBtn.style.marginBottom = '10px';
-        closeBtn.onclick = () => modal.style.display = 'none';
+        closeBtn.onclick = () => closeAdminOverlay(modal);
 
         const container = document.createElement('div');
         Object.assign(container.style, {
@@ -1143,7 +1175,7 @@ export async function openActivityLogsModal(title = 'Activity Logs', baseFilters
         document.getElementById('logFilterAgent').value = '';
     }
 
-    modal.style.display = 'flex';
+    openAdminOverlay(modal);
     loadActivityLogs();
 }
 
@@ -1210,7 +1242,7 @@ export async function openViewLeadsModal() {
         closeBtn.textContent = t('Close');
         closeBtn.style.alignSelf = 'flex-end';
         closeBtn.style.marginBottom = '10px';
-        closeBtn.onclick = () => modal.style.display = 'none';
+        closeBtn.onclick = () => closeAdminOverlay(modal);
 
         const container = document.createElement('div');
         Object.assign(container.style, {
@@ -1219,12 +1251,15 @@ export async function openViewLeadsModal() {
         });
 
         container.innerHTML = `
-            <h2 class="gold-text" style="margin-bottom: 10px;">${t('Scraped Phone Leads')}</h2>
-            <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 16px;">${t('WhatsApp outreach uses the welcome message with platform registration link.')}</p>
+            <h2 class="gold-text" style="margin-bottom: 10px;">${t('Apply Invitations to Potential Professionals')}</h2>
+            <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 16px;">${t('Send the welcome WhatsApp invitation with platform and registration links from the potential professionals table.')}</p>
             <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
                 <button id="refreshLeadsBtn">${t('Refresh List')}</button>
                 <button id="previewInviteBtn" type="button" style="background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold);">${t('Preview invite message')}</button>
-                <button id="bulkWhatsappBtn" type="button" style="background: #25D366; color: #fff; font-weight: bold; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer;">${t('Bulk WhatsApp (pending)')}</button>
+                <button id="selectPendingLeadsBtn" type="button" style="background: #333; color: white; border: 1px solid #555; padding: 8px 12px; border-radius: 4px; cursor: pointer;">${t('Select pending')}</button>
+                <button id="clearLeadSelectionBtn" type="button" style="background: #333; color: white; border: 1px solid #555; padding: 8px 12px; border-radius: 4px; cursor: pointer;">${t('Clear selection')}</button>
+                <button id="applySelectedInviteBtn" type="button" style="background: #25D366; color: #fff; font-weight: bold; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer;">${t('Apply invitation to selected')}</button>
+                <button id="bulkWhatsappBtn" type="button" style="background: transparent; border: 1px solid #25D366; color: #25D366; font-weight: bold; padding: 10px 16px; border-radius: 4px; cursor: pointer;">${t('Apply to all pending')}</button>
             </div>
             <div id="bulkWhatsappPanel" class="hidden" style="margin-bottom: 20px; padding: 16px; border: 1px solid rgba(37,211,102,0.4); border-radius: 8px; background: rgba(37,211,102,0.08);">
                 <h4 class="gold-text" style="margin: 0 0 10px 0;">${t('Bulk outreach progress')}</h4>
@@ -1242,16 +1277,17 @@ export async function openViewLeadsModal() {
                 <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
                     <thead>
                         <tr style="border-bottom: 1px solid var(--primary-gold);">
+                            <th style="padding: 10px;">${t('Select')}</th>
                             <th style="padding: 10px;">${t('Date Added')}</th>
                             <th style="padding: 10px;">${t('Alias')}</th>
                             <th style="padding: 10px;">${t('Phone Number')}</th>
                             <th style="padding: 10px;">${t('Source')}</th>
                             <th style="padding: 10px;">${t('Status')}</th>
-                            <th style="padding: 10px;">WhatsApp</th>
+                            <th style="padding: 10px;">${t('Invitation')}</th>
                         </tr>
                     </thead>
                     <tbody id="leadsTableBody">
-                        <tr><td colspan="6" style="padding: 10px; text-align: center;">Loading...</td></tr>
+                        <tr><td colspan="7" style="padding: 10px; text-align: center;">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1264,17 +1300,24 @@ export async function openViewLeadsModal() {
 
         document.getElementById('refreshLeadsBtn').onclick = loadLeads;
         document.getElementById('previewInviteBtn').onclick = previewInviteMessage;
+        document.getElementById('selectPendingLeadsBtn').onclick = () => {
+            document.querySelectorAll('.lead-invite-cb:not(:disabled)').forEach((cb) => { cb.checked = true; });
+        };
+        document.getElementById('clearLeadSelectionBtn').onclick = () => {
+            document.querySelectorAll('.lead-invite-cb').forEach((cb) => { cb.checked = false; });
+        };
+        document.getElementById('applySelectedInviteBtn').onclick = applyInvitationToSelectedLeads;
         document.getElementById('bulkWhatsappBtn').onclick = startBulkWhatsappOutreach;
     }
 
-    modal.style.display = 'flex';
+    openAdminOverlay(modal);
     loadLeads();
     pollBulkWhatsappStatus();
 }
 
 export async function loadLeads() {
     const tbody = document.getElementById('leadsTableBody');
-    tbody.innerHTML = '<tr><td colspan="6" style="padding: 10px; text-align: center;">Loading...</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="7" style="padding: 10px; text-align: center;">${t('Loading...')}</td></tr>`;
     
     try {
         const token = localStorage.getItem('token');
@@ -1287,7 +1330,7 @@ export async function loadLeads() {
         if (data.success) {
             tbody.innerHTML = '';
             if (data.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="padding: 10px; text-align: center;">No leads found.</td></tr>';
+                tbody.innerHTML = `<tr><td colspan="7" style="padding: 10px; text-align: center;">${t('No leads found.')}</td></tr>`;
                 return;
             }
             
@@ -1299,10 +1342,14 @@ export async function loadLeads() {
                 const statusColor = lead.status === 'contacted' ? 'green' : (lead.status === 'rejected' ? 'red' : 'orange');
                 const waLink = lead.whatsappLink || '#';
                 const waDisabled = !lead.whatsappLink;
+                const isPending = (lead.status || 'pending') === 'pending';
 
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid #333';
                 tr.innerHTML = `
+                    <td style="padding: 10px;">
+                        <input type="checkbox" class="lead-invite-cb" value="${lead._id}" ${isPending ? '' : 'disabled'} style="width:auto;">
+                    </td>
                     <td style="padding: 10px;">${dateAdded}</td>
                     <td style="padding: 10px;">${lead.alias || '—'}</td>
                     <td style="padding: 10px;">${lead.phone}</td>
@@ -1313,7 +1360,7 @@ export async function loadLeads() {
                         </span>
                     </td>
                     <td style="padding: 10px;">
-                        <a href="${waLink}" target="_blank" rel="noopener noreferrer" data-lead-id="${lead._id}" class="lead-whatsapp-btn" style="display:inline-block;padding:6px 12px;background:#25D366;color:#fff;text-decoration:none;border-radius:4px;font-weight:bold;${waDisabled ? 'opacity:0.4;pointer-events:none;' : ''}">WhatsApp</a>
+                        <a href="${waLink}" target="_blank" rel="noopener noreferrer" data-lead-id="${lead._id}" class="lead-whatsapp-btn" style="display:inline-block;padding:6px 12px;background:#25D366;color:#fff;text-decoration:none;border-radius:4px;font-weight:bold;${waDisabled ? 'opacity:0.4;pointer-events:none;' : ''}">${t('Send invite')}</a>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -1324,7 +1371,49 @@ export async function loadLeads() {
             });
         }
     } catch (err) {
-        tbody.innerHTML = '<tr><td colspan="6" style="padding: 10px; text-align: center; color: var(--accent-red);">Failed to load leads.</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="7" style="padding: 10px; text-align: center; color: var(--accent-red);">${t('Failed to load leads.')}</td></tr>`;
+    }
+}
+
+async function applyInvitationToSelectedLeads() {
+    const leadIds = Array.from(document.querySelectorAll('.lead-invite-cb:checked')).map((cb) => cb.value);
+    if (!leadIds.length) {
+        alert(t('Select at least one pending lead'));
+        return;
+    }
+
+    if (!confirm(t('Apply the platform invitation to {count} selected potential professional(s)?').replace('{count}', leadIds.length))) {
+        return;
+    }
+
+    const btn = document.getElementById('applySelectedInviteBtn');
+    if (btn) btn.disabled = true;
+
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/admin/outreach/whatsapp/targeted`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ leadIds, professionalIds: [], message: '' })
+        });
+        const data = await res.json();
+        if (!data.success) {
+            alert(data.error || t('Could not start invitation outreach'));
+            if (btn) btn.disabled = false;
+            return;
+        }
+
+        document.getElementById('bulkWhatsappPanel').classList.remove('hidden');
+        if (bulkWhatsappPollTimer) clearInterval(bulkWhatsappPollTimer);
+        bulkWhatsappPollTimer = setInterval(pollBulkWhatsappStatus, 2500);
+        pollBulkWhatsappStatus();
+    } catch {
+        alert(t('Could not start invitation outreach'));
+        if (btn) btn.disabled = false;
     }
 }
 
@@ -1408,12 +1497,16 @@ function renderBulkWhatsappStatus(status) {
             clearInterval(bulkWhatsappPollTimer);
             bulkWhatsappPollTimer = null;
         }
-        const btn = document.getElementById('bulkWhatsappBtn');
-        if (btn) btn.disabled = false;
+        const bulkBtn = document.getElementById('bulkWhatsappBtn');
+        const selectedBtn = document.getElementById('applySelectedInviteBtn');
+        if (bulkBtn) bulkBtn.disabled = false;
+        if (selectedBtn) selectedBtn.disabled = false;
         loadLeads();
     } else if (status.phase === 'sending' || status.phase === 'qr' || status.phase === 'initializing') {
-        const btn = document.getElementById('bulkWhatsappBtn');
-        if (btn) btn.disabled = true;
+        const bulkBtn = document.getElementById('bulkWhatsappBtn');
+        const selectedBtn = document.getElementById('applySelectedInviteBtn');
+        if (bulkBtn) bulkBtn.disabled = true;
+        if (selectedBtn) selectedBtn.disabled = true;
         if (!bulkWhatsappPollTimer) {
             bulkWhatsappPollTimer = setInterval(pollBulkWhatsappStatus, 2500);
         }
@@ -1435,7 +1528,7 @@ async function pollBulkWhatsappStatus() {
 }
 
 async function startBulkWhatsappOutreach() {
-    if (!confirm(t('Send the welcome WhatsApp message to ALL pending leads? This cannot be undone easily.'))) return;
+    if (!confirm(t('Apply the platform invitation to ALL pending potential professionals? This cannot be undone easily.'))) return;
 
     const btn = document.getElementById('bulkWhatsappBtn');
     if (btn) btn.disabled = true;
@@ -1484,7 +1577,7 @@ export async function openPaymentVerificationsModal() {
         closeBtn.textContent = t('Close');
         closeBtn.style.alignSelf = 'flex-end';
         closeBtn.style.marginBottom = '10px';
-        closeBtn.onclick = () => modal.style.display = 'none';
+        closeBtn.onclick = () => closeAdminOverlay(modal);
 
         const container = document.createElement('div');
         Object.assign(container.style, {
@@ -1518,7 +1611,7 @@ export async function openPaymentVerificationsModal() {
         applyStaticTranslations(modal);
     }
 
-    modal.style.display = 'flex';
+    openAdminOverlay(modal);
     loadPaymentVerifications();
 }
 
@@ -1657,17 +1750,13 @@ export async function openPendingVerificationsModal() {
         document.body.appendChild(modal);
 
         document.getElementById('pendingModalCloseBtn').addEventListener('click', () => {
-            modal.style.display = 'none';
-            const adminPanel = document.getElementById('adminPanelSection');
-            if (adminPanel) {
-                adminPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
+            closeAdminOverlay(modal);
         });
 
         applyStaticTranslations(modal);
     }
 
-    modal.style.display = 'flex';
+    openAdminOverlay(modal);
     loadPendingVerifications();
 }
 
@@ -1797,10 +1886,10 @@ export function openRejectVerificationModal(professionalId) {
         document.body.appendChild(modal);
 
         document.getElementById('rejectModalCancelBtn').addEventListener('click', () => {
-            modal.style.display = 'none';
+            closeAdminOverlay(modal);
         });
         modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.style.display = 'none';
+            if (e.target === modal) closeAdminOverlay(modal);
         });
         applyStaticTranslations(modal);
     }
@@ -1831,14 +1920,14 @@ export function openRejectVerificationModal(professionalId) {
 
         try {
             await updateVerificationStatus(professionalId, 'rejected', { rejectionReason, rejectionDetails });
-            modal.style.display = 'none';
+            closeAdminOverlay(modal);
         } finally {
             confirmBtn.disabled = false;
             confirmBtn.textContent = t('Send rejection email');
         }
     };
 
-    modal.style.display = 'flex';
+    openAdminOverlay(modal);
 }
 
 export async function updateVerificationStatus(id, status, extra = {}) {
@@ -1876,33 +1965,52 @@ export function openImageModal(src) {
         modal.id = 'imageViewerModal';
         Object.assign(modal.style, {
             position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
-            backgroundColor: 'rgba(0,0,0,0.95)', zIndex: '4000', display: 'flex',
-            flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
+            backgroundColor: 'rgba(0,0,0,0.95)', zIndex: '4000', display: 'none',
+            flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            padding: '20px', boxSizing: 'border-box'
         });
-        
+
         const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
         closeBtn.innerHTML = '&times;';
+        closeBtn.setAttribute('aria-label', t('Close'));
         Object.assign(closeBtn.style, {
             position: 'absolute', top: '20px', right: '30px',
             background: 'transparent', color: 'var(--primary-gold)', border: 'none',
-            fontSize: '50px', cursor: 'pointer', lineHeight: '1'
+            fontSize: '50px', cursor: 'pointer', lineHeight: '1', zIndex: '1'
         });
-        closeBtn.onclick = () => modal.style.display = 'none';
-        
+
         const img = document.createElement('img');
         img.id = 'imageViewerImg';
         Object.assign(img.style, {
-            maxWidth: '90%', maxHeight: '90%', objectFit: 'contain', border: '2px solid var(--primary-gold)', borderRadius: '8px'
+            maxWidth: '95%', maxHeight: '92vh', objectFit: 'contain',
+            border: '2px solid var(--primary-gold)', borderRadius: '8px', background: '#111'
         });
-        
+
+        const closeModal = () => {
+            closeAdminOverlay(modal);
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        };
+
+        closeBtn.onclick = closeModal;
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
+        });
+
         modal.appendChild(closeBtn);
         modal.appendChild(img);
         document.body.appendChild(modal);
     }
-    
+
     document.getElementById('imageViewerImg').src = src;
-    modal.style.display = 'flex';
-};
+    openAdminOverlay(modal);
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+}
 
 // --- Admin Mail Broadcast Modal ---
 export async function openMailBroadcastModal() {
@@ -1920,7 +2028,7 @@ export async function openMailBroadcastModal() {
         closeBtn.textContent = t('Close');
         closeBtn.style.alignSelf = 'flex-end';
         closeBtn.style.marginBottom = '10px';
-        closeBtn.onclick = () => modal.style.display = 'none';
+        closeBtn.onclick = () => closeAdminOverlay(modal);
 
         const container = document.createElement('div');
         Object.assign(container.style, {
@@ -1946,6 +2054,8 @@ export async function openMailBroadcastModal() {
                 <textarea id="broadcastMessage" required rows="6" style="padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px; font-family: sans-serif;"></textarea>
 
                 <p style="font-size: 0.85rem; color: #aaa;">Note: The greeting "Hello [Alias]," will be automatically prepended to each email.</p>
+
+                <button type="submit" style="padding: 10px 20px; background: var(--primary-gold); color: var(--dark-bg); border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Send Broadcast</button>
             </form>
         `;
 
@@ -2001,11 +2111,397 @@ export async function openMailBroadcastModal() {
         };
     }
 
-    modal.style.display = 'flex';
+    openAdminOverlay(modal);
+}
+
+async function fetchAdminProfessionalsForPicker() {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_URL}/admin/professionals`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include'
+    });
+    const data = await res.json();
+    return data.success ? data.data : [];
+}
+
+async function fetchAdminLeadsForPicker() {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_URL}/admin/potential-professionals`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include'
+    });
+    const data = await res.json();
+    return data.success ? data.data : [];
+}
+
+function renderRecipientChecklist(containerId, items, valueKey, labelFn, emptyMessage) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (!items.length) {
+        container.innerHTML = `<p style="color:#888;font-size:0.9rem;">${emptyMessage}</p>`;
+        return;
+    }
+    container.innerHTML = items.map((item) => `
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #333;cursor:pointer;">
+            <input type="checkbox" class="special-recipient-cb" value="${item[valueKey]}" style="width:auto;">
+            <span>${labelFn(item)}</span>
+        </label>
+    `).join('');
+}
+
+export async function openMailSpecialModal() {
+    let modal = document.getElementById('mailSpecialModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'mailSpecialModal';
+        Object.assign(modal.style, {
+            position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.9)', zIndex: '3000', display: 'flex',
+            flexDirection: 'column', padding: '20px', overflowY: 'auto'
+        });
+
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = t('Close');
+        closeBtn.style.alignSelf = 'flex-end';
+        closeBtn.style.marginBottom = '10px';
+        closeBtn.onclick = () => closeAdminOverlay(modal);
+
+        const container = document.createElement('div');
+        Object.assign(container.style, {
+            backgroundColor: 'var(--dark-bg, #1a1a1a)', padding: '20px',
+            borderRadius: '8px', color: 'white', maxWidth: '700px', margin: '0 auto', width: '100%'
+        });
+
+        container.innerHTML = `
+            <h2 class="gold-text" style="margin-bottom: 10px;">${t('Mail: Special Messages')}</h2>
+            <p style="color:#aaa;font-size:0.9rem;margin-bottom:16px;">${t('Send email only to the professionals you select below.')}</p>
+            <form id="mailSpecialForm" style="display:flex;flex-direction:column;gap:15px;">
+                <div id="mailSpecialAlert" class="alert hidden" style="padding:10px;border-radius:4px;border:1px solid transparent;"></div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <button type="button" id="mailSpecialSelectAll" style="padding:6px 12px;background:#333;color:white;border:1px solid #555;border-radius:4px;cursor:pointer;">${t('Select all')}</button>
+                    <button type="button" id="mailSpecialClearAll" style="padding:6px 12px;background:#333;color:white;border:1px solid #555;border-radius:4px;cursor:pointer;">${t('Clear selection')}</button>
+                </div>
+                <div id="mailSpecialRecipients" style="max-height:220px;overflow-y:auto;border:1px solid #333;border-radius:4px;padding:10px;background:#111;">${t('Loading...')}</div>
+                <label>${t('Subject')}</label>
+                <input type="text" id="mailSpecialSubject" required style="padding:8px;background:#222;color:white;border:1px solid #444;border-radius:4px;">
+                <label>${t('Message')}</label>
+                <textarea id="mailSpecialMessage" required rows="6" style="padding:8px;background:#222;color:white;border:1px solid #444;border-radius:4px;font-family:sans-serif;"></textarea>
+                <p style="font-size:0.85rem;color:#aaa;">${t('The greeting "Hello [Alias]," is added automatically for each recipient.')}</p>
+                <button type="submit" style="padding:10px 20px;background:var(--primary-gold);color:var(--dark-bg);border:none;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Send to selected')}</button>
+            </form>
+        `;
+
+        modal.appendChild(closeBtn);
+        modal.appendChild(container);
+        document.body.appendChild(modal);
+        applyStaticTranslations(modal);
+
+        document.getElementById('mailSpecialSelectAll').onclick = () => {
+            modal.querySelectorAll('.special-recipient-cb').forEach((cb) => { cb.checked = true; });
+        };
+        document.getElementById('mailSpecialClearAll').onclick = () => {
+            modal.querySelectorAll('.special-recipient-cb').forEach((cb) => { cb.checked = false; });
+        };
+
+        document.getElementById('mailSpecialForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const alertEl = document.getElementById('mailSpecialAlert');
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const recipientIds = Array.from(modal.querySelectorAll('.special-recipient-cb:checked')).map((cb) => cb.value);
+
+            if (!recipientIds.length) {
+                showAlert(alertEl, t('Select at least one recipient'));
+                return;
+            }
+
+            if (!confirm(t('Send this email to {count} selected professional(s)?').replace('{count}', recipientIds.length))) {
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = t('Sending...');
+
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`${API_URL}/admin/notifications/mail/targeted`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        recipientIds,
+                        subject: document.getElementById('mailSpecialSubject').value,
+                        message: document.getElementById('mailSpecialMessage').value
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showAlert(alertEl, data.message || t('Emails successfully queued for sending.'), false);
+                    document.getElementById('mailSpecialForm').reset();
+                    modal.querySelectorAll('.special-recipient-cb').forEach((cb) => { cb.checked = false; });
+                } else {
+                    showAlert(alertEl, data.error || t('Failed to send messages'));
+                }
+            } catch {
+                showAlert(alertEl, t('Server connection error'));
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = t('Send to selected');
+            }
+        };
+    }
+
+    openAdminOverlay(modal);
+    const professionals = await fetchAdminProfessionalsForPicker();
+    renderRecipientChecklist(
+        'mailSpecialRecipients',
+        professionals,
+        '_id',
+        (p) => `${p.professionalProfile?.alias || '—'} <span style="color:#888;">(${p.email})</span>`,
+        t('No professionals found.')
+    );
+}
+
+export async function openWaSpecialModal() {
+    let modal = document.getElementById('waSpecialModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'waSpecialModal';
+        Object.assign(modal.style, {
+            position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.9)', zIndex: '3000', display: 'flex',
+            flexDirection: 'column', padding: '20px', overflowY: 'auto'
+        });
+
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = t('Close');
+        closeBtn.style.alignSelf = 'flex-end';
+        closeBtn.style.marginBottom = '10px';
+        closeBtn.onclick = () => closeAdminOverlay(modal);
+
+        const container = document.createElement('div');
+        Object.assign(container.style, {
+            backgroundColor: 'var(--dark-bg, #1a1a1a)', padding: '20px',
+            borderRadius: '8px', color: 'white', maxWidth: '800px', margin: '0 auto', width: '100%'
+        });
+
+        container.innerHTML = `
+            <h2 class="gold-text" style="margin-bottom: 10px;">${t('WA: Special Messages')}</h2>
+            <p style="color:#aaa;font-size:0.9rem;margin-bottom:16px;">${t('Send WhatsApp only to the leads or professionals you select. Leave the message blank to use the default invite template.')}</p>
+            <div id="waSpecialAlert" class="alert hidden" style="padding:10px;border-radius:4px;border:1px solid transparent;margin-bottom:12px;"></div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+                <button type="button" id="waSpecialSelectAll" style="padding:6px 12px;background:#333;color:white;border:1px solid #555;border-radius:4px;cursor:pointer;">${t('Select all')}</button>
+                <button type="button" id="waSpecialClearAll" style="padding:6px 12px;background:#333;color:white;border:1px solid #555;border-radius:4px;cursor:pointer;">${t('Clear selection')}</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+                <div>
+                    <h4 class="gold-text" style="margin:0 0 10px 0;">${t('Scraped leads')}</h4>
+                    <div id="waSpecialLeads" style="max-height:180px;overflow-y:auto;border:1px solid #333;border-radius:4px;padding:10px;background:#111;">${t('Loading...')}</div>
+                </div>
+                <div>
+                    <h4 class="gold-text" style="margin:0 0 10px 0;">${t('Registered professionals')}</h4>
+                    <div id="waSpecialProfessionals" style="max-height:180px;overflow-y:auto;border:1px solid #333;border-radius:4px;padding:10px;background:#111;">${t('Loading...')}</div>
+                </div>
+            </div>
+            <label>${t('Custom message (optional)')}</label>
+            <textarea id="waSpecialMessage" rows="5" placeholder="${t('Use {alias} as a placeholder for the recipient name.')}" style="padding:8px;background:#222;color:white;border:1px solid #444;border-radius:4px;font-family:sans-serif;width:100%;box-sizing:border-box;margin-bottom:12px;"></textarea>
+            <div id="bulkWhatsappPanelSpecial" class="hidden" style="margin-bottom:16px;padding:16px;border:1px solid rgba(37,211,102,0.4);border-radius:8px;background:rgba(37,211,102,0.08);">
+                <h4 class="gold-text" style="margin:0 0 10px 0;">${t('Outreach progress')}</h4>
+                <p id="waSpecialStatusText" style="color:#ccc;margin:0 0 12px 0;font-size:0.9rem;">—</p>
+                <div id="waSpecialQrWrap" class="hidden" style="margin-bottom:12px;text-align:center;">
+                    <p style="color:#aaa;font-size:0.85rem;margin-bottom:8px;">${t('Scan QR with WhatsApp on your phone')}</p>
+                    <img id="waSpecialQrImg" alt="WhatsApp QR" style="max-width:220px;background:white;padding:8px;border-radius:8px;">
+                </div>
+                <div style="background:#222;border-radius:4px;height:10px;overflow:hidden;margin-bottom:8px;">
+                    <div id="waSpecialBar" style="height:100%;width:0%;background:#25D366;transition:width 0.3s ease;"></div>
+                </div>
+                <p id="waSpecialCounts" style="color:#888;font-size:0.85rem;margin:0;">0 / 0</p>
+            </div>
+            <button type="button" id="waSpecialSendBtn" style="padding:10px 20px;background:#25D366;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Send WhatsApp to selected')}</button>
+        `;
+
+        modal.appendChild(closeBtn);
+        modal.appendChild(container);
+        document.body.appendChild(modal);
+        applyStaticTranslations(modal);
+
+        document.getElementById('waSpecialSelectAll').onclick = () => {
+            modal.querySelectorAll('.wa-lead-cb, .wa-prof-cb').forEach((cb) => { cb.checked = true; });
+        };
+        document.getElementById('waSpecialClearAll').onclick = () => {
+            modal.querySelectorAll('.wa-lead-cb, .wa-prof-cb').forEach((cb) => { cb.checked = false; });
+        };
+
+        document.getElementById('waSpecialSendBtn').onclick = async () => {
+            const alertEl = document.getElementById('waSpecialAlert');
+            const btn = document.getElementById('waSpecialSendBtn');
+            const leadIds = Array.from(modal.querySelectorAll('.wa-lead-cb:checked')).map((cb) => cb.value);
+            const professionalIds = Array.from(modal.querySelectorAll('.wa-prof-cb:checked')).map((cb) => cb.value);
+
+            if (!leadIds.length && !professionalIds.length) {
+                showAlert(alertEl, t('Select at least one recipient'));
+                return;
+            }
+
+            const total = leadIds.length + professionalIds.length;
+            if (!confirm(t('Send WhatsApp to {count} selected recipient(s)?').replace('{count}', total))) {
+                return;
+            }
+
+            btn.disabled = true;
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`${API_URL}/admin/outreach/whatsapp/targeted`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        leadIds,
+                        professionalIds,
+                        message: document.getElementById('waSpecialMessage').value.trim()
+                    })
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    showAlert(alertEl, data.error || t('Could not start WhatsApp outreach'));
+                    btn.disabled = false;
+                    return;
+                }
+                showAlert(alertEl, t('WhatsApp outreach started. Scan the QR if prompted.'), false);
+                document.getElementById('bulkWhatsappPanelSpecial').classList.remove('hidden');
+                if (waSpecialPollTimer) clearInterval(waSpecialPollTimer);
+                waSpecialPollTimer = setInterval(pollWaSpecialStatus, 2500);
+                pollWaSpecialStatus();
+            } catch {
+                showAlert(alertEl, t('Server connection error'));
+                btn.disabled = false;
+            }
+        };
+    }
+
+    openAdminOverlay(modal);
+    const [leads, professionals] = await Promise.all([
+        fetchAdminLeadsForPicker(),
+        fetchAdminProfessionalsForPicker()
+    ]);
+
+    const leadsContainer = document.getElementById('waSpecialLeads');
+    if (!leads.length) {
+        leadsContainer.innerHTML = `<p style="color:#888;font-size:0.9rem;">${t('No leads found.')}</p>`;
+    } else {
+        leadsContainer.innerHTML = leads.map((lead) => `
+            <label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #333;cursor:pointer;">
+                <input type="checkbox" class="wa-lead-cb" value="${lead._id}" style="width:auto;">
+                <span>${lead.alias || '—'} <span style="color:#888;">(${lead.phone})</span></span>
+            </label>
+        `).join('');
+    }
+
+    const profsWithPhone = professionals.filter((p) => {
+        const profile = p.professionalProfile || {};
+        return (profile.whatsappNumber || profile.mobilePhone || '').trim();
+    });
+    const profContainer = document.getElementById('waSpecialProfessionals');
+    if (!profsWithPhone.length) {
+        profContainer.innerHTML = `<p style="color:#888;font-size:0.9rem;">${t('No professionals with WhatsApp numbers found.')}</p>`;
+    } else {
+        profContainer.innerHTML = profsWithPhone.map((p) => {
+            const profile = p.professionalProfile || {};
+            const phone = profile.whatsappNumber || profile.mobilePhone || '';
+            return `
+                <label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #333;cursor:pointer;">
+                    <input type="checkbox" class="wa-prof-cb" value="${p._id}" style="width:auto;">
+                    <span>${profile.alias || '—'} <span style="color:#888;">(${phone})</span></span>
+                </label>
+            `;
+        }).join('');
+    }
+
+    pollWaSpecialStatus();
+}
+
+let waSpecialPollTimer = null;
+
+function renderWaSpecialStatus(status) {
+    const panel = document.getElementById('bulkWhatsappPanelSpecial');
+    const textEl = document.getElementById('waSpecialStatusText');
+    const barEl = document.getElementById('waSpecialBar');
+    const countsEl = document.getElementById('waSpecialCounts');
+    const qrWrap = document.getElementById('waSpecialQrWrap');
+    const qrImg = document.getElementById('waSpecialQrImg');
+    const btn = document.getElementById('waSpecialSendBtn');
+    if (!panel || !textEl) return;
+
+    if (!status || status.phase === 'idle') {
+        panel.classList.add('hidden');
+        if (btn) btn.disabled = false;
+        return;
+    }
+
+    panel.classList.remove('hidden');
+    const labels = {
+        initializing: t('Connecting to WhatsApp...'),
+        qr: t('Scan QR with WhatsApp on your phone'),
+        sending: t('Sending messages...'),
+        complete: t('Outreach complete.'),
+        error: status.lastError || t('Outreach failed.')
+    };
+    textEl.textContent = labels[status.phase] || status.phase;
+
+    if (status.phase === 'qr' && status.qr && qrWrap && qrImg) {
+        qrWrap.classList.remove('hidden');
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(status.qr)}`;
+    } else if (qrWrap) {
+        qrWrap.classList.add('hidden');
+    }
+
+    const done = (status.sent || 0) + (status.failed || 0) + (status.skipped || 0);
+    const total = status.total || 0;
+    const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+    if (barEl) barEl.style.width = `${pct}%`;
+    if (countsEl) countsEl.textContent = `${done} / ${total} (${status.sent || 0} ${t('sent')}, ${status.failed || 0} ${t('failed')})`;
+
+    if (status.phase === 'complete' || status.phase === 'error') {
+        if (waSpecialPollTimer) {
+            clearInterval(waSpecialPollTimer);
+            waSpecialPollTimer = null;
+        }
+        if (btn) btn.disabled = false;
+    } else if (btn) {
+        btn.disabled = true;
+    }
+}
+
+async function pollWaSpecialStatus() {
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/admin/outreach/bulk-whatsapp/status`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+            credentials: 'include'
+        });
+        const data = await res.json();
+        if (data.success) renderWaSpecialStatus(data.data);
+    } catch (err) {
+        console.error('WA special status poll failed', err);
+    }
 }
 
 // --- Admin Edit Professional Profile Modal ---
+let editModalReturnMode = 'list';
+
+function closeAdminEditModalToDashboard() {
+    closeAdminOverlay(document.getElementById('editProfModal'), () => {
+        if (document.getElementById('adminGridContent')) loadAdminGridData();
+    });
+}
+
 export async function openEditProfessionalModal(prof = null) {
+    editModalReturnMode = prof ? 'dashboard' : 'list';
     let modal = document.getElementById('editProfModal');
     if (!modal) {
         modal = document.createElement('div');
@@ -2016,16 +2512,10 @@ export async function openEditProfessionalModal(prof = null) {
             flexDirection: 'column', padding: '20px', overflowY: 'auto'
         });
         const closeBtn = document.createElement('button');
-        closeBtn.textContent = t('Close');
+        closeBtn.innerHTML = '&#8592; ' + t('Back to Dashboard');
         closeBtn.style.alignSelf = 'flex-end';
         closeBtn.style.marginBottom = '10px';
-        closeBtn.onclick = () => {
-            modal.style.display = 'none';
-            // If we close the modal, always refresh the main grid to see any potential changes
-            if (document.getElementById('adminGridContent')) {
-                loadAdminGridData();
-            }
-        };
+        closeBtn.onclick = () => closeAdminEditModalToDashboard();
         const container = document.createElement('div');
         container.id = 'editProfContainer';
         Object.assign(container.style, {
@@ -2039,7 +2529,7 @@ export async function openEditProfessionalModal(prof = null) {
         applyStaticTranslations(modal);
     }
 
-    modal.style.display = 'flex';
+    openAdminOverlay(modal);
     const container = document.getElementById('editProfContainer');
     container.innerHTML = 'Loading...';
 
@@ -2139,7 +2629,7 @@ export function renderEditForm(prof) {
         container.style.position = 'relative';
 
     container.innerHTML = `
-            <button id="backToListBtn" style="position: absolute; top: 20px; right: 20px; padding: 6px 12px; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold); border-radius: 4px; cursor: pointer; transition: background 0.3s ease; z-index: 10;" onmouseover="this.style.background='rgba(212, 175, 55, 0.1)'" onmouseout="this.style.background='transparent'">&larr; Back to List</button>
+            <button id="backToListBtn" style="position: absolute; top: 20px; right: 20px; padding: 6px 12px; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold); border-radius: 4px; cursor: pointer; transition: background 0.3s ease; z-index: 10;" onmouseover="this.style.background='rgba(212, 175, 55, 0.1)'" onmouseout="this.style.background='transparent'">&larr; ${editModalReturnMode === 'dashboard' ? t('Back to Dashboard') : t('Back to List')}</button>
             <h2 class="gold-text" style="margin-bottom: 20px; padding-right: 120px;">Edit Professional: ${profile.alias || prof.email}</h2>
         <form id="adminEditProfForm" style="display: flex; flex-direction: column; gap: 15px;"> <div id="adminEditAlert" class="alert hidden" style="padding: 10px; border-radius: 4px; border: 1px solid transparent;"></div>
             <label>Email</label>
@@ -2225,7 +2715,8 @@ export function renderEditForm(prof) {
             <label>Height</label>
             <input type="text" id="adminEditHeight" value="${profile.height || ''}" style="padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
 
-            <label>Manage Photos</label>
+            <label>${t('Manage Photos')}</label>
+            <p style="font-size: 0.8rem; color: #888; margin: 0 0 8px;">${t('Click a photo to enlarge and review its content.')}</p>
             <div id="adminEditPhotos" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;"></div>
 
             <button type="submit" style="margin-top: 10px;">Save Changes</button>
@@ -2240,20 +2731,35 @@ export function renderEditForm(prof) {
         const item = document.createElement('div');
         item.className = 'admin-photo-item';
         item.style.cssText = 'position: relative; width: 100px; height: 100px;';
+        const resolvedSrc = resolvePhotoSrc(photoSrc);
         const img = document.createElement('img');
-        img.src = photoSrc;
-        img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 4px;';
+        img.src = resolvedSrc;
+        img.alt = t('Manage Photos');
+        img.title = t('Click to enlarge');
+        img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 4px; cursor: zoom-in;';
+        img.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openImageModal(resolvedSrc);
+        });
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'remove-photo-btn';
         btn.textContent = 'X';
-        btn.style.cssText = 'position: absolute; top: 0; right: 0; background: var(--accent-red); color: white; border: none; cursor: pointer; padding: 2px 6px;';
+        btn.style.cssText = 'position: absolute; top: 0; right: 0; background: var(--accent-red); color: white; border: none; cursor: pointer; padding: 2px 6px; z-index: 2;';
+        btn.addEventListener('click', (e) => e.stopPropagation());
         item.appendChild(img);
         item.appendChild(btn);
         photosHost.appendChild(item);
     });
 
-    document.getElementById('backToListBtn').onclick = () => renderProfessionalList();
+    document.getElementById('backToListBtn').onclick = () => {
+        if (editModalReturnMode === 'dashboard') {
+            closeAdminEditModalToDashboard();
+        } else {
+            renderProfessionalList();
+        }
+    };
 
     // Attach photo removal logic
     document.querySelectorAll('.remove-photo-btn').forEach(btn => {
@@ -2291,7 +2797,8 @@ export function renderEditForm(prof) {
                 services: document.getElementById('adminEditServices').tagName === 'SELECT'
                     ? Array.from(document.getElementById('adminEditServices').selectedOptions).map(opt => opt.value)
                     : document.getElementById('adminEditServices').value.split(','),
-                whatsappNumber: document.getElementById('adminEditWhatsapp').value,
+                whatsappNumber: document.getElementById('adminEditWhatsapp').value.trim()
+                    || document.getElementById('adminEditMobilePhone').value.trim(),
                 workingHours: {
                     start: document.getElementById('adminEditWStart').value,
                     end: document.getElementById('adminEditWEnd').value
@@ -2335,9 +2842,7 @@ export function renderEditForm(prof) {
             if (data.success) {
                 showAlert(alertEl, 'Profile updated successfully!', false);
                 setTimeout(() => {
-                    const modal = document.getElementById('editProfModal');
-                    if (modal) modal.style.display = 'none';
-                    loadAdminGridData(); // Refresh the main grid
+                    closeAdminEditModalToDashboard();
                 }, 1500);
             } else {
                 showAlert(alertEl, data.error || 'Update failed');
@@ -2369,7 +2874,7 @@ export async function openEditPricingModal(currentPricing) {
             background: 'transparent', border: '1px solid var(--primary-gold)',
             color: 'var(--primary-gold)', borderRadius: '4px', cursor: 'pointer'
         });
-        closeBtn.onclick = () => modal.style.display = 'none';
+        closeBtn.onclick = () => closeAdminOverlay(modal);
 
         const container = document.createElement('div');
         Object.assign(container.style, {
@@ -2464,7 +2969,7 @@ export async function openEditPricingModal(currentPricing) {
     document.getElementById('priceSilver').value = currentPricing.Silver || 20000;
     document.getElementById('priceStandard').value = currentPricing.Standard || 15000;
 
-    modal.style.display = 'flex';
+    openAdminOverlay(modal);
 }
 
 window.openImageModal = openImageModal;

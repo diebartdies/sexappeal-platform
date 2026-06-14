@@ -17,12 +17,81 @@
     <meta property="og:type" content="website">
     <meta name="theme-color" content="#D4AF37">
     <script>document.documentElement.classList.add('page-pending');</script>
+
+    <!-- SEO & Open Graph Tags -->
+    <meta name="description" content="SexAppeal - The Architecture of Intimacy. Directorio exclusivo de acompañantes VIP y Living Treasures.">
+    <meta property="og:title" content="SexAppeal Platform">
+    <meta property="og:description" content="El santuario definitivo para conexiones de alto nivel y discreción absoluta.">
+    <meta property="og:image" content="https://sexappeal.drsrv.net.ar/SexAppeal_logo_black.png">
+    <meta property="og:url" content="https://sexappeal.drsrv.net.ar">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#D4AF37">
 </head>
 <body>
     <div class="container" style="max-width: 900px;">
         <div id="loader"><p>Loading dashboard...</p></div>
         <div id="profDashboardContent" class="hidden">
             <form id="updateProfileForm"></form>
+        </div>
+
+        <div id="dashboardOverlays" class="hidden">
+            <div id="rateAlert" class="card hidden" style="border-color: var(--accent-red); background: rgba(139, 0, 0, 0.1); margin-top: 20px;">
+                <h3 style="color: var(--accent-red);">Action Required: Rate Change</h3>
+                <p>The platform price rates have been updated. You must acknowledge this change to continue with transactions.</p>
+                <button id="ackRateBtn" style="margin-top: 15px;">Acknowledge Change</button>
+            </div>
+
+            <div class="card hidden" id="paymentSection" style="margin-top: 40px;">
+                <h3 class="gold-text" style="margin-bottom: 12px;">Pago mensual</h3>
+                <p style="color: #ccc; font-size: 0.9rem; margin-bottom: 16px;">Cuando recibas tu factura, registrá el comprobante de transferencia o Mercado Pago.</p>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    <button type="button" id="btnOpenPaymentModal" style="flex: 1; min-width: 160px;">Pago mensual</button>
+                    <button type="button" id="btnHowToPay" style="flex: 1; min-width: 160px; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold);">Cómo pagar</button>
+                </div>
+            </div>
+
+            <div id="paymentModalOverlay" class="hidden payment-modal-overlay" aria-hidden="true">
+                <div class="card payment-modal-panel">
+                    <button type="button" id="closePaymentModal" class="payment-modal-close" aria-label="Cerrar">&times;</button>
+                    <h3 class="gold-text" style="margin-bottom: 20px;">Registrar comprobante de pago</h3>
+                    <form id="receiptForm" style="display: flex; flex-direction: column; gap: 15px;">
+                        <div id="receiptAlert" class="alert hidden" style="padding: 10px; border-radius: 4px; border: 1px solid transparent;"></div>
+                        <label>Subí foto o PDF del comprobante</label>
+                        <input type="file" id="receiptFile" accept="image/*,.pdf,application/pdf" style="padding: 10px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
+                        <button type="submit" id="btnUploadReceipt">Enviar comprobante</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="howToPayOverlay" class="hidden payment-modal-overlay" aria-hidden="true">
+                <div class="card payment-modal-panel">
+                    <button type="button" id="closeHowToPayModal" class="payment-modal-close" aria-label="Cerrar">&times;</button>
+                    <h3 class="gold-text" style="margin-bottom: 16px;">Cómo pagar</h3>
+                    <div id="howToPayContent" style="color: #ccc; line-height: 1.7; font-size: 0.95rem;"></div>
+                    <button type="button" id="btnCloseHowToPayFooter" style="margin-top: 20px; width: 100%; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold);">Cerrar</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="deleteProfileOverlay" class="hidden payment-modal-overlay" aria-hidden="true">
+            <div class="card payment-modal-panel" style="border-color: var(--accent-red); max-width: 480px;">
+                <button type="button" id="closeDeleteProfileModal" class="payment-modal-close" aria-label="Close">&times;</button>
+                <h3 style="color: var(--accent-red); margin-bottom: 12px;">Delete profile</h3>
+                <p style="color: #ccc; font-size: 0.9rem; line-height: 1.6; margin-bottom: 16px;">
+                    This permanently removes your account, photos, statistics, and public profile. This action cannot be undone.
+                </p>
+                <label style="display: block; margin-bottom: 8px; color: #ccc; font-size: 0.9rem;">Enter your password to confirm</label>
+                <input type="password" id="deleteProfilePassword" autocomplete="current-password" placeholder="Your password" style="width: 100%; padding: 10px; background: #222; color: white; border: 1px solid #444; border-radius: 4px; box-sizing: border-box; margin-bottom: 12px;">
+                <label style="display: flex; align-items: flex-start; gap: 8px; color: #ccc; font-size: 0.85rem; margin-bottom: 16px; cursor: pointer;">
+                    <input type="checkbox" id="deleteProfileConfirm" style="margin-top: 3px;">
+                    <span>I understand my profile will be permanently deleted and I will lose access to this account.</span>
+                </label>
+                <div id="deleteProfileAlert" class="alert hidden" style="padding: 10px; border-radius: 4px; border: 1px solid transparent; margin-bottom: 12px;"></div>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button type="button" id="confirmDeleteProfileBtn" style="flex: 1; min-width: 140px; background: var(--accent-red); color: white; font-weight: bold;">Delete permanently</button>
+                    <button type="button" id="cancelDeleteProfileBtn" style="flex: 1; min-width: 140px; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold);">Cancel</button>
+                </div>
+            </div>
         </div>
     </div>
     <script src="/js/app.js?v=7.5" type="module"></script>

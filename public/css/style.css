@@ -160,10 +160,10 @@ input {
     font-style: italic;
 }
 
-/* Discovery Feed */
+/* Discovery Feed — 4 columns desktop, 2 on mobile */
 .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 15px;
     margin-top: 50px;
 }
@@ -292,6 +292,13 @@ input {
     }
 }
 
+@media (max-width: 768px) {
+    .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+}
+
 /* Responsive Design for smaller screens */
 @media (max-width: 480px) {
     .container {
@@ -303,8 +310,6 @@ input {
     }
 
     .grid {
-        /* Switch to a two column layout on small screens to prevent overflow */
-        grid-template-columns: repeat(2, 1fr);
         gap: 10px;
     }
 
@@ -688,6 +693,31 @@ input {
 
 .floating-controls-bar .floating-menu-btn.is-dim {
     color: rgba(212, 175, 55, 0.55);
+}
+
+/* Compact grid toggle (9-square icon) — 6 columns desktop */
+body.small-grid-mode #treasureGrid .grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    gap: 10px;
+}
+
+body.small-grid-mode #treasureGrid .treasure-card h3,
+body.small-grid-mode #treasureGrid .treasure-alias {
+    font-size: 0.85rem !important;
+}
+
+body.small-grid-mode #treasureGrid .treasure-img-container {
+    margin: -10px -10px 10px -10px !important;
+}
+
+body.small-grid-mode #treasureGrid .treasure-card {
+    padding: 10px !important;
+}
+
+@media (max-width: 768px) {
+    body.small-grid-mode #treasureGrid .grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
 }
 
 #floatingProgressWrapper {

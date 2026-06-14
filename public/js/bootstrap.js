@@ -3,10 +3,12 @@ import { t, applyStaticTranslations, currentLang } from './i18n.js';
 import { injectGlobalStyles, injectPlausible, initGlobalTopBar, initPrivacyShield } from './ui.js';
 import { attachPasswordToggles } from './uiHelpers.js';
 import { setupLocationDropdowns } from './helpers.js';
+import { pushReturnPoint, applyPendingScrollRestore } from './navReturn.js';
 import {
     loadTreasures,
     loadTreasureDetails,
     initializeFilters,
+    initTreasureGridControls,
     applyCountsToDropdowns
 } from './discovery.js';
 import { loadDashboard } from './admin.js';
@@ -17,18 +19,29 @@ function initRelativeLinkFixer() {
         const link = e.target.closest('a[href]');
         if (!link) return;
         const href = link.getAttribute('href');
-        if (!href || /^(https?:|\/|#|mailto:|javascript:)/i.test(href)) return;
-        if (!/\.html(?:[?#]|$)/i.test(href)) return;
+        if (!href || href.startsWith('#') || /^(mailto:|javascript:)/i.test(href)) return;
+        if (/^https?:\/\//i.test(href) && !href.includes(window.location.hostname)) return;
+
+        const isAppHtml = /\.html(?:[?#]|$)/i.test(href);
+        const isAppPath = href.startsWith('/') && !href.startsWith('//');
+        if (!isAppHtml && !isAppPath) return;
+
         e.preventDefault();
-        const hashIndex = href.indexOf('#');
-        const queryIndex = href.indexOf('?');
-        const pathEnd = Math.min(
-            queryIndex >= 0 ? queryIndex : href.length,
-            hashIndex >= 0 ? hashIndex : href.length
-        );
-        const path = href.slice(0, pathEnd);
-        const suffix = href.slice(pathEnd);
-        window.location.href = appPath(path) + suffix;
+        pushReturnPoint();
+
+        if (isAppHtml && !href.startsWith('/')) {
+            const hashIndex = href.indexOf('#');
+            const queryIndex = href.indexOf('?');
+            const pathEnd = Math.min(
+                queryIndex >= 0 ? queryIndex : href.length,
+                hashIndex >= 0 ? hashIndex : href.length
+            );
+            const path = href.slice(0, pathEnd);
+            const suffix = href.slice(pathEnd);
+            window.location.href = appPath(path) + suffix;
+        } else {
+            window.location.href = href;
+        }
     }, true);
 }
 
@@ -162,6 +175,7 @@ export function initBootstrap() {
         injectGlobalStyles();
         injectPlausible();
         applyStaticTranslations();
+        applyPendingScrollRestore();
         document.documentElement.lang = currentLang === 'es' ? 'es' : 'en';
 
         if (document.getElementById('landing')) {
@@ -196,6 +210,8 @@ export function initBootstrap() {
             }
 
             setTimeout(applyCountsToDropdowns, 500);
+        } else if (document.getElementById('treasureGrid')) {
+            initTreasureGridControls();
         }
         if (document.getElementById('treasureGrid')) loadTreasures();
         if (document.getElementById('dashboardContent')) loadDashboard();
@@ -204,6 +220,7 @@ export function initBootstrap() {
     });
 
     window.addEventListener('pageshow', (event) => {
+        if (document.getElementById('landing')) return;
         if (!event.persisted) return;
         document.documentElement.classList.add('page-pending');
         if (document.getElementById('dashboardContent')) loadDashboard();

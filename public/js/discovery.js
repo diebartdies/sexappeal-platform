@@ -1,11 +1,126 @@
 import { BASE_ORIGIN, API_URL, CATEGORY_META, resolvePhotoSrc, appPath, isReservedAppPage } from './globals.js';
 import { t, applyStaticTranslations, formatWorkingDays } from './i18n.js';
 import { getPendingApprovalBannerHtml } from './uiHelpers.js';
+import { navigateBack } from './ui.js';
+import { navigateWithReturn } from './navReturn.js';
+import { appPath } from './globals.js';
 import { renderSpecialtyDropdown } from './helpers.js';
 import { beginPageLoad, finishPageLoad, failPageLoad } from './dashboardShell.js';
+import {
+    buildCategoryQueue,
+    resetLazyCategoryLoader,
+    startLazyCategoryLoader
+} from './lazyCategoryLoader.js';
+
+const TREASURE_CATEGORY_ORDER = ['Elite', 'Premium', 'Gold', 'Silver', 'Standard'];
+
+function renderTreasureCategorySection(grid, cat, items, eagerImages = false) {
+    let catSection = document.getElementById(`cat-section-${cat}`);
+    let innerGrid;
+
+    if (!catSection) {
+        const meta = CATEGORY_META[cat];
+        catSection = document.createElement('div');
+        catSection.id = `cat-section-${cat}`;
+        catSection.className = 'fileteado-section';
+        catSection.style.marginBottom = '30px';
+        catSection.style.border = '14px solid transparent';
+        catSection.style.borderImage = 'url("data:image/svg+xml;utf8,<svg width=\'40\' height=\'40\' viewBox=\'0 0 40 40\' xmlns=\'http://www.w3.org/2000/svg\'><rect x=\'1\' y=\'1\' width=\'38\' height=\'38\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1\'/><path d=\'M1 12 Q 12 12 12 1\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M28 1 Q 28 12 39 12\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M39 28 Q 28 28 28 39\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M12 39 Q 12 28 1 28\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M4 6 Q 6 4 8 6 Q 6 8 4 6\' fill=\'%232e7d32\'/><path d=\'M36 6 Q 34 4 32 6 Q 34 8 36 6\' fill=\'%232e7d32\'/><path d=\'M36 34 Q 34 36 32 34 Q 34 32 36 34\' fill=\'%232e7d32\'/><path d=\'M4 34 Q 6 36 8 34 Q 6 32 4 34\' fill=\'%232e7d32\'/><circle cx=\'6\' cy=\'6\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'34\' cy=\'6\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'34\' cy=\'34\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'6\' cy=\'34\' r=\'1.5\' fill=\'%23b81d1d\'/></svg>") 12 stretch';
+        catSection.style.padding = '15px';
+        catSection.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 1px solid rgba(212, 175, 55, 0.3); padding-bottom: 10px;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="color: var(--primary-gold); width: 40px; text-align: center;">${meta.logo}</div>
+                    <div>
+                        <h3 class="gold-text" style="margin: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            ${t(meta.name)} <span style="font-size: 0.8rem; color: #aaa; font-weight: normal; font-family: sans-serif;">${t(meta.desc)}</span>
+                        </h3>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        innerGrid = document.createElement('div');
+        innerGrid.id = `cat-grid-${cat}`;
+        innerGrid.className = 'grid';
+        innerGrid.style.marginTop = '10px';
+
+        catSection.appendChild(innerGrid);
+        grid.appendChild(catSection);
+    } else {
+        innerGrid = document.getElementById(`cat-grid-${cat}`);
+    }
+
+    items.forEach(treasure => {
+        const card = document.createElement('div');
+        const prof = treasure.professionalProfile || {};
+        const validPhotos = (prof.photos || []).filter(p => p && p.trim() !== '');
+        const photoUrl = validPhotos.length > 0 ? resolvePhotoSrc(validPhotos[0]) : 'https://via.placeholder.com/300x400?text=No+Photo';
+
+        card.className = 'card treasure-card';
+        card.style.position = 'relative';
+
+        const imgContainer = document.createElement('div');
+        imgContainer.className = 'treasure-img-container';
+        imgContainer.style.cursor = 'pointer';
+        const img = document.createElement('img');
+        img.className = 'treasure-img';
+        img.src = photoUrl;
+        img.alt = prof.alias || 'Unknown';
+        if (!eagerImages) img.loading = 'lazy';
+        img.onerror = () => {
+            img.onerror = null;
+            img.src = 'https://via.placeholder.com/300x400?text=No+Photo';
+        };
+        imgContainer.appendChild(img);
+
+        const aliasEl = document.createElement('h3');
+        aliasEl.className = 'treasure-alias gold-text';
+        aliasEl.style.cursor = 'pointer';
+        aliasEl.style.marginBottom = '0';
+        aliasEl.style.fontSize = '0.95rem';
+        aliasEl.textContent = prof.alias || 'Unknown';
+
+        card.appendChild(imgContainer);
+        card.appendChild(aliasEl);
+        imgContainer.addEventListener('click', () => trackDashboardPhotoClick(prof.alias));
+        aliasEl.addEventListener('click', () => trackDashboardPhotoClick(prof.alias));
+        innerGrid.appendChild(card);
+    });
+}
 
 // Load Treasures
 let currentDiscoveryPage = 1;
+let discoveryTotalLoaded = 0;
+
+function updateFloatingProgress(data, append) {
+    const progressWrapper = document.getElementById('floatingProgressWrapper');
+    const progressBar = document.getElementById('floatingProgressBar');
+    const progressText = document.getElementById('floatingProgressText');
+    if (!progressWrapper || !progressBar || !progressText || !data.pagination) return;
+
+    const total = data.pagination.total;
+    if (total <= 0) {
+        progressWrapper.style.display = 'none';
+        return;
+    }
+
+    if (!append) discoveryTotalLoaded = 0;
+    discoveryTotalLoaded += data.data?.length || 0;
+
+    const loaded = Math.min(discoveryTotalLoaded, total);
+    const percentage = Math.min(100, Math.round((loaded / total) * 100));
+    const allLoaded = data.pagination.hasMore === false || loaded >= total;
+
+    if (allLoaded) {
+        progressWrapper.style.display = 'none';
+        return;
+    }
+
+    progressWrapper.style.display = 'flex';
+    progressBar.style.width = `${percentage}%`;
+    progressText.textContent = `${percentage}%`;
+}
 
 export async function loadTreasures(page = 1, append = false) {
     const grid = document.getElementById('treasureGrid');
@@ -13,6 +128,7 @@ export async function loadTreasures(page = 1, append = false) {
 
     if (!append) {
         currentDiscoveryPage = 1;
+        resetLazyCategoryLoader();
         beginPageLoad('treasureGrid', 'pageLoader', { clearContent: true });
     }
     
@@ -39,10 +155,9 @@ export async function loadTreasures(page = 1, append = false) {
     const city = urlParams.get('city');
     const neighborhood = urlParams.get('neighborhood');
 
-    let url;
-    const limit = 100; // Increased to load more profiles automatically
+    const limit = 0; // 0 = no cap — load all matching professionals
 
-    url = new URL(`${API_URL}/professionals`);
+    let url = new URL(`${API_URL}/professionals`);
     if (specialty && specialty.trim()) url.searchParams.set('specialty', specialty);
     if (quality && quality.trim()) url.searchParams.set('quality', quality);
     if (province && province.trim()) url.searchParams.set('province', province);
@@ -50,7 +165,7 @@ export async function loadTreasures(page = 1, append = false) {
     if (neighborhood && neighborhood.trim()) url.searchParams.set('neighborhood', neighborhood);
 
     url.searchParams.set('page', page);
-    url.searchParams.set('limit', limit);
+    url.searchParams.set('limit', String(limit));
 
     // Add a cache-busting parameter to ensure fresh data is always fetched
     url.searchParams.set('_', new Date().getTime());
@@ -62,166 +177,58 @@ export async function loadTreasures(page = 1, append = false) {
         }
         
         let data = await res.json();
+        let allTreasures = [...(data.data || [])];
 
-        // Update Progress Bar in the Floating Menu
-        const progressWrapper = document.getElementById('floatingProgressWrapper');
-        const progressBar = document.getElementById('floatingProgressBar');
-        const progressText = document.getElementById('floatingProgressText');
-        
-        if (progressWrapper && progressBar && progressText && data.pagination) {
-            const total = data.pagination.total;
-            if (total > 0) {
-                const loaded = Math.min(data.pagination.page * data.pagination.limit, total);
-                const percentage = Math.round((loaded / total) * 100);
-                const allLoaded = data.pagination.hasMore === false || loaded >= total || percentage >= 100;
-                if (allLoaded) {
-                    progressWrapper.style.display = 'none';
-                } else {
-                    progressWrapper.style.display = 'flex';
-                    progressBar.style.width = `${percentage}%`;
-                    progressText.textContent = `${percentage}%`;
-                }
-            } else {
-                progressWrapper.style.display = 'none';
-            }
+        updateFloatingProgress(data, append);
+
+        while (data.pagination?.hasMore) {
+            currentDiscoveryPage++;
+            url.searchParams.set('page', String(currentDiscoveryPage));
+            url.searchParams.set('_', String(Date.now()));
+            const nextRes = await fetch(url);
+            if (!nextRes.ok) break;
+            const nextData = await nextRes.json();
+            updateFloatingProgress(nextData, true);
+            if (!nextData.success) break;
+            allTreasures.push(...(nextData.data || []));
+            data = nextData;
         }
 
-        if (data.success && data.data.length > 0) {
+        if (data.success && allTreasures.length > 0) {
             if (!append) {
                 grid.innerHTML = '';
             }
-            
-            // Remove the main 'grid' class to allow stacking of our categorized sections
+
             grid.classList.remove('grid');
 
-            // Group data by quality (Insertion order here guarantees display order)
-            const categories = { 'Elite': [], 'Premium': [], 'Gold': [], 'Silver': [], 'Standard': [] };
-            
-            data.data.forEach(treasure => {
+            const categories = { Elite: [], Premium: [], Gold: [], Silver: [], Standard: [] };
+            allTreasures.forEach(treasure => {
                 const q = treasure.professionalProfile?.quality || 'Standard';
-                if (categories[q]) {
-                    categories[q].push(treasure);
-                } else {
-                    categories['Standard'].push(treasure);
-                }
+                if (categories[q]) categories[q].push(treasure);
+                else categories.Standard.push(treasure);
             });
-            
-            let loggedInProfId = null;
-            try {
-                const uStr = localStorage.getItem('user');
-                if (uStr) {
-                    const u = JSON.parse(uStr);
-                    if (u.role === 'professional') loggedInProfId = u._id;
+
+            const queue = buildCategoryQueue(categories, TREASURE_CATEGORY_ORDER);
+            let pageLoadFinished = append;
+
+            startLazyCategoryLoader(
+                grid,
+                queue,
+                (entry, ctx) => {
+                    renderTreasureCategorySection(grid, entry.cat, entry.items, ctx.eagerImages);
+                    applyStaticTranslations(grid);
+                },
+                {
+                    onInitialBatchComplete: () => {
+                        if (!pageLoadFinished) {
+                            pageLoadFinished = true;
+                            finishPageLoad('treasureGrid', 'pageLoader');
+                        }
+                    },
+                    onAllComplete: () => applyStaticTranslations(grid)
                 }
-            } catch(e) {}
-
-            let isFirstCategoryRendered = !append;
-
-            for (const [cat, items] of Object.entries(categories)) {
-                if (items.length === 0) continue;
-
-                // Fisher-Yates shuffle for true randomization on page load per quality tier
-                for (let i = items.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [items[i], items[j]] = [items[j], items[i]];
-                }
-
-                let catSection = document.getElementById(`cat-section-${cat}`);
-                let innerGrid;
-
-                if (!catSection) {
-                    const meta = CATEGORY_META[cat];
-                    catSection = document.createElement('div');
-                    catSection.id = `cat-section-${cat}`;
-                    catSection.className = 'fileteado-section';
-                    catSection.style.marginBottom = '30px';
-                    catSection.style.border = '14px solid transparent';
-                    catSection.style.borderImage = 'url("data:image/svg+xml;utf8,<svg width=\'40\' height=\'40\' viewBox=\'0 0 40 40\' xmlns=\'http://www.w3.org/2000/svg\'><rect x=\'1\' y=\'1\' width=\'38\' height=\'38\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1\'/><path d=\'M1 12 Q 12 12 12 1\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M28 1 Q 28 12 39 12\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M39 28 Q 28 28 28 39\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M12 39 Q 12 28 1 28\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M4 6 Q 6 4 8 6 Q 6 8 4 6\' fill=\'%232e7d32\'/><path d=\'M36 6 Q 34 4 32 6 Q 34 8 36 6\' fill=\'%232e7d32\'/><path d=\'M36 34 Q 34 36 32 34 Q 34 32 36 34\' fill=\'%232e7d32\'/><path d=\'M4 34 Q 6 36 8 34 Q 6 32 4 34\' fill=\'%232e7d32\'/><circle cx=\'6\' cy=\'6\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'34\' cy=\'6\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'34\' cy=\'34\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'6\' cy=\'34\' r=\'1.5\' fill=\'%23b81d1d\'/></svg>") 12 stretch';
-                    catSection.style.padding = '15px';
-                    catSection.innerHTML = `
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 1px solid rgba(212, 175, 55, 0.3); padding-bottom: 10px;">
-                            <div style="display: flex; align-items: center; gap: 15px;">
-                                <div style="color: var(--primary-gold); width: 40px; text-align: center;">${meta.logo}</div>
-                                <div>
-                                    <h3 class="gold-text" style="margin: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
-                                        ${t(meta.name)} <span style="font-size: 0.8rem; color: #aaa; font-weight: normal; font-family: sans-serif;">${t(meta.desc)}</span>
-                                    </h3>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    
-                    innerGrid = document.createElement('div');
-                    innerGrid.id = `cat-grid-${cat}`;
-                    innerGrid.className = 'grid'; // Re-apply grid styling to the inner container
-                    innerGrid.style.marginTop = '10px';
-                    
-                    catSection.appendChild(innerGrid);
-                    grid.appendChild(catSection);
-                } else {
-                    innerGrid = document.getElementById(`cat-grid-${cat}`);
-                }
-
-                items.forEach(treasure => {
-                    const card = document.createElement('div');
-                    const prof = treasure.professionalProfile || {};
-                    const quality = prof.quality || 'Standard';
-                    
-                    // Ensure we grab a valid photo URL, ignoring empty strings
-                    const validPhotos = (prof.photos || []).filter(p => p && p.trim() !== '');
-                    const photoUrl = validPhotos.length > 0 ? resolvePhotoSrc(validPhotos[0]) : 'https://via.placeholder.com/300x400?text=No+Photo';
-
-                    card.className = 'card treasure-card';
-                    card.style.position = 'relative';
-
-                    const imgContainer = document.createElement('div');
-                    imgContainer.className = 'treasure-img-container';
-                    imgContainer.style.cursor = 'pointer';
-                    const img = document.createElement('img');
-                    img.className = 'treasure-img';
-                    img.src = photoUrl;
-                    img.alt = prof.alias || 'Unknown';
-                    if (!isFirstCategoryRendered) img.loading = 'lazy';
-                    img.onerror = () => {
-                        img.onerror = null;
-                        img.src = 'https://via.placeholder.com/300x400?text=No+Photo';
-                    };
-                    imgContainer.appendChild(img);
-
-                    const aliasEl = document.createElement('h3');
-                    aliasEl.className = 'treasure-alias gold-text';
-                    aliasEl.style.cursor = 'pointer';
-                    aliasEl.style.marginBottom = '0';
-                    aliasEl.style.fontSize = '0.95rem';
-                    aliasEl.textContent = prof.alias || 'Unknown';
-
-                    card.appendChild(imgContainer);
-                    card.appendChild(aliasEl);
-                    imgContainer.addEventListener('click', () => trackDashboardPhotoClick(prof.alias));
-                    aliasEl.addEventListener('click', () => trackDashboardPhotoClick(prof.alias));
-                    innerGrid.appendChild(card);
-                });
-
-                isFirstCategoryRendered = false;
-            }
-            
-            // Infinite Scroll: Automatically fetch next page when user scrolls near the bottom
-            if (data.data.length === limit) {
-                const scrollTrigger = document.createElement('div');
-                scrollTrigger.style.height = '10px';
-                grid.appendChild(scrollTrigger);
-
-                const observer = new IntersectionObserver((entries) => {
-                    if (entries[0].isIntersecting) {
-                        observer.disconnect();
-                        scrollTrigger.remove();
-                        currentDiscoveryPage++;
-                        loadTreasures(currentDiscoveryPage, true);
-                    }
-                }, { rootMargin: '300px' }); // Triggers load 300px before reaching the actual bottom
-                
-                observer.observe(scrollTrigger);
-            }
+            );
+            return;
         } else {
             if (!append) {
                 // Ensure grid class is restored if no treasures are found so the fallback card centers correctly
@@ -248,6 +255,7 @@ export async function loadTreasures(page = 1, append = false) {
         applyStaticTranslations(grid);
         if (!append) finishPageLoad('treasureGrid', 'pageLoader');
     } catch (err) {
+        resetLazyCategoryLoader();
         console.error('Vault connection error:', err);
         grid.classList.add('grid');
         failPageLoad(
@@ -316,7 +324,7 @@ export async function loadTreasureDetails() {
             const pendingApprovalBannerHtml = ownerPendingApproval ? getPendingApprovalBannerHtml() : '';
 
             const editBtnHtml = isOwner ? `
-                <button onclick="window.location.href='/profDashboard.html'" title="${t('Edit Profile')}" style="position: absolute; top: 15px; right: 105px; font-size: 1.8rem; background: transparent; color: var(--primary-gold); border: none; cursor: pointer; transition: transform 0.3s ease; z-index: 10; text-shadow: 0 0 8px rgba(212, 175, 55, 0.6);" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
+                <button type="button" id="ownerEditProfileBtn" title="${t('Edit Profile')}" style="position: absolute; top: 15px; right: 105px; font-size: 1.8rem; background: transparent; color: var(--primary-gold); border: none; cursor: pointer; transition: transform 0.3s ease; z-index: 10; text-shadow: 0 0 8px rgba(212, 175, 55, 0.6);" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
                     ✏️
                 </button>
             ` : '';
@@ -329,11 +337,15 @@ export async function loadTreasureDetails() {
 
             // Store photos for gallery navigation
             const galleryPhotos = prof.photos || [];
+            const safeBio = String(prof.bio || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
 
             content.innerHTML = `
                 <div class="card" style="position: relative;">
                     ${editBtnHtml}
-                    <button onclick="window.history.back()" onmouseover="this.style.background='rgba(212, 175, 55, 0.1)'" onmouseout="this.style.background='transparent'" style="position: absolute; top: 20px; right: 20px; padding: 6px 12px; font-size: 0.85rem; background: transparent; color: var(--primary-gold); border: 1px solid var(--primary-gold); border-radius: 4px; cursor: pointer; transition: background 0.3s ease; z-index: 10;">&#8592; ${t('Back')}</button>
+                    <button type="button" id="treasureBackBtn" onmouseover="this.style.background='rgba(212, 175, 55, 0.1)'" onmouseout="this.style.background='transparent'" style="position: absolute; top: 20px; right: 20px; padding: 6px 12px; font-size: 0.85rem; background: transparent; color: var(--primary-gold); border: 1px solid var(--primary-gold); border-radius: 4px; cursor: pointer; transition: background 0.3s ease; z-index: 10;">&#8592; ${t('Back')}</button>
                     <h2 class="gold-text" style="text-align: center; margin-bottom: 20px; padding: 0 80px;">${prof.alias || 'Unknown'}</h2>
                     ${pendingApprovalBannerHtml}
 
@@ -344,7 +356,7 @@ export async function loadTreasureDetails() {
                     </div>
 
                     ${photoReminderHtml}
-                    
+
                     <div style="text-align: center; margin-bottom: 10px; font-size: 0.85rem; color: var(--primary-gold); opacity: 0.8;">
                         <em>${t('Desktop: Click & Drag to scroll | Mobile: Swipe left/right')}</em>
                     </div>
@@ -354,14 +366,17 @@ export async function loadTreasureDetails() {
                         <!-- Photos will be injected here -->
                     </div>
 
-                    <p style="white-space: pre-wrap; margin-bottom: 20px;">${prof.bio}</p>
-
-                    <div class="tag-list" style="justify-content: flex-start; margin-top: 10px;">
+                    <div class="tag-list" style="justify-content: flex-start; margin-top: 10px; margin-bottom: 20px;">
                         <strong>Specialties:</strong> 
                         ${(prof.services || []).map(s => `<span class="tag">${s}</span>`).join('')}
                     </div>
 
-                    <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                    <div id="treasureBioSection" style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <h3 class="gold-text" style="margin: 0 0 12px; font-size: 1.1rem;">${t('Service Description')}</h3>
+                        <p style="white-space: pre-wrap; color: #ccc; line-height: 1.65; margin: 0;">${safeBio || t('No service description available.')}</p>
+                    </div>
+
+                    <div style="margin-top: 0;">
                         <p><strong>Location:</strong> ${(() => {
                             if (!prof.location) return 'N/A';
                             const p = prof.location.province || '';
@@ -405,7 +420,7 @@ export async function loadTreasureDetails() {
                     document.head.appendChild(style);
                 }
 
-                galleryPhotos.forEach((url, index) => {
+                galleryPhotos.forEach((url) => {
                     const item = document.createElement('div');
                     item.className = 'photo-item-public';
                     Object.assign(item.style, {
@@ -419,7 +434,7 @@ export async function loadTreasureDetails() {
                         boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
                         position: 'relative'
                     });
-                    
+
                     const img = document.createElement('img');
                     img.src = resolvePhotoSrc(url);
                     img.alt = `${prof.alias}'s photo`;
@@ -429,7 +444,7 @@ export async function loadTreasureDetails() {
                         objectFit: 'cover',
                         transition: 'transform 0.3s ease'
                     });
-                    
+
                     item.addEventListener('mouseenter', () => img.style.transform = 'scale(1.05)');
                     item.addEventListener('mouseleave', () => img.style.transform = 'scale(1)');
 
@@ -490,6 +505,13 @@ export async function loadTreasureDetails() {
                 photoGrid.innerHTML = '<p>No photos available.</p>';
             }
 
+            document.getElementById('treasureBackBtn')?.addEventListener('click', () => {
+                navigateBack(() => { window.location.href = appPath('categories.html'); });
+            });
+            document.getElementById('ownerEditProfileBtn')?.addEventListener('click', () => {
+                navigateWithReturn(appPath('profDashboard.html'));
+            });
+
             finishPageLoad('treasureContent', 'loader');
             applyStaticTranslations(content);
         } else {
@@ -502,6 +524,134 @@ export async function loadTreasureDetails() {
 }
 
 // Combined Filter Logic
+
+/** Floating bar: grid density toggles (+ optional filter button). All treasure grid pages. */
+export function initTreasureGridControls(onOpenFilters = null) {
+    const grid = document.getElementById('treasureGrid');
+    if (!grid || document.getElementById('floatingControlsBar')) return;
+
+    const GOLD = 'var(--primary-gold)';
+
+    const controlsBar = document.createElement('div');
+    controlsBar.id = 'floatingControlsBar';
+    controlsBar.className = 'floating-controls-bar';
+    Object.assign(controlsBar.style, {
+        position: 'fixed', left: '50%', transform: 'translateX(-50%)', zIndex: '9999',
+        display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0',
+        padding: '5px', backgroundColor: 'transparent',
+        borderRadius: '30px', border: 'none', backdropFilter: 'none',
+        WebkitBackdropFilter: 'none', boxShadow: 'none',
+        width: 'fit-content', transition: 'top 0.15s ease-out'
+    });
+
+    const updateFloatingMenuPosition = () => {
+        const bar = document.getElementById('floatingControlsBar');
+        if (!bar) return;
+        const barHeight = bar.offsetHeight || 44;
+        const scrollRange = Math.max(180, Math.min(window.innerHeight * 0.6, 520));
+        const scrollProgress = Math.min(1, window.scrollY / scrollRange);
+        const bottomOffset = 30;
+        const bottomTop = window.innerHeight - bottomOffset - barHeight;
+        const centerTop = (window.innerHeight - barHeight) / 2;
+        const top = bottomTop - scrollProgress * (bottomTop - centerTop);
+        bar.style.top = `${top}px`;
+        bar.style.bottom = 'auto';
+        bar.style.left = '50%';
+        bar.style.transform = 'translateX(-50%)';
+    };
+
+    if (!window.__sexappealFloatingMenuScrollBound) {
+        window.__sexappealFloatingMenuScrollBound = true;
+        window.addEventListener('scroll', updateFloatingMenuPosition, { passive: true });
+        window.addEventListener('resize', updateFloatingMenuPosition, { passive: true });
+    }
+
+    if (typeof onOpenFilters === 'function') {
+        const openFilterBtn = document.createElement('button');
+        openFilterBtn.className = 'floating-menu-btn';
+        openFilterBtn.type = 'button';
+        openFilterBtn.title = t('Filters');
+        openFilterBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>`;
+        openFilterBtn.onclick = onOpenFilters;
+        controlsBar.appendChild(openFilterBtn);
+    }
+
+    const gridToggles = document.createElement('div');
+    gridToggles.style.display = 'flex';
+    gridToggles.style.gap = '0';
+
+    const btnGridLarge = document.createElement('button');
+    btnGridLarge.type = 'button';
+    btnGridLarge.className = 'floating-menu-btn';
+    btnGridLarge.title = '4 columns';
+    btnGridLarge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>';
+
+    const btnGridSmall = document.createElement('button');
+    btnGridSmall.type = 'button';
+    btnGridSmall.className = 'floating-menu-btn';
+    btnGridSmall.title = '6 columns';
+    btnGridSmall.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="4" height="4"></rect><rect x="10" y="3" width="4" height="4"></rect><rect x="17" y="3" width="4" height="4"></rect><rect x="3" y="10" width="4" height="4"></rect><rect x="10" y="10" width="4" height="4"></rect><rect x="17" y="10" width="4" height="4"></rect><rect x="3" y="17" width="4" height="4"></rect><rect x="10" y="17" width="4" height="4"></rect><rect x="17" y="17" width="4" height="4"></rect></svg>';
+
+    const updateGridButtons = (isSmall) => {
+        btnGridSmall.classList.toggle('is-active', isSmall);
+        btnGridSmall.classList.toggle('is-dim', !isSmall);
+        btnGridLarge.classList.toggle('is-active', !isSmall);
+        btnGridLarge.classList.toggle('is-dim', isSmall);
+    };
+
+    const setSmallGridMode = (isSmall) => {
+        document.body.classList.toggle('small-grid-mode', isSmall);
+        localStorage.setItem('smallGridMode', isSmall ? 'true' : 'false');
+        updateGridButtons(isSmall);
+    };
+
+    updateGridButtons(localStorage.getItem('smallGridMode') === 'true');
+    if (localStorage.getItem('smallGridMode') === 'true') {
+        document.body.classList.add('small-grid-mode');
+    }
+
+    btnGridLarge.onclick = () => setSmallGridMode(false);
+    btnGridSmall.onclick = () => setSmallGridMode(true);
+
+    gridToggles.appendChild(btnGridLarge);
+    gridToggles.appendChild(btnGridSmall);
+    controlsBar.appendChild(gridToggles);
+
+    const progressWrapper = document.createElement('div');
+    progressWrapper.id = 'floatingProgressWrapper';
+    Object.assign(progressWrapper.style, {
+        display: 'none', alignItems: 'center', gap: '5px', padding: '0 10px',
+        borderLeft: onOpenFilters ? '1px solid rgba(212, 175, 55, 0.35)' : 'none'
+    });
+
+    const progressBg = document.createElement('div');
+    Object.assign(progressBg.style, {
+        width: '60px', height: '6px', background: 'rgba(212, 175, 55, 0.2)',
+        borderRadius: '3px', overflow: 'hidden'
+    });
+
+    const progressBar = document.createElement('div');
+    progressBar.id = 'floatingProgressBar';
+    Object.assign(progressBar.style, {
+        width: '0%', height: '100%', background: GOLD,
+        transition: 'width 0.3s ease'
+    });
+
+    const progressText = document.createElement('span');
+    progressText.id = 'floatingProgressText';
+    Object.assign(progressText.style, {
+        fontSize: '0.75rem', color: GOLD, fontWeight: 'bold'
+    });
+
+    progressBg.appendChild(progressBar);
+    progressWrapper.appendChild(progressBg);
+    progressWrapper.appendChild(progressText);
+    controlsBar.appendChild(progressWrapper);
+
+    grid.parentNode.insertBefore(controlsBar, grid);
+    requestAnimationFrame(updateFloatingMenuPosition);
+}
+
 export async function initializeFilters() {
     const filterForm = document.getElementById('filterForm');
     const qualitySelect = document.getElementById('qualitySelect'); // Formerly tierSelect
@@ -582,124 +732,7 @@ export async function initializeFilters() {
             if (touchStartX - e.changedTouches[0].screenX > 50) closeDrawer();
         }, { passive: true });
 
-        const GOLD = 'var(--primary-gold)';
-
-        const controlsBar = document.createElement('div');
-        controlsBar.id = 'floatingControlsBar';
-        controlsBar.className = 'floating-controls-bar';
-        Object.assign(controlsBar.style, {
-            position: 'fixed', left: '50%', transform: 'translateX(-50%)', zIndex: '9999',
-            display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0',
-            padding: '5px', backgroundColor: 'transparent',
-            borderRadius: '30px', border: 'none', backdropFilter: 'none',
-            WebkitBackdropFilter: 'none', boxShadow: 'none',
-            width: 'fit-content', transition: 'top 0.15s ease-out'
-        });
-
-        const updateFloatingMenuPosition = () => {
-            const bar = document.getElementById('floatingControlsBar');
-            if (!bar) return;
-            const barHeight = bar.offsetHeight || 44;
-            const scrollRange = Math.max(180, Math.min(window.innerHeight * 0.6, 520));
-            const scrollProgress = Math.min(1, window.scrollY / scrollRange);
-            const bottomOffset = 30;
-            const bottomTop = window.innerHeight - bottomOffset - barHeight;
-            const centerTop = (window.innerHeight - barHeight) / 2;
-            const top = bottomTop - scrollProgress * (bottomTop - centerTop);
-            bar.style.top = `${top}px`;
-            bar.style.bottom = 'auto';
-            bar.style.left = '50%';
-            bar.style.transform = 'translateX(-50%)';
-        };
-
-        window.addEventListener('scroll', updateFloatingMenuPosition, { passive: true });
-        window.addEventListener('resize', updateFloatingMenuPosition, { passive: true });
-
-        const openFilterBtn = document.createElement('button');
-        openFilterBtn.className = 'floating-menu-btn is-active';
-        openFilterBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>`;
-        openFilterBtn.onclick = openDrawer;
-
-        const gridToggles = document.createElement('div');
-        gridToggles.style.display = 'flex';
-        gridToggles.style.gap = '0';
-
-        if (!document.getElementById('gridLayoutStyles')) {
-            const gridStyle = document.createElement('style');
-            gridStyle.id = 'gridLayoutStyles';
-            gridStyle.textContent = `
-                .small-grid-mode .grid,
-                .small-grid-mode#treasureGrid.grid,
-                .small-grid-mode .grid > div > .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important; gap: 10px; }
-                .small-grid-mode .treasure-card h3 { font-size: 0.85rem !important; }
-                .small-grid-mode .treasure-img-container { margin: -10px -10px 10px -10px !important; }
-                .small-grid-mode .treasure-card { padding: 10px !important; }
-            `;
-            document.head.appendChild(gridStyle);
-        }
-
-        const btnGridLarge = document.createElement('button');
-        btnGridLarge.className = 'floating-menu-btn';
-        btnGridLarge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>';
-        
-        const btnGridSmall = document.createElement('button');
-        btnGridSmall.className = 'floating-menu-btn';
-        btnGridSmall.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="4" height="4"></rect><rect x="10" y="3" width="4" height="4"></rect><rect x="17" y="3" width="4" height="4"></rect><rect x="3" y="10" width="4" height="4"></rect><rect x="10" y="10" width="4" height="4"></rect><rect x="17" y="10" width="4" height="4"></rect><rect x="3" y="17" width="4" height="4"></rect><rect x="10" y="17" width="4" height="4"></rect><rect x="17" y="17" width="4" height="4"></rect></svg>';
-        
-        const updateGridButtons = (isSmall) => {
-            btnGridSmall.classList.toggle('is-active', isSmall);
-            btnGridSmall.classList.toggle('is-dim', !isSmall);
-            btnGridLarge.classList.toggle('is-active', !isSmall);
-            btnGridLarge.classList.toggle('is-dim', isSmall);
-        };
-        
-        const isSmallGrid = localStorage.getItem('smallGridMode') === 'true';
-        if (isSmallGrid) {
-            document.body.classList.add('small-grid-mode');
-        }
-        updateGridButtons(isSmallGrid);
-
-        btnGridLarge.onclick = () => { document.body.classList.remove('small-grid-mode'); localStorage.setItem('smallGridMode', 'false'); updateGridButtons(false); };
-        btnGridSmall.onclick = () => { document.body.classList.add('small-grid-mode'); localStorage.setItem('smallGridMode', 'true'); updateGridButtons(true); };
-
-        gridToggles.appendChild(btnGridLarge);
-        gridToggles.appendChild(btnGridSmall);
-        
-        const progressWrapper = document.createElement('div');
-        progressWrapper.id = 'floatingProgressWrapper';
-        Object.assign(progressWrapper.style, {
-            display: 'none', alignItems: 'center', gap: '5px', padding: '0 10px', borderLeft: '1px solid rgba(212, 175, 55, 0.35)'
-        });
-        
-        const progressBg = document.createElement('div');
-        Object.assign(progressBg.style, {
-            width: '60px', height: '6px', background: 'rgba(212, 175, 55, 0.2)',
-            borderRadius: '3px', overflow: 'hidden'
-        });
-        
-        const progressBar = document.createElement('div');
-        progressBar.id = 'floatingProgressBar';
-        Object.assign(progressBar.style, {
-            width: '0%', height: '100%', background: GOLD,
-            transition: 'width 0.3s ease'
-        });
-        
-        const progressText = document.createElement('span');
-        progressText.id = 'floatingProgressText';
-        Object.assign(progressText.style, {
-            fontSize: '0.75rem', color: GOLD, fontWeight: 'bold'
-        });
-        
-        progressBg.appendChild(progressBar);
-        progressWrapper.appendChild(progressBg);
-        progressWrapper.appendChild(progressText);
-
-        controlsBar.appendChild(openFilterBtn);
-        controlsBar.appendChild(gridToggles);
-        controlsBar.appendChild(progressWrapper);
-
-        grid.parentNode.insertBefore(controlsBar, grid);
-        requestAnimationFrame(updateFloatingMenuPosition);
+        initTreasureGridControls(openDrawer);
 
         // Form layout (Vertical)
         filterForm.style.display = 'flex';
@@ -868,7 +901,7 @@ export async function applyCountsToDropdowns() {
     if (!allProfsCache) {
         if (!profsFetchPromise) {
             const url = new URL(`${API_URL}/professionals`);
-            url.searchParams.set('limit', 5000);
+            url.searchParams.set('limit', '0');
             url.searchParams.set('minimal', 'true'); // Prevent fetching photos for count sweeps
             url.searchParams.set('_', new Date().getTime()); // Prevent browser from caching old seed data
             profsFetchPromise = fetch(url).then(res => res.json()).catch(e => {
@@ -1018,7 +1051,7 @@ export function trackDashboardPhotoClick(alias) {
         method: 'POST',
         keepalive: true
     }).catch(() => {});
-    window.location.href = '/perfil/' + encodeURIComponent(alias);
+    navigateWithReturn('/perfil/' + encodeURIComponent(alias));
 }
 
 // Contact on WhatsApp

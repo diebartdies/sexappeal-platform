@@ -142,32 +142,14 @@ html.page-pending #pageLoader {
     max-width: 100%;
 }
 
-@media (max-width: 1200px) {
-    #adminGridContent .admin-prof-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 992px) {
+@media (max-width: 768px) {
     #adminGridContent .admin-prof-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 600px) {
-    #adminGridContent .admin-prof-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 8px;
+        gap: 10px;
     }
 
     #adminGridContent .admin-prof-category {
         padding: 16px 18px !important;
-    }
-}
-
-@media (max-width: 400px) {
-    #adminGridContent .admin-prof-grid {
-        grid-template-columns: 1fr;
     }
 }
 
@@ -293,7 +275,7 @@ body.has-global-topbar {
 
 @media (max-width: 768px) {
     .grid {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 12px;
         margin-top: 24px;
     }
@@ -357,7 +339,6 @@ body.has-global-topbar {
 
 @media (max-width: 480px) {
     .grid {
-        grid-template-columns: repeat(2, 1fr);
         gap: 10px;
     }
 

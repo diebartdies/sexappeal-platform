@@ -12,6 +12,7 @@ const connectDB = require('./config/database');
 const User = require('./models/User');
 const ActivityLog = require('./models/ActivityLog');
 const sendEmail = require('./sendEmail');
+const { resolveWhatsappNumber } = require('./utils/contactNumber');
 
 // Connect to database
 connectDB();
@@ -203,6 +204,7 @@ app.get('/api/v1/professionals/me', protect, authorize('professional', 'admin'),
     } catch (err) { next(err); }
 });
 app.put('/api/v1/professionals/updateprofile', protect, authorize('professional'), upload.array('photos', 10), professionalController.updateProfile);
+app.delete('/api/v1/professionals/me', protect, authorize('professional'), professionalController.deleteMyProfile);
 app.post('/api/v1/professionals/resubmit-verification', protect, authorize('professional'), upload.array('verificationDocuments', 3), professionalController.resubmitVerification);
 app.put('/api/v1/professionals/acknowledge-rate', protect, authorize('professional'), professionalController.acknowledgeRateChange);
 app.post('/api/v1/professionals/upload-receipt', protect, authorize('professional'), upload.single('receipt'), paymentController.uploadReceipt);
@@ -232,10 +234,12 @@ app.put('/api/v1/admin/professionals/:id', protect, authorize('admin'), adminCon
 app.get('/api/v1/admin/professionals', protect, authorize('admin'), adminController.getAllProfessionals);
 app.get('/api/v1/admin/outreach/invite-message', protect, authorize('admin'), potentialProfessionalController.getInviteMessage);
 app.post('/api/v1/admin/outreach/bulk-whatsapp', protect, authorize('admin'), outreachController.startBulkWhatsApp);
+app.post('/api/v1/admin/outreach/whatsapp/targeted', protect, authorize('admin'), outreachController.startTargetedWhatsApp);
 app.get('/api/v1/admin/outreach/bulk-whatsapp/status', protect, authorize('admin'), outreachController.getBulkWhatsAppStatus);
 app.get('/api/v1/admin/potential-professionals', protect, authorize('admin'), potentialProfessionalController.getPotentialProfessionals);
 app.put('/api/v1/admin/potential-professionals/:id', protect, authorize('admin'), potentialProfessionalController.updatePotentialProfessional);
 app.post('/api/v1/admin/notifications/mail/broadcast', protect, authorize('admin'), adminController.sendBroadcastEmail);
+app.post('/api/v1/admin/notifications/mail/targeted', protect, authorize('admin'), adminController.sendTargetedEmail);
 
 if (process.env.NODE_ENV !== 'production') {
   const testingController = require('./controllers/testingController');
@@ -382,8 +386,9 @@ setInterval(async () => {
             subject: 'SexAppeal Platform - Vacation Period Ended',
             message: `Hello ${user.professionalProfile?.alias || 'Professional'},\n\nYour vacation period has concluded. Welcome back! All your profile counters and activities have resumed.`
           });
-          if (user.professionalProfile.whatsappNumber) {
-            sendWhatsappNotification(user.professionalProfile.whatsappNumber, `Hello ${user.professionalProfile?.alias || 'Professional'}! 💎\n\nYour vacation period has concluded. Welcome back! All your profile counters and activities have resumed.`);
+          const notifyNumber = resolveWhatsappNumber(user.professionalProfile);
+          if (notifyNumber) {
+            sendWhatsappNotification(notifyNumber, `Hello ${user.professionalProfile?.alias || 'Professional'}! 💎\n\nYour vacation period has concluded. Welcome back! All your profile counters and activities have resumed.`);
           }
         }
       }
@@ -434,7 +439,8 @@ setInterval(async () => {
           await user.save();
           
           await sendEmail({ email: user.email, subject: `SexAppeal Platform - Invoice for ${yyyyMm}`, message: `Hello ${user.professionalProfile?.alias || 'Professional'},\n\nYour subscription fee for ${yyyyMm} is $${amountToBill} ARS.\n\nPlease upload your receipt within the first 5 business days of next month to avoid a late fee and suspension.\n\nThank you!` });
-          if (user.professionalProfile.whatsappNumber) sendWhatsappNotification(user.professionalProfile.whatsappNumber, `Hello ${user.professionalProfile?.alias || 'Professional'}! 💎\n\nYour invoice for ${yyyyMm} is ready. The amount due is $${amountToBill} ARS. Please upload your receipt in the dashboard within the first 5 business days to keep your profile active.\n\nThank you!`);
+          const notifyNumber = resolveWhatsappNumber(user.professionalProfile);
+          if (notifyNumber) sendWhatsappNotification(notifyNumber, `Hello ${user.professionalProfile?.alias || 'Professional'}! 💎\n\nYour invoice for ${yyyyMm} is ready. The amount due is $${amountToBill} ARS. Please upload your receipt in the dashboard within the first 5 business days to keep your profile active.\n\nThank you!`);
           console.log(`[Billing Engine] Generated invoice for ${user.email} - $${amountToBill}`);
         } else {
           user.professionalProfile.paymentProcessed = true;

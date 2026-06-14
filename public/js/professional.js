@@ -3,6 +3,8 @@ import { showAlert, getPendingApprovalBannerHtml, getResubmissionBannerHtml, get
 import { t, applyStaticTranslations } from './i18n.js';
 import { renderSpecialtyDropdown, setupLocationDropdowns } from './helpers.js';
 import { beginDashboardLoad, finishDashboardLoad, failDashboardLoad } from './dashboardShell.js';
+import { navigateBack } from './ui.js';
+import { beginModalSession, endModalSession } from './navReturn.js';
 
 export function hideProfessionalPaymentOverlays() {
     const overlays = document.getElementById('dashboardOverlays');
@@ -208,21 +210,25 @@ export function injectProfessionalDashboardGuides(content, data, insertRef) {
 function showPaymentOverlay(overlayId) {
     const el = document.getElementById(overlayId);
     if (!el) return;
+    const wasHidden = el.classList.contains('hidden');
     el.classList.remove('hidden');
     el.style.display = 'flex';
     el.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
+    if (wasHidden) beginModalSession();
 }
 
 function hidePaymentOverlay(overlayId) {
     const el = document.getElementById(overlayId);
     if (!el) return;
+    const wasVisible = !el.classList.contains('hidden');
     el.classList.add('hidden');
     el.style.display = 'none';
     el.setAttribute('aria-hidden', 'true');
     const payOpen = !document.getElementById('paymentModalOverlay')?.classList.contains('hidden');
     const howOpen = !document.getElementById('howToPayOverlay')?.classList.contains('hidden');
     if (!payOpen && !howOpen) document.body.style.overflow = '';
+    if (wasVisible) endModalSession();
 }
 
 function fillHowToPayContent(paymentInstructions) {
@@ -358,7 +364,9 @@ export function bindProfessionalProfileForm() {
 
         formData.append('measurements', document.getElementById('upMeasurements').value);
         formData.append('height', document.getElementById('upHeight').value);
-        formData.append('whatsappNumber', document.getElementById('upWhatsapp').value);
+        const mobilePhone = document.getElementById('upMobilePhone')?.value || '';
+        const whatsappNumber = (document.getElementById('upWhatsapp')?.value || '').trim() || mobilePhone.trim();
+        formData.append('whatsappNumber', whatsappNumber);
 
         formData.append('postalCode', document.getElementById('upPostCode')?.value || '');
         formData.append('instagram', document.getElementById('upInstagram')?.value || '');
@@ -562,7 +570,10 @@ export async function openPendingConnectionsModal() {
             background: 'transparent', border: '1px solid var(--primary-gold)',
             color: 'var(--primary-gold)', borderRadius: '4px', cursor: 'pointer'
         });
-        closeBtn.onclick = () => modal.style.display = 'none';
+        closeBtn.onclick = () => {
+            modal.style.display = 'none';
+            endModalSession();
+        };
 
         const container = document.createElement('div');
         Object.assign(container.style, {
@@ -595,6 +606,7 @@ export async function openPendingConnectionsModal() {
         applyStaticTranslations(modal);
     }
 
+    beginModalSession();
     modal.style.display = 'flex';
     loadPendingConnections();
 }
@@ -733,7 +745,13 @@ export function addPhotoToGrid(fileOrUrl) {
     Object.assign(img.style, {
         width: '100%',
         height: '100%',
-        objectFit: 'cover'
+        objectFit: 'cover',
+        cursor: 'zoom-in'
+    });
+    img.title = t('Click to enlarge');
+    img.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (typeof window.openImageModal === 'function') window.openImageModal(img.src);
     });
     img.onerror = () => {
         if (isNew) {
@@ -866,6 +884,119 @@ if (newPhotoInput) {
 
 // --- Professional Dedicated 5-Block Editing Dashboard ---
 
+function showDeleteProfileOverlay() {
+    const el = document.getElementById('deleteProfileOverlay');
+    if (!el) return;
+    const wasHidden = el.classList.contains('hidden');
+    el.classList.remove('hidden');
+    el.style.display = 'flex';
+    el.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    if (wasHidden) beginModalSession();
+}
+
+function hideDeleteProfileOverlay() {
+    const el = document.getElementById('deleteProfileOverlay');
+    if (!el) return;
+    const wasVisible = !el.classList.contains('hidden');
+    el.classList.add('hidden');
+    el.style.display = 'none';
+    el.setAttribute('aria-hidden', 'true');
+    const payOpen = !document.getElementById('paymentModalOverlay')?.classList.contains('hidden');
+    const howOpen = !document.getElementById('howToPayOverlay')?.classList.contains('hidden');
+    if (!payOpen && !howOpen) document.body.style.overflow = '';
+    if (wasVisible) endModalSession();
+}
+
+function setupDeleteProfileUI() {
+    const openBtn = document.getElementById('btnOpenDeleteProfile');
+    const overlay = document.getElementById('deleteProfileOverlay');
+    if (!openBtn || !overlay) return;
+
+    const closeBtn = document.getElementById('closeDeleteProfileModal');
+    const cancelBtn = document.getElementById('cancelDeleteProfileBtn');
+    const confirmBtn = document.getElementById('confirmDeleteProfileBtn');
+    const passwordInput = document.getElementById('deleteProfilePassword');
+    const confirmCheckbox = document.getElementById('deleteProfileConfirm');
+    const alertEl = document.getElementById('deleteProfileAlert');
+
+    const resetModal = () => {
+        if (passwordInput) passwordInput.value = '';
+        if (confirmCheckbox) confirmCheckbox.checked = false;
+        if (alertEl) alertEl.classList.add('hidden');
+    };
+
+    openBtn.onclick = () => {
+        resetModal();
+        showDeleteProfileOverlay();
+        passwordInput?.focus();
+    };
+
+    closeBtn && (closeBtn.onclick = () => { hideDeleteProfileOverlay(); resetModal(); });
+    cancelBtn && (cancelBtn.onclick = () => { hideDeleteProfileOverlay(); resetModal(); });
+
+    overlay.onclick = (e) => {
+        if (e.target === overlay) {
+            hideDeleteProfileOverlay();
+            resetModal();
+        }
+    };
+
+    confirmBtn.onclick = async () => {
+        const password = passwordInput?.value?.trim() || '';
+        if (!confirmCheckbox?.checked) {
+            showAlert(alertEl, t('Please confirm that you understand this action is permanent.'));
+            return;
+        }
+        if (!password) {
+            showAlert(alertEl, t('Please enter your password to confirm account deletion'));
+            return;
+        }
+
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = t('Deleting...');
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`${API_URL}/professionals/me`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({ password })
+            });
+            const data = await res.json();
+            if (data.success) {
+                try {
+                    if (token) {
+                        await fetch(`${API_URL}/auth/logout`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${token}` },
+                            credentials: 'include'
+                        });
+                    }
+                } catch (err) {
+                    console.error('Logout error:', err);
+                } finally {
+                    document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('is18Plus');
+                    window.location.href = appPath('index.html');
+                }
+                return;
+            }
+            showAlert(alertEl, data.error || t('Unable to delete profile. Please try again.'));
+        } catch {
+            showAlert(alertEl, t('Server connection error'));
+        } finally {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = t('Delete permanently');
+        }
+    };
+}
+
 let profDashboardLoadInFlight = null;
 
 export async function loadProfDashboard() {
@@ -921,12 +1052,14 @@ export async function loadProfDashboard() {
             formObj.style.width = '100%';
             formObj.style.margin = '0 auto';
 
+            const safeBio = String(prof.bio || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
             formObj.innerHTML = `
                 <div class="prof-dash-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2 class="gold-text" style="margin: 0; display: flex; align-items: center; gap: 10px;">
                         Professional Dashboard <span style="font-size: 1.5rem; text-shadow: 0 0 5px rgba(212,175,55,0.5);">✏️</span>
                     </h2>
-                    <button type="button" onclick="window.history.back()" onmouseover="this.style.background='rgba(212, 175, 55, 0.1)'" onmouseout="this.style.background='transparent'" style="padding: 6px 12px; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold); border-radius: 4px; cursor: pointer; transition: background 0.3s ease; font-weight: bold; font-size: 0.85rem;">&#8592; Back</button>
+                    <button type="button" id="profDashHeaderBackBtn" onmouseover="this.style.background='rgba(212, 175, 55, 0.1)'" onmouseout="this.style.background='transparent'" style="padding: 6px 12px; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold); border-radius: 4px; cursor: pointer; transition: background 0.3s ease; font-weight: bold; font-size: 0.85rem;">&#8592; Back</button>
                 </div>
 
                 ${statusBannerHtml}
@@ -946,7 +1079,6 @@ export async function loadProfDashboard() {
                 <input type="hidden" id="upIdNumber" value="${prof.idNumber || ''}">
                 <input type="hidden" id="upBirthDate" value="${prof.birthDate ? new Date(prof.birthDate).toISOString().split('T')[0] : ''}">
                 <input type="hidden" id="upMobilePhone" value="${prof.mobilePhone || ''}">
-                <textarea id="upBio" style="display:none;">${prof.bio || ''}</textarea>
                 <input type="checkbox" id="upIsExposed" style="display:none;" ${prof.isExposed !== false ? 'checked' : ''}>
                 <input type="checkbox" id="upPaysMonthly" style="display:none;" ${prof.paysMonthlyCharges !== false ? 'checked' : ''}>
                 <input type="hidden" id="upWhatsapp" value="${prof.whatsappNumber || ''}">
@@ -995,6 +1127,13 @@ export async function loadProfDashboard() {
                     </div>
                 </div>
 
+                <!-- Service Description -->
+                <div class="card fileteado-section" style="margin-bottom: 20px; border: 1px solid var(--primary-gold);">
+                    <h3 class="gold-text" style="margin-bottom: 10px;">${t('Service Description')}</h3>
+                    <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 12px;">${t('Describe your services for visitors on your public profile.')}</p>
+                    <textarea id="upBio" rows="6" maxlength="500" style="width: 100%; padding: 10px; background: #222; color: white; border: 1px solid #444; border-radius: 4px; resize: vertical; box-sizing: border-box; min-height: 120px;">${safeBio}</textarea>
+                </div>
+
                 <!-- 3. Address -->
                 <div class="card fileteado-section" style="margin-bottom: 20px; border: 1px solid var(--primary-gold);">
                     <h3 class="gold-text" style="margin-bottom: 15px;">Address</h3>
@@ -1030,7 +1169,7 @@ export async function loadProfDashboard() {
                         <h3 class="gold-text" style="margin: 0;">Photos</h3>
                         <button type="button" id="btnUploadPhoto" style="padding: 8px 16px; background: var(--primary-gold); color: #111; font-weight: bold; border: none; border-radius: 4px; cursor: pointer;">Upload</button>
                     </div>
-                    <p style="font-size: 0.85rem; color: #ccc; margin-bottom: 15px;">Admin upload, update, remove actions. Drag photos to reorder.</p>
+                    <p style="font-size: 0.85rem; color: #ccc; margin-bottom: 15px;">Admin upload, update, remove actions. Drag photos to reorder. ${t('Click a photo to enlarge and review its content.')}</p>
                     <input type="file" id="newPhotoInput" accept="image/png, image/jpeg, image/jpg, image/webp" multiple style="display: none;">
                     <div id="photoGrid" style="display: flex; flex-wrap: wrap; gap: 15px;">
                         <label class="add-photo-frame" style="width: 120px; height: 160px; border: 2px dashed var(--primary-gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--primary-gold); font-size: 2rem; background: rgba(212, 175, 55, 0.05); transition: background 0.3s ease; flex-shrink: 0;">
@@ -1041,6 +1180,13 @@ export async function loadProfDashboard() {
                 </div>
                 
                 <div id="updateAlert" class="alert hidden" style="padding: 10px; border-radius: 4px; border: 1px solid transparent; margin-bottom: 20px;"></div>
+
+                <div class="card fileteado-section" style="margin-top: 20px; margin-bottom: 20px; border: 1px solid var(--accent-red);">
+                    <h3 style="color: var(--accent-red); margin-bottom: 10px;">${t('Leave the platform')}</h3>
+                    <p style="color: #ccc; font-size: 0.9rem; margin-bottom: 16px;">${t('If you no longer wish to remain on SexAppeal, you can permanently delete your profile and all associated data.')}</p>
+                    <button type="button" id="btnOpenDeleteProfile" style="width: 100%; padding: 12px; background: transparent; border: 1px solid var(--accent-red); color: var(--accent-red); font-weight: bold; border-radius: 4px; cursor: pointer;">${t('Delete my profile')}</button>
+                </div>
+
                 <button type="button" id="explicitSaveBtn" class="hidden" style="background: #25D366; color: white; font-weight: bold; width: 100%; padding: 12px; border-radius: 4px; border: none; cursor: pointer; margin-bottom: 15px;">💾 Save Changes</button>
                 <button type="button" id="bottomBackBtn" style="background: var(--primary-gold); color: var(--dark-bg); font-weight: bold; width: 100%; padding: 12px; border-radius: 4px; border: none; cursor: pointer;">&#8592; Back to Main Dashboard</button>
             `;
@@ -1076,6 +1222,28 @@ export async function loadProfDashboard() {
             });
 
             setupLocationDropdowns('upProvince', 'upCity', 'upNeighborhood', false, prof.location || {});
+
+            injectProfessionalDashboardGuides(content, data, formObj);
+
+            if (!data.isReadyForTransactions) {
+                const rateAlert = document.getElementById('rateAlert');
+                if (rateAlert) rateAlert.classList.remove('hidden');
+            }
+
+            if (prof.subscriptionStatus === 'suspended') {
+                const suspensionAlert = document.createElement('div');
+                suspensionAlert.className = 'card alert';
+                suspensionAlert.style.marginBottom = '20px';
+                suspensionAlert.style.border = '2px solid var(--accent-red)';
+                const pendingInv = (prof.invoices || []).find(i => i.status === 'pending');
+                const feeText = pendingInv && pendingInv.lateFeeApplied
+                    ? ` A 2% late fee has been applied. Your new total is <strong>$${new Intl.NumberFormat('es-AR').format(pendingInv.amount)} ARS</strong>.`
+                    : '';
+                suspensionAlert.innerHTML = `<h3 style="color: var(--accent-red); margin-top: 0;">Account Suspended</h3><p>Your profile has been removed from the public grid due to an unpaid balance past the 5-business-day grace period.${feeText}</p><p>To restore your access, please upload your payment receipt below. Once verified by an admin, your profile will reappear on the directory.</p>`;
+                content.insertBefore(suspensionAlert, formObj);
+                formObj.style.opacity = '0.3';
+                formObj.style.pointerEvents = 'none';
+            }
 
             const photoGrid = document.getElementById('photoGrid');
             const newPhotoInput = document.getElementById('newPhotoInput');
@@ -1116,7 +1284,7 @@ export async function loadProfDashboard() {
             if (allowResubmission) {
                 ['upFirstName', 'upSurname', 'upMiddleName', 'upAlias', 'upBirthDate', 'upHeight', 'upMeasurements',
                     'upStreet', 'upStreetNumber', 'upFloor', 'upApartment', 'upPostCode', 'upProvince', 'upCity', 'upNeighborhood', 'upQuality',
-                    'upAvailStart', 'upAvailEnd', 'upVacationStart', 'upVacationEnd'
+                    'upAvailStart', 'upAvailEnd', 'upVacationStart', 'upVacationEnd', 'upBio'
                 ].forEach((id) => {
                     const el = document.getElementById(id);
                     if (!el) return;
@@ -1160,7 +1328,7 @@ export async function loadProfDashboard() {
                             const data = await res.json();
                             if (data.success) {
                                 showAlert(alertEl, data.message || t('Verification submitted for review.'), false);
-                                setTimeout(() => { window.location.href = appPath('dashboard.html'); }, 1500);
+                                setTimeout(() => { window.location.href = appPath('profDashboard.html'); }, 1500);
                             } else {
                                 showAlert(alertEl, data.error || t('Submission failed'));
                             }
@@ -1201,13 +1369,20 @@ export async function loadProfDashboard() {
 
             document.getElementById('bottomBackBtn').onclick = async () => {
                 if (typeof window.saveProfessionalProfile === 'function') await window.saveProfessionalProfile(true);
-                window.location.href = '/perfil/' + encodeURIComponent(prof.alias || '');
+                navigateBack(() => {
+                    window.location.href = '/perfil/' + encodeURIComponent(prof.alias || '');
+                });
             };
+
+            document.getElementById('profDashHeaderBackBtn')?.addEventListener('click', () => navigateBack());
 
             loader.classList.add('hidden');
             content.classList.remove('hidden');
             delete formObj.dataset.bound;
             bindProfessionalProfileForm();
+            setupDeleteProfileUI();
+            const deleteOverlay = document.getElementById('deleteProfileOverlay');
+            if (deleteOverlay) applyStaticTranslations(deleteOverlay);
             finishDashboardLoad('profDashboardContent', 'loader');
             applyStaticTranslations(content);
         } else {

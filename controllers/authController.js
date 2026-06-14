@@ -77,6 +77,7 @@ exports.register = async (req, res, next) => {
       hasFantasyWardrobe: hasFantasyWardrobe === 'true',
       location: { province, city, neighborhood, street, number, floor, apartment, postalCode, country: originCountry },
       measurements, height,
+      whatsappNumber: mobilePhone ? String(mobilePhone).trim() : '',
       services: services ? services.split(',').map(s => s.trim()).filter(Boolean) : [],
       desiredQuality: selectedQuality,
       quality: evaluationQuality,

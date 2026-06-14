@@ -1,5 +1,13 @@
 import { BASE_ORIGIN, API_URL, appPath } from './globals.js';
 import { t } from './i18n.js';
+import {
+    navigateBack as returnNavigateBack,
+    clearReturnStack
+} from './navReturn.js';
+
+export function navigateBack(fallback) {
+    returnNavigateBack(fallback);
+}
 
 function ensureResponsiveCss() {
     if (document.getElementById('sexappeal-responsive-css')) return;
@@ -129,11 +137,20 @@ export function initGlobalTopBar() {
                 nameToShow = user.professionalProfile.alias;
             }
             userDisplay = `<span class="user-info-text">User: </span><strong style="color: var(--primary-gold);">${nameToShow}</strong>`;
+            userInfo.innerHTML = userDisplay;
 
             if (user.role === 'professional') {
-                userDisplay += `<a href="/profDashboard.html" style="color: var(--dark-bg); background-color: var(--primary-gold); margin-left: 10px; text-decoration: none; font-size: 0.8rem; font-weight: bold; padding: 3px 8px; border-radius: 4px;">✏️ ${t('Edit Profile')}</a>`;
+                const editLink = document.createElement('a');
+                editLink.href = appPath('profDashboard.html');
+                editLink.style.cssText = 'color: var(--dark-bg); background-color: var(--primary-gold); margin-left: 10px; text-decoration: none; font-size: 0.8rem; font-weight: bold; padding: 3px 8px; border-radius: 4px;';
+                editLink.textContent = `✏️ ${t('Edit Profile')}`;
+                userInfo.appendChild(editLink);
             } else if (user.role === 'admin') {
-                userDisplay += `<a href="/dashboard.html" style="color: #ccc; margin-left: 10px; text-decoration: none; font-size: 0.8rem;">${t('Admin Menu')}</a>`;
+                const adminLink = document.createElement('a');
+                adminLink.href = appPath('dashboard.html');
+                adminLink.style.cssText = 'color: #ccc; margin-left: 10px; text-decoration: none; font-size: 0.8rem;';
+                adminLink.textContent = t('Admin Menu');
+                userInfo.appendChild(adminLink);
             }
             isLoggedIn = true;
         } catch (e) { console.error('Failed to parse user', e); }
@@ -169,6 +186,7 @@ export function initGlobalTopBar() {
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
                 localStorage.removeItem('is18Plus');
+                clearReturnStack();
                 window.location.href = appPath('index.html');
             }
         });
@@ -201,6 +219,7 @@ export function initGlobalTopBar() {
     langSwitcher.appendChild(makeLangBtn('en', 'https://flagcdn.com/w40/us.png', 'English'));
 
     if (!isLoggedIn) {
+        const isLandingPage = !!document.getElementById('landing');
         const authLinks = document.createElement('div');
         authLinks.style.display = 'flex';
         authLinks.style.gap = '8px';
@@ -219,11 +238,13 @@ export function initGlobalTopBar() {
         registerLink.style.color = '#ccc';
         registerLink.style.textDecoration = 'none';
 
-        authLinks.appendChild(loginLink);
-        const sep = document.createElement('span');
-        sep.textContent = '/';
-        sep.style.color = '#666';
-        authLinks.appendChild(sep);
+        if (!isLandingPage) {
+            authLinks.appendChild(loginLink);
+            const sep = document.createElement('span');
+            sep.textContent = '/';
+            sep.style.color = '#666';
+            authLinks.appendChild(sep);
+        }
         authLinks.appendChild(registerLink);
 
         rightGroup.appendChild(authLinks);
@@ -249,7 +270,7 @@ export function initGlobalTopBar() {
         });
         backBtn.addEventListener('mouseover', () => backBtn.style.background = 'rgba(255, 255, 255, 0.1)');
         backBtn.addEventListener('mouseout', () => backBtn.style.background = 'transparent');
-        backBtn.onclick = () => window.history.back();
+        backBtn.onclick = () => navigateBack();
         leftGroup.appendChild(backBtn);
     }
 

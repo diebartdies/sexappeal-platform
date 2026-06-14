@@ -4,25 +4,31 @@ const sendEmail = require('../sendEmail');
 const { isValidRejectionReason, buildRejectionEmail } = require('../utils/rejectionMessages');
 const { resolvePhotoForClient, resolvePhotosForClient, resolveFirstPhotoForClient } = require('../utils/photoUtils');
 const { getProfessionalIdNumberError, normalizeProfessionalIdNumber } = require('../utils/idNumber');
+const { resolveWhatsappNumber } = require('../utils/contactNumber');
 
 // @desc    Get all professionals
 // @route   GET /api/v1/admin/professionals
 // @access  Private/Admin
 exports.getAllProfessionals = async (req, res, next) => {
   try {
-    const { alias, page = 1, limit = 50 } = req.query;
+    const { alias, page = 1, limit: limitParam = 0 } = req.query;
     const query = { role: 'professional' };
     
     if (alias) {
       query['professionalProfile.alias'] = { $regex: alias, $options: 'i' };
     }
 
-    const skip = (page - 1) * limit;
+    const parsedLimit = parseInt(limitParam, 10);
+    const limit = Number.isFinite(parsedLimit) ? parsedLimit : 0;
+    const skip = limit > 0 ? (page - 1) * limit : 0;
 
-    const professionals = await User.find(query)
+    let professionalsQuery = User.find(query)
       .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit, 10));
+      .skip(skip);
+    if (limit > 0) {
+      professionalsQuery = professionalsQuery.limit(limit);
+    }
+    const professionals = await professionalsQuery;
 
     const total = await User.countDocuments(query);
 
@@ -126,6 +132,61 @@ exports.sendBroadcastEmail = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: `Broadcast email triggered for ${professionals.length} professionals`
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Send email to selected professionals only
+// @route   POST /api/v1/admin/notifications/mail/targeted
+// @access  Private/Admin
+exports.sendTargetedEmail = async (req, res, next) => {
+  try {
+    const { subject, message, recipientIds } = req.body;
+
+    if (!subject || !message) {
+      return res.status(400).json({ success: false, error: 'Subject and message are required' });
+    }
+    if (!Array.isArray(recipientIds) || recipientIds.length === 0) {
+      return res.status(400).json({ success: false, error: 'Select at least one recipient' });
+    }
+
+    const professionals = await User.find({
+      _id: { $in: recipientIds },
+      role: 'professional'
+    });
+
+    if (professionals.length === 0) {
+      return res.status(400).json({ success: false, error: 'No valid professional recipients found' });
+    }
+
+    professionals.forEach(p => {
+      sendEmail({
+        email: p.email,
+        subject,
+        message: `Hello ${p.professionalProfile?.alias || 'Professional'},\n\n${message}`
+      }).catch(err => console.error(`Failed to send email to ${p.email}:`, err));
+    });
+
+    const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket ? req.socket.remoteAddress : req.ip);
+    await ActivityLog.create({
+      professional: req.user.id,
+      action: 'admin_targeted_email',
+      ipAddress: clientIp,
+      userAgent: req.headers['user-agent'],
+      isGuest: false,
+      details: {
+        adminId: req.user.id,
+        count: professionals.length,
+        subject,
+        recipientIds: professionals.map(p => p._id)
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Email triggered for ${professionals.length} selected professional(s)`
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -376,6 +437,7 @@ exports.updateProfessionalProfile = async (req, res, next) => {
         ...user.professionalProfile.toObject(),
         ...req.body.professionalProfile
       };
+      user.professionalProfile.whatsappNumber = resolveWhatsappNumber(user.professionalProfile);
     }
 
     await user.save();

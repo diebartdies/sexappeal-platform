@@ -1,11 +1,17 @@
+const fs = require('fs');
+const path = require('path');
 const User = require('../models/User');
 const config = require('../config/appConfig');
 const ActivityLog = require('../models/ActivityLog');
 const sendEmail = require('../sendEmail');
 const Specialty = require('../models/Specialty');
 const Statistic = require('../models/Statistic');
-const { resolvePhotoForClient, resolvePhotosForClient, normalizePhotosForStorage, resolveFirstPhotoForClient } = require('../utils/photoUtils');
+const Review = require('../models/Review');
+const Connection = require('../models/Connection');
+const ConnectionRequest = require('../models/ConnectionRequest');
+const { isUploadPath, resolvePhotoForClient, resolvePhotosForClient, normalizePhotosForStorage, resolveFirstPhotoForClient } = require('../utils/photoUtils');
 const { getProfessionalIdNumberError, normalizeProfessionalIdNumber } = require('../utils/idNumber');
+const { resolveWhatsappNumber, hasContactNumber } = require('../utils/contactNumber');
 
 // Simple in-memory cache setup
 const cache = new Map();
@@ -102,8 +108,9 @@ exports.getProfessionals = async (req, res, next) => {
     }
 
     const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 12;
-    const skip = (page - 1) * limit;
+    const parsedLimit = parseInt(req.query.limit, 10);
+    const limit = Number.isFinite(parsedLimit) ? parsedLimit : 12;
+    const skip = limit > 0 ? (page - 1) * limit : 0;
 
     const total = await User.countDocuments(query);
 
@@ -131,10 +138,13 @@ exports.getProfessionals = async (req, res, next) => {
       };
     }
 
-    const professionals = await User.find(query)
+    let professionalsQuery = User.find(query)
       .select(selectQuery)
-      .skip(skip)
-      .limit(limit);
+      .skip(skip);
+    if (limit > 0) {
+      professionalsQuery = professionalsQuery.limit(limit);
+    }
+    const professionals = await professionalsQuery;
 
     const responsePayload = {
       success: true,
@@ -144,7 +154,7 @@ exports.getProfessionals = async (req, res, next) => {
         page,
         limit,
         total,
-        hasMore: skip + professionals.length < total
+        hasMore: limit > 0 ? skip + professionals.length < total : false
       },
       data: professionals.map(p => {
         const profObj = p.toObject ? p.toObject() : (p._doc || p);
@@ -184,7 +194,7 @@ exports.getProfessionalByAlias = async (req, res, next) => {
     const professional = await User.findOne({ 
       'professionalProfile.alias': aliasRegex,
       role: 'professional'
-    }).select('professionalProfile.alias professionalProfile.quality professionalProfile.bio professionalProfile.services professionalProfile.location professionalProfile.pricing professionalProfile.measurements professionalProfile.height professionalProfile.eyeColor professionalProfile.hasTattoos professionalProfile.whatsappNumber professionalProfile.photos professionalProfile.workingHours professionalProfile.workingDays');
+    }).select('professionalProfile.alias professionalProfile.quality professionalProfile.bio professionalProfile.services professionalProfile.location professionalProfile.pricing professionalProfile.measurements professionalProfile.height professionalProfile.eyeColor professionalProfile.hasTattoos professionalProfile.whatsappNumber professionalProfile.mobilePhone professionalProfile.photos professionalProfile.workingHours professionalProfile.workingDays');
 
     if (!professional) {
       return res.status(404).json({
@@ -195,8 +205,9 @@ exports.getProfessionalByAlias = async (req, res, next) => {
 
     // Convert to object, check for WhatsApp, and delete the actual number so it's never sent to the browser
     const profObj = professional.toObject();
-    const hasWhatsapp = !!(profObj.professionalProfile.whatsappNumber && profObj.professionalProfile.whatsappNumber.trim() !== '');
+    const hasWhatsapp = hasContactNumber(profObj.professionalProfile);
     delete profObj.professionalProfile.whatsappNumber;
+    delete profObj.professionalProfile.mobilePhone;
     profObj.professionalProfile.hasWhatsapp = hasWhatsapp;
     profObj.isActiveNow = checkIsActive(profObj.professionalProfile);
     if (profObj.professionalProfile && profObj.professionalProfile.photos) {
@@ -271,13 +282,14 @@ exports.contactWhatsApp = async (req, res, next) => {
     const professional = await User.findOne({ 
       'professionalProfile.alias': aliasRegex,
       role: 'professional'
-    }).select('professionalProfile.whatsappNumber professionalProfile.alias');
+    }).select('professionalProfile.whatsappNumber professionalProfile.mobilePhone professionalProfile.alias');
 
-    if (!professional || !professional.professionalProfile.whatsappNumber) {
+    const contactNumber = professional ? resolveWhatsappNumber(professional.professionalProfile) : '';
+    if (!professional || !contactNumber) {
       return res.status(404).send('WhatsApp contact not available for this professional.');
     }
 
-    const cleanNumber = professional.professionalProfile.whatsappNumber.replace(/\D/g, '');
+    const cleanNumber = contactNumber.replace(/\D/g, '');
     const message = `Hello ${professional.professionalProfile.alias}, I saw your profile on SexAppeal and I'm interested in your services.`;
     const waUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
 
@@ -573,10 +585,14 @@ exports.updateProfile = async (req, res, next) => {
     }
 
     // Build the professionalProfile object from the form fields
+    const mobilePhone = req.body.mobilePhone !== undefined ? req.body.mobilePhone : oldProf.mobilePhone;
+    const whatsappRaw = req.body.whatsappNumber !== undefined ? req.body.whatsappNumber : oldProf.whatsappNumber;
+    const whatsappNumber = (whatsappRaw && String(whatsappRaw).trim()) || (mobilePhone && String(mobilePhone).trim()) || '';
+
     const professionalProfile = {
       alias: req.body.alias,
       ...identityFields,
-      mobilePhone: req.body.mobilePhone !== undefined ? req.body.mobilePhone : oldProf.mobilePhone,
+      mobilePhone,
       instagram: req.body.instagram !== undefined ? req.body.instagram : oldProf.instagram,
       facebook: req.body.facebook !== undefined ? req.body.facebook : oldProf.facebook,
       bio: req.body.bio,
@@ -584,7 +600,7 @@ exports.updateProfile = async (req, res, next) => {
       measurements: req.body.measurements,
       height: req.body.height,
       photos: allPhotos,
-      whatsappNumber: req.body.whatsappNumber,
+      whatsappNumber,
       hasOwnApartment: req.body.hasOwnApartment === 'true',
       hasFantasyWardrobe: req.body.hasFantasyWardrobe === 'true',
       workingHours: {
@@ -796,13 +812,14 @@ exports.contactPhone = async (req, res, next) => {
     const professional = await User.findOne({ 
       'professionalProfile.alias': aliasRegex,
       role: 'professional'
-    }).select('professionalProfile.whatsappNumber professionalProfile.alias');
+    }).select('professionalProfile.whatsappNumber professionalProfile.mobilePhone professionalProfile.alias');
 
-    if (!professional || !professional.professionalProfile.whatsappNumber) {
+    const contactNumber = professional ? resolveWhatsappNumber(professional.professionalProfile) : '';
+    if (!professional || !contactNumber) {
       return res.status(404).send('Phone contact not available for this professional.');
     }
 
-    const cleanNumber = professional.professionalProfile.whatsappNumber.replace(/\D/g, '');
+    const cleanNumber = contactNumber.replace(/\D/g, '');
     const phoneUrl = `tel:+${cleanNumber}`;
 
     // Track the Phone Click Activity
@@ -827,5 +844,62 @@ exports.contactPhone = async (req, res, next) => {
     res.redirect(phoneUrl);
   } catch (error) {
     res.status(400).send('Unable to redirect to phone.');
+  }
+};
+
+function tryDeleteUploadFile(storedPath) {
+  if (!isUploadPath(storedPath)) return;
+  const absolutePath = path.join(config.root, 'public', storedPath.replace(/^\//, ''));
+  try {
+    if (fs.existsSync(absolutePath)) fs.unlinkSync(absolutePath);
+  } catch (err) {
+    console.error('Failed to delete upload file:', err.message);
+  }
+}
+
+// @desc    Permanently delete the logged-in professional account
+// @route   DELETE /api/v1/professionals/me
+// @access  Private (Professional)
+exports.deleteMyProfile = async (req, res, next) => {
+  try {
+    const { password } = req.body || {};
+    if (!password || typeof password !== 'string') {
+      return res.status(400).json({ success: false, error: 'Please provide your password to confirm account deletion' });
+    }
+
+    const userId = req.user.id || req.user._id;
+    const user = await User.findById(userId).select('+password +verificationDocuments');
+    if (!user || user.role !== 'professional') {
+      return res.status(404).json({ success: false, error: 'Professional account not found' });
+    }
+
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, error: 'Incorrect password. Please try again.' });
+    }
+
+    const prof = user.professionalProfile || {};
+
+    (prof.photos || []).forEach(tryDeleteUploadFile);
+    tryDeleteUploadFile(prof.paymentReceiptUrl);
+    (prof.paymentHistory || []).forEach((entry) => tryDeleteUploadFile(entry.receiptUrl));
+
+    await Promise.all([
+      ActivityLog.deleteMany({ professional: user._id }),
+      Statistic.deleteMany({ professionalId: user._id }),
+      Specialty.deleteMany({ user: user._id }),
+      Review.deleteMany({ $or: [{ professional: user._id }, { author: user._id }] }),
+      Connection.deleteMany({ $or: [{ professional: user._id }, { requester: user._id }] }),
+      ConnectionRequest.deleteMany({ $or: [{ professional: user._id }, { guestUser: user._id }] })
+    ]);
+
+    await User.findByIdAndDelete(user._id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Your profile has been permanently deleted.'
+    });
+  } catch (error) {
+    next(error);
   }
 };
