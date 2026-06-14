@@ -11,11 +11,22 @@ const { getProfessionalIdNumberError, normalizeProfessionalIdNumber } = require(
 const cache = new Map();
 const CACHE_TTL = 60 * 1000; // 1 minute TTL in milliseconds
 
+function isOnVacation(profile) {
+  if (!profile?.vacation?.startDate || !profile?.vacation?.endDate) return false;
+  const now = new Date();
+  const vStart = new Date(profile.vacation.startDate);
+  const vEnd = new Date(profile.vacation.endDate);
+  vStart.setHours(0, 0, 0, 0);
+  vEnd.setHours(23, 59, 59, 999);
+  return now >= vStart && now <= vEnd;
+}
+
 // Helper function to check if professional is active RIGHT NOW in Argentina timezone
 function checkIsActive(profile) {
   if (!profile || !profile.workingDays || profile.workingDays.length === 0) return false;
   if (!profile.workingHours || !profile.workingHours.start || !profile.workingHours.end) return false;
   if (typeof profile.workingHours.start !== 'string' || typeof profile.workingHours.end !== 'string') return false;
+  if (isOnVacation(profile)) return false;
 
   const now = new Date();
   const formatter = new Intl.DateTimeFormat('en-US', {
@@ -393,6 +404,11 @@ exports.getMe = async (req, res, next) => {
       isReadyForTransactions,
       stats: { photoCount, whatsappcCount, callCount },
       globalPricing,
+      paymentInstructions: user.role === 'professional' ? {
+        intro: 'El método de pago es transferencia bancaria o Mercado Pago a los siguientes Alias o CVU/CBU:',
+        mercadoPago: { alias: config.payment.mercadoPago.alias, cvu: config.payment.mercadoPago.cvu },
+        bankTransfer: { alias: config.payment.bankTransfer.alias, cbu: config.payment.bankTransfer.cbu }
+      } : undefined,
       data: user
     });
   } catch (error) {
@@ -602,9 +618,17 @@ exports.updateProfile = async (req, res, next) => {
     }
 
     if (req.body.quality) {
-        professionalProfile.quality = req.body.quality;
+        if (oldProf.isEvaluationPeriod) {
+          professionalProfile.desiredQuality = req.body.quality;
+          professionalProfile.quality = oldProf.quality || 'Standard';
+        } else {
+          professionalProfile.quality = req.body.quality;
+        }
     } else {
         professionalProfile.quality = oldProf.quality || 'Standard';
+    }
+    if (oldProf.desiredQuality && oldProf.isEvaluationPeriod) {
+      professionalProfile.desiredQuality = professionalProfile.desiredQuality || oldProf.desiredQuality;
     }
 
     // Check if sensitive contact/location details were changed

@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if [[ "${1:-}" == "--auto" ]] || [[ "${1:-}" == "-y" ]]; then
+    exec bash "$(dirname "$0")/scripts/git-backup-push.sh" "$(cd "$(dirname "$0")" && pwd)"
+fi
+
 echo "🚀 Starting GitHub upload process..."
 
 # Check if git is installed

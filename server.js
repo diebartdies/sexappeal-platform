@@ -123,6 +123,7 @@ const feedbackController = require('./controllers/feedbackController');
 const locationController = require('./controllers/locationController');
 const transactionController = require('./controllers/transactionController');
 const potentialProfessionalController = require('./controllers/potentialProfessionalController');
+const outreachController = require('./controllers/outreachController');
 const paymentController = require('./controllers/paymentController');
 const specialtyController = require('./controllers/specialtyController');
 const { protect, authorize } = require('./middleware/auth');
@@ -229,6 +230,9 @@ app.post('/api/v1/admin/notify-rate-change', protect, authorize('admin'), profes
 app.get('/api/v1/admin/logs', protect, authorize('admin'), adminController.getActivityLogs);
 app.put('/api/v1/admin/professionals/:id', protect, authorize('admin'), adminController.updateProfessionalProfile);
 app.get('/api/v1/admin/professionals', protect, authorize('admin'), adminController.getAllProfessionals);
+app.get('/api/v1/admin/outreach/invite-message', protect, authorize('admin'), potentialProfessionalController.getInviteMessage);
+app.post('/api/v1/admin/outreach/bulk-whatsapp', protect, authorize('admin'), outreachController.startBulkWhatsApp);
+app.get('/api/v1/admin/outreach/bulk-whatsapp/status', protect, authorize('admin'), outreachController.getBulkWhatsAppStatus);
 app.get('/api/v1/admin/potential-professionals', protect, authorize('admin'), potentialProfessionalController.getPotentialProfessionals);
 app.put('/api/v1/admin/potential-professionals/:id', protect, authorize('admin'), potentialProfessionalController.updatePotentialProfessional);
 app.post('/api/v1/admin/notifications/mail/broadcast', protect, authorize('admin'), adminController.sendBroadcastEmail);
@@ -355,6 +359,14 @@ setInterval(async () => {
     });
 
     for (const user of activeUsers) {
+      if (user.professionalProfile?.isEvaluationPeriod && user.professionalProfile.trialEndDate) {
+        const trialEnd = new Date(user.professionalProfile.trialEndDate);
+        if (today > trialEnd) {
+          user.professionalProfile.isEvaluationPeriod = false;
+          await user.save();
+        }
+      }
+
       const userActiveDays = getActiveBusinessDaysCount(today, user.professionalProfile.vacation);
       
       // Check if vacation JUST ended to send resumption notification
@@ -405,6 +417,7 @@ setInterval(async () => {
           const overlapEnd = new Date(Math.min(vEnd, monthEnd));
           if (overlapStart <= overlapEnd) vacationDaysInMonth = Math.ceil((overlapEnd - overlapStart) / (1000 * 60 * 60 * 24)) + 1;
         }
+        vacationDaysInMonth = Math.min(vacationDaysInMonth, 15);
 
         billableDays -= vacationDaysInMonth;
         if (billableDays < 0) billableDays = 0;

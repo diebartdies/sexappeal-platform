@@ -312,6 +312,11 @@ exports.acknowledgePayment = async (req, res, next) => {
     user.professionalProfile.paymentProcessed = true;
     user.professionalProfile.subscriptionStatus = 'active';
 
+    if (user.professionalProfile.desiredQuality) {
+      user.professionalProfile.quality = user.professionalProfile.desiredQuality;
+    }
+    user.professionalProfile.isEvaluationPeriod = false;
+
     if (user.professionalProfile.invoices) {
       user.professionalProfile.invoices.forEach(inv => {
         if (inv.status === 'pending') inv.status = 'paid';

@@ -2,6 +2,7 @@ import { BASE_ORIGIN, API_URL, CATEGORY_META, resolvePhotoSrc, appPath, isReserv
 import { t, applyStaticTranslations, formatWorkingDays } from './i18n.js';
 import { getPendingApprovalBannerHtml } from './uiHelpers.js';
 import { renderSpecialtyDropdown } from './helpers.js';
+import { beginPageLoad, finishPageLoad, failPageLoad } from './dashboardShell.js';
 
 // Load Treasures
 let currentDiscoveryPage = 1;
@@ -12,6 +13,7 @@ export async function loadTreasures(page = 1, append = false) {
 
     if (!append) {
         currentDiscoveryPage = 1;
+        beginPageLoad('treasureGrid', 'pageLoader', { clearContent: true });
     }
     
     // Inject hover styles for the profile thumbnails if not already present
@@ -52,10 +54,6 @@ export async function loadTreasures(page = 1, append = false) {
 
     // Add a cache-busting parameter to ensure fresh data is always fetched
     url.searchParams.set('_', new Date().getTime());
-
-    if (!append) {
-        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--primary-gold); font-size: 1.2rem;">' + t('Loading...') + '</div>';
-    }
 
     try {
         const res = await fetch(url);
@@ -248,10 +246,15 @@ export async function loadTreasures(page = 1, append = false) {
             }
         }
         applyStaticTranslations(grid);
+        if (!append) finishPageLoad('treasureGrid', 'pageLoader');
     } catch (err) {
         console.error('Vault connection error:', err);
         grid.classList.add('grid');
-        grid.innerHTML = `<div class="card alert" style="grid-column: 1/-1;">${t('Error connecting to the vault:')} ${err.message}. ${t('Please ensure the server is running.')}</div>`;
+        failPageLoad(
+            'treasureGrid',
+            'pageLoader',
+            `<div class="card alert" style="grid-column: 1/-1;">${t('Error connecting to the vault:')} ${err.message}. ${t('Please ensure the server is running.')}</div>`
+        );
     }
 }
 
@@ -261,6 +264,8 @@ export async function loadTreasureDetails() {
     const content = document.getElementById('treasureContent');
     const loader = document.getElementById('loader');
     if (!content) return;
+
+    beginPageLoad('treasureContent', 'loader', { clearContent: true });
 
     const urlParams = new URLSearchParams(window.location.search);
     let alias = urlParams.get('alias');
@@ -277,7 +282,7 @@ export async function loadTreasureDetails() {
     }
 
     if (!alias) {
-        loader.innerHTML = '<p class="alert">No treasure specified.</p>';
+        failPageLoad('treasureContent', 'loader', '<p class="alert">No treasure specified.</p>');
         return;
     }
 
@@ -485,15 +490,14 @@ export async function loadTreasureDetails() {
                 photoGrid.innerHTML = '<p>No photos available.</p>';
             }
 
-            loader.classList.add('hidden');
-            content.classList.remove('hidden');
+            finishPageLoad('treasureContent', 'loader');
             applyStaticTranslations(content);
         } else {
-            loader.innerHTML = `<p class="alert">${t('Could not find the specified treasure.')}</p>`;
+            failPageLoad('treasureContent', 'loader', `<p class="alert">${t('Could not find the specified treasure.')}</p>`);
         }
     } catch (err) {
         console.error('Error loading treasure details:', err);
-        loader.innerHTML = `<p class="alert">${t('Error connecting to the vault:')} ${err.message}</p>`;
+        failPageLoad('treasureContent', 'loader', `<p class="alert">${t('Error connecting to the vault:')} ${err.message}</p>`);
     }
 }
 
@@ -578,8 +582,7 @@ export async function initializeFilters() {
             if (touchStartX - e.changedTouches[0].screenX > 50) closeDrawer();
         }, { passive: true });
 
-        const EMERALD = '#50C878';
-        const EMERALD_DIM = 'rgba(80, 200, 120, 0.45)';
+        const GOLD = 'var(--primary-gold)';
 
         const controlsBar = document.createElement('div');
         controlsBar.id = 'floatingControlsBar';
@@ -613,13 +616,8 @@ export async function initializeFilters() {
         window.addEventListener('resize', updateFloatingMenuPosition, { passive: true });
 
         const openFilterBtn = document.createElement('button');
-        openFilterBtn.className = 'floating-menu-btn';
-        openFilterBtn.innerHTML = `<svg style="width:20px; height:20px; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>`;
-        Object.assign(openFilterBtn.style, {
-            background: 'transparent', border: 'none', color: EMERALD,
-            padding: '8px 12px', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', transition: 'color 0.3s ease'
-        });
+        openFilterBtn.className = 'floating-menu-btn is-active';
+        openFilterBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>`;
         openFilterBtn.onclick = openDrawer;
 
         const gridToggles = document.createElement('div');
@@ -642,22 +640,17 @@ export async function initializeFilters() {
 
         const btnGridLarge = document.createElement('button');
         btnGridLarge.className = 'floating-menu-btn';
-        btnGridLarge.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>';
+        btnGridLarge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>';
         
         const btnGridSmall = document.createElement('button');
         btnGridSmall.className = 'floating-menu-btn';
-        btnGridSmall.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="4" height="4"></rect><rect x="10" y="3" width="4" height="4"></rect><rect x="17" y="3" width="4" height="4"></rect><rect x="3" y="10" width="4" height="4"></rect><rect x="10" y="10" width="4" height="4"></rect><rect x="17" y="10" width="4" height="4"></rect><rect x="3" y="17" width="4" height="4"></rect><rect x="10" y="17" width="4" height="4"></rect><rect x="17" y="17" width="4" height="4"></rect></svg>';
-
-        [btnGridLarge, btnGridSmall].forEach(btn => {
-            Object.assign(btn.style, {
-                background: 'transparent', border: 'none', color: EMERALD_DIM,
-                padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'color 0.3s ease'
-            });
-        });
+        btnGridSmall.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="4" height="4"></rect><rect x="10" y="3" width="4" height="4"></rect><rect x="17" y="3" width="4" height="4"></rect><rect x="3" y="10" width="4" height="4"></rect><rect x="10" y="10" width="4" height="4"></rect><rect x="17" y="10" width="4" height="4"></rect><rect x="3" y="17" width="4" height="4"></rect><rect x="10" y="17" width="4" height="4"></rect><rect x="17" y="17" width="4" height="4"></rect></svg>';
         
         const updateGridButtons = (isSmall) => {
-            btnGridSmall.style.color = isSmall ? EMERALD : EMERALD_DIM;
-            btnGridLarge.style.color = !isSmall ? EMERALD : EMERALD_DIM;
+            btnGridSmall.classList.toggle('is-active', isSmall);
+            btnGridSmall.classList.toggle('is-dim', !isSmall);
+            btnGridLarge.classList.toggle('is-active', !isSmall);
+            btnGridLarge.classList.toggle('is-dim', isSmall);
         };
         
         const isSmallGrid = localStorage.getItem('smallGridMode') === 'true';
@@ -675,7 +668,7 @@ export async function initializeFilters() {
         const progressWrapper = document.createElement('div');
         progressWrapper.id = 'floatingProgressWrapper';
         Object.assign(progressWrapper.style, {
-            display: 'none', alignItems: 'center', gap: '5px', padding: '0 10px', borderLeft: '1px solid rgba(80, 200, 120, 0.35)'
+            display: 'none', alignItems: 'center', gap: '5px', padding: '0 10px', borderLeft: '1px solid rgba(212, 175, 55, 0.35)'
         });
         
         const progressBg = document.createElement('div');
@@ -687,14 +680,14 @@ export async function initializeFilters() {
         const progressBar = document.createElement('div');
         progressBar.id = 'floatingProgressBar';
         Object.assign(progressBar.style, {
-            width: '0%', height: '100%', background: '#50C878',
+            width: '0%', height: '100%', background: GOLD,
             transition: 'width 0.3s ease'
         });
         
         const progressText = document.createElement('span');
         progressText.id = 'floatingProgressText';
         Object.assign(progressText.style, {
-            fontSize: '0.75rem', color: '#50C878', fontWeight: 'bold'
+            fontSize: '0.75rem', color: GOLD, fontWeight: 'bold'
         });
         
         progressBg.appendChild(progressBar);

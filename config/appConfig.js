@@ -44,10 +44,9 @@ const config = {
   },
   respectAgreement: {
     adminEmail: 'admin@drsrv.net.ar',
-    inappropriateTerms: ['offensive1', 'offensive2', 'spam', 'scam', 'abuse', 'illegal', 'escort', 'prostitution', 'drugs'], // Expanded sample list
+    inappropriateTerms: ['offensive1', 'offensive2', 'spam', 'scam', 'abuse', 'illegal', 'escort', 'prostitution', 'drugs'],
     violationMessage: 'Feedback must adhere to our Respect Agreement. Inappropriate terms have been flagged and reported.',
   },
-  
   // Payment & Subscription Rules
   payment: {
     adminEmail: 'admin@drsrv.net.ar',
@@ -60,6 +59,11 @@ const config = {
       cvu: '0000003100079017216982',
       alias: 'drcar.lo'
     }
+  },
+
+  platform: {
+    publicUrl: process.env.PLATFORM_URL || 'https://sexappeal.drsrv.net.ar',
+    registerUrl: process.env.PLATFORM_REGISTER_URL || 'https://sexappeal.drsrv.net.ar/register.html'
   }
 };
 

@@ -2,10 +2,16 @@ import { BASE_ORIGIN, API_URL, CATEGORY_META, resolvePhotoSrc, appPath } from '.
 import { showAlert, getPendingApprovalBannerHtml, getResubmissionBannerHtml, getGeneralRejectionBannerHtml } from './uiHelpers.js';
 import { t, applyStaticTranslations } from './i18n.js';
 import { renderSpecialtyDropdown, setupLocationDropdowns } from './helpers.js';
+import { beginDashboardLoad, finishDashboardLoad, failDashboardLoad } from './dashboardShell.js';
 
 // Update Profile
-const updateProfileForm = document.getElementById('updateProfileForm');
-if (updateProfileForm) {
+let profileFormBound = false;
+
+export function bindProfessionalProfileForm() {
+    const updateProfileForm = document.getElementById('updateProfileForm');
+    if (!updateProfileForm || updateProfileForm.dataset.bound === '1') return;
+    updateProfileForm.dataset.bound = '1';
+
     let isSaving = false;
     
     window.saveProfessionalProfile = async (silent = false) => {
@@ -188,7 +194,45 @@ if (updateProfileForm) {
     });
 }
 
+bindProfessionalProfileForm();
+
 // Upload Payment Receipt
+export function setupProfessionalPaymentUI(paymentInstructions) {
+    const paymentSection = document.getElementById('paymentSection');
+    const paymentOverlay = document.getElementById('paymentModalOverlay');
+    const howToPayOverlay = document.getElementById('howToPayOverlay');
+    const howToPayContent = document.getElementById('howToPayContent');
+    const btnOpen = document.getElementById('btnOpenPaymentModal');
+    const btnHow = document.getElementById('btnHowToPay');
+    const btnClosePay = document.getElementById('closePaymentModal');
+    const btnCloseHow = document.getElementById('closeHowToPayModal');
+
+    if (paymentSection) paymentSection.classList.remove('hidden');
+
+    const showOverlay = (el) => { if (el) { el.classList.remove('hidden'); el.style.display = 'flex'; } };
+    const hideOverlay = (el) => { if (el) { el.classList.add('hidden'); el.style.display = 'none'; } };
+
+    btnOpen?.addEventListener('click', () => showOverlay(paymentOverlay));
+    btnClosePay?.addEventListener('click', () => hideOverlay(paymentOverlay));
+    paymentOverlay?.addEventListener('click', (e) => { if (e.target === paymentOverlay) hideOverlay(paymentOverlay); });
+
+    if (paymentInstructions && howToPayContent) {
+        howToPayContent.innerHTML = `
+            <p>${paymentInstructions.intro}</p>
+            <p style="margin-top: 12px;"><strong>Mercado Pago</strong><br>
+            Alias: <span style="color: var(--primary-gold);">${paymentInstructions.mercadoPago.alias}</span><br>
+            CVU: <span style="color: var(--primary-gold);">${paymentInstructions.mercadoPago.cvu}</span></p>
+            <p style="margin-top: 12px;"><strong>Transferencia bancaria</strong><br>
+            Alias: <span style="color: var(--primary-gold);">${paymentInstructions.bankTransfer.alias}</span><br>
+            CBU: <span style="color: var(--primary-gold);">${paymentInstructions.bankTransfer.cbu}</span></p>
+        `;
+    }
+
+    btnHow?.addEventListener('click', () => showOverlay(howToPayOverlay));
+    btnCloseHow?.addEventListener('click', () => hideOverlay(howToPayOverlay));
+    howToPayOverlay?.addEventListener('click', (e) => { if (e.target === howToPayOverlay) hideOverlay(howToPayOverlay); });
+}
+
 const receiptForm = document.getElementById('receiptForm');
 if (receiptForm) {
     receiptForm.addEventListener('submit', async (e) => {
@@ -223,8 +267,10 @@ if (receiptForm) {
             if (btn) { btn.textContent = originalText; btn.disabled = false; }
             
             if (data.success) {
-                showAlert(alert, 'Receipt uploaded successfully! Admin will review it shortly.', false);
+                showAlert(alert, 'Comprobante enviado. Será verificado por el administrador.', false);
                 receiptForm.reset();
+                const paymentOverlay = document.getElementById('paymentModalOverlay');
+                if (paymentOverlay) { paymentOverlay.classList.add('hidden'); paymentOverlay.style.display = 'none'; }
             } else {
                 showAlert(alert, data.error || 'Failed to upload receipt');
             }
@@ -578,11 +624,19 @@ if (newPhotoInput) {
 
 // --- Professional Dedicated 5-Block Editing Dashboard ---
 
+let profDashboardLoadInFlight = null;
+
 export async function loadProfDashboard() {
+    if (profDashboardLoadInFlight) return profDashboardLoadInFlight;
+
+    profDashboardLoadInFlight = (async () => {
     const formObj = document.getElementById('updateProfileForm');
     const loader = document.getElementById('loader');
     const content = document.getElementById('profDashboardContent');
     if (!formObj || !content) return;
+
+    beginDashboardLoad('profDashboardContent', 'loader', { clearContent: false });
+    formObj.innerHTML = '';
 
     try {
         const token = localStorage.getItem('token');
@@ -910,11 +964,19 @@ export async function loadProfDashboard() {
 
             loader.classList.add('hidden');
             content.classList.remove('hidden');
+            delete formObj.dataset.bound;
+            bindProfessionalProfileForm();
+            finishDashboardLoad('profDashboardContent', 'loader');
             applyStaticTranslations(content);
         } else {
             window.location.href = '/index.html';
         }
     } catch (err) {
-        if(loader) loader.innerHTML = '<p class="alert">Server connection error.</p>';
+        failDashboardLoad('profDashboardContent', 'loader', '<p class="alert" style="text-align:center;padding:40px;">Server connection error.</p>');
+    } finally {
+        profDashboardLoadInFlight = null;
     }
+    })();
+
+    return profDashboardLoadInFlight;
 }

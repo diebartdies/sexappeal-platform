@@ -202,4 +202,13 @@ export function initBootstrap() {
         if (document.getElementById('profDashboardContent')) loadProfDashboard();
         if (document.getElementById('treasureDetail')) loadTreasureDetails();
     });
+
+    window.addEventListener('pageshow', (event) => {
+        if (!event.persisted) return;
+        document.documentElement.classList.add('page-pending');
+        if (document.getElementById('dashboardContent')) loadDashboard();
+        if (document.getElementById('profDashboardContent')) loadProfDashboard();
+        if (document.getElementById('treasureGrid')) loadTreasures();
+        if (document.getElementById('treasureDetail')) loadTreasureDetails();
+    });
 }

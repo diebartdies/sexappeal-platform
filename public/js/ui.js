@@ -6,7 +6,7 @@ function ensureResponsiveCss() {
     const link = document.createElement('link');
     link.id = 'sexappeal-responsive-css';
     link.rel = 'stylesheet';
-    link.href = '/css/responsive.css?v=7.4';
+    link.href = '/css/responsive.css?v=7.5';
     document.head.appendChild(link);
 
     const viewport = document.querySelector('meta[name="viewport"]');

@@ -85,6 +85,14 @@ const UserSchema = new mongoose.Schema({
       enum: ['Standard', 'Silver', 'Gold', 'Premium', 'Elite'],
       default: 'Standard'
     },
+    desiredQuality: {
+      type: String,
+      enum: ['Standard', 'Silver', 'Gold', 'Premium', 'Elite']
+    },
+    isEvaluationPeriod: {
+      type: Boolean,
+      default: true
+    },
     firstName: String,
     surname: String,
     middleName: String,

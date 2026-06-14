@@ -24,3 +24,8 @@ docker-compose.override.yml
 
 # Puppeteer / Chrome cache to prevent GitHub large file errors
 .cache/
+
+# MongoDB dumps and large archives (never push to GitHub)
+*.archive
+*.tar.gz
+certbot/

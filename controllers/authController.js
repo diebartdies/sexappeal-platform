@@ -64,6 +64,9 @@ exports.register = async (req, res, next) => {
     const selectedQuality = role === 'professional'
       ? String(quality).trim()
       : (allowedQualities.includes(String(quality || '').trim()) ? String(quality).trim() : 'Standard');
+    const evaluationQuality = role === 'professional'
+      ? allowedQualities[Math.floor(Math.random() * allowedQualities.length)]
+      : selectedQuality;
 
     // Reconstruct the professionalProfile object
     const professionalProfile = role === 'professional' ? {
@@ -75,7 +78,9 @@ exports.register = async (req, res, next) => {
       location: { province, city, neighborhood, street, number, floor, apartment, postalCode, country: originCountry },
       measurements, height,
       services: services ? services.split(',').map(s => s.trim()).filter(Boolean) : [],
-      quality: selectedQuality
+      desiredQuality: selectedQuality,
+      quality: evaluationQuality,
+      isEvaluationPeriod: true
     } : undefined;
 
     // Check if user already exists
@@ -167,20 +172,34 @@ exports.register = async (req, res, next) => {
     let emailMessage = `Welcome to the SexAppeal Platform!\n\nYour verification code is: ${verificationCode}\n\nThis code will expire in 10 minutes.`;
 
     if (role === 'professional') {
-      emailSubject = 'Welcome to SexAppeal - Verification & Next Steps';
-      emailMessage = `Welcome to the SexAppeal Platform, a sanctuary for Living Treasures like you.
+      emailSubject = 'Bienvenida a SexAppeal — Tu mes de evaluación comienza';
+      emailMessage = `Hola,
 
-Your verification code is: ${verificationCode}
-(This code will expire in 10 minutes)
+Bienvenida a SexAppeal, el santuario donde tu presencia se convierte en una Living Treasure.
 
-NEXT STEPS: VERIFICATION PROCESS
-Thank you for submitting your registration and verification documents. Our team will now review your profile.
+Tu código de verificación es: ${verificationCode}
+(Este código vence en 10 minutos)
 
-This process is handled with absolute discretion. Your documents are stored securely and are never shared or published. Please note that the approval process will take at least 48 hours. You will receive an email notification once your profile is approved.
+✨ TU PRIMER MES, SIN COSTO
+Durante los próximos 30 días disfrutás de un período de evaluación completamente gratuito. Es tu oportunidad de conocer la plataforma, recibir contactos reales y descubrir el valor de estar visible en un espacio exclusivo, discreto y sin comisiones por conexión.
 
-Profile photos for your public gallery can only be uploaded after your account has been approved.
+📂 CATEGORÍA DURANTE LA EVALUACIÓN
+En este primer mes, tu perfil aparecerá en una categoría asignada al azar entre todas las participantes activas. Esto nos permite mostrarte cómo funciona la visibilidad en cada nivel.
 
-Welcome to the Architecture of Intimacy.`;
+Cuando finalice tu mes gratuito y tu primer pago sea validado por nuestro equipo, pasarás automáticamente a la categoría que elegiste al registrarte — y pagarás únicamente la tarifa correspondiente a esa categoría.
+
+🏖️ VACACIONES
+Si necesitás ausentarte, podés registrar vacaciones desde tu panel. Durante ese período tu perfil figurará como inactivo y, en tu facturación mensual, se descontarán hasta 15 días de vacaciones del saldo a abonar.
+
+💳 DESPUÉS DEL MES GRATUITO
+Al finalizar la evaluación, recibirás el monto mensual según tu categoría elegida. Podrás subir tu comprobante de pago desde el botón "Pago mensual" en tu panel, con instrucciones claras de cómo transferir.
+
+🔒 VERIFICACIÓN
+Revisaremos tus documentos con absoluta discreción. El proceso puede demorar al menos 48 horas. Te avisaremos por email cuando tu perfil esté aprobado. Revisá también tu carpeta de Spam.
+
+Gracias por confiar en la Arquitectura de la Intimidad.
+
+— Equipo SexAppeal`;
     }
 
     try {

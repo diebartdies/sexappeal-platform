@@ -1,8 +1,10 @@
 import { BASE_ORIGIN, API_URL, CATEGORY_META, getVerificationGesture, appPath } from './globals.js';
 import { showAlert, getPendingApprovalBannerHtml, getResubmissionBannerHtml, getGeneralRejectionBannerHtml } from './uiHelpers.js';
 import { t, applyStaticTranslations } from './i18n.js';
+import { setupProfessionalPaymentUI } from './professional.js';
+import { beginDashboardLoad, finishDashboardLoad, failDashboardLoad } from './dashboardShell.js';
 import { renderSpecialtyDropdown, setupLocationDropdowns } from './helpers.js';
-import { addPhotoToGrid, openPendingConnectionsModal } from './professional.js';
+import { addPhotoToGrid, openPendingConnectionsModal, bindProfessionalProfileForm } from './professional.js';
 
 export async function renderAdminGrid(container) {
     container.innerHTML = `
@@ -131,11 +133,11 @@ export async function loadAdminGridData() {
             }
 
             const catSection = document.createElement('div');
-            catSection.className = 'fileteado-section';
+            catSection.className = 'fileteado-section admin-prof-category';
             catSection.style.marginBottom = '25px';
             catSection.style.border = '14px solid transparent';
             catSection.style.borderImage = 'url("data:image/svg+xml;utf8,<svg width=\'40\' height=\'40\' viewBox=\'0 0 40 40\' xmlns=\'http://www.w3.org/2000/svg\'><rect x=\'1\' y=\'1\' width=\'38\' height=\'38\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1\'/><path d=\'M1 12 Q 12 12 12 1\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M28 1 Q 28 12 39 12\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M39 28 Q 28 28 28 39\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M12 39 Q 12 28 1 28\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M4 6 Q 6 4 8 6 Q 6 8 4 6\' fill=\'%232e7d32\'/><path d=\'M36 6 Q 34 4 32 6 Q 34 8 36 6\' fill=\'%232e7d32\'/><path d=\'M36 34 Q 34 36 32 34 Q 34 32 36 34\' fill=\'%232e7d32\'/><path d=\'M4 34 Q 6 36 8 34 Q 6 32 4 34\' fill=\'%232e7d32\'/><circle cx=\'6\' cy=\'6\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'34\' cy=\'6\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'34\' cy=\'34\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'6\' cy=\'34\' r=\'1.5\' fill=\'%23b81d1d\'/></svg>") 12 stretch';
-            catSection.style.padding = '15px';
+            catSection.style.padding = '22px 26px';
             catSection.innerHTML = `
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 1px solid rgba(212, 175, 55, 0.3); padding-bottom: 10px;">
                     <div style="display: flex; align-items: center; gap: 15px;">
@@ -150,10 +152,11 @@ export async function loadAdminGridData() {
             `;
             
             const grid = document.createElement('div');
-            grid.className = 'five-column-grid';
+            grid.className = 'five-column-grid admin-prof-grid';
 
             items.forEach(p => {
                 const card = document.createElement('div');
+                card.className = 'admin-prof-card';
                 card.style.background = '#222';
                 card.style.padding = '10px';
                 card.style.borderRadius = '8px';
@@ -165,10 +168,12 @@ export async function loadAdminGridData() {
                 const vStatus = p.verificationStatus || 'pending';
                 const statusColor = vStatus === 'approved' ? 'green' : (vStatus === 'rejected' ? 'red' : 'orange');
                 const thumbWrap = document.createElement('div');
+                thumbWrap.className = 'admin-prof-thumb';
                 thumbWrap.style.cssText = 'width: 100%; aspect-ratio: 1/1; overflow: hidden; border-radius: 4px; margin-bottom: 10px; position: relative;';
                 const thumbImg = document.createElement('img');
                 thumbImg.src = photo;
-                thumbImg.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
+                thumbImg.className = 'admin-prof-thumb-img';
+                thumbImg.style.cssText = 'width: 100%; height: 100%; object-fit: cover; display: block;';
                 if (!isFirstAdminCategoryRendered) thumbImg.loading = 'lazy';
                 const statusBadge = document.createElement('div');
                 statusBadge.style.cssText = `position: absolute; top: 5px; right: 5px; font-size: 0.55rem; padding: 2px 6px; border-radius: 10px; background: ${statusColor}; color: white; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.5);`;
@@ -217,10 +222,92 @@ export async function loadAdminGridData() {
 
 // --- Dashboard ---
 
+let dashboardLoadInFlight = null;
+
+function renderProfessionalMainDashboardShell(content) {
+    content.innerHTML = `
+        <h2 class="gold-text" style="margin-bottom: 40px;">Your Sanctuary Dashboard</h2>
+        <div class="grid">
+            <div class="card">
+                <h3 class="gold-text">Identity Status</h3>
+                <p id="verificationStatus" style="margin: 15px 0; font-size: 1.2rem;">Checking...</p>
+                <div id="revelationStatus" class="tag" style="display: inline-block;">Veiled</div>
+            </div>
+            <div class="card">
+                <h3 class="gold-text">Duo Connection</h3>
+                <div id="duoStatus" style="margin: 15px 0;"><p>Not currently in a Duo.</p></div>
+            </div>
+            <div class="card">
+                <h3 class="gold-text">Your Performance</h3>
+                <div style="margin: 15px 0; display: flex; justify-content: space-around;">
+                    <div style="text-align: center;">
+                        <h4 id="statProfileViews" style="font-size: 2rem; color: var(--primary-gold);">0</h4>
+                        <p style="font-size: 0.8rem; opacity: 0.8;">Profile Views</p>
+                    </div>
+                    <div style="text-align: center;">
+                        <h4 id="statWaClicks" style="font-size: 2rem; color: #00ff50;">0</h4>
+                        <p style="font-size: 0.8rem; opacity: 0.8;">WhatsApp Clicks</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card" style="margin-top: 40px;">
+            <h3 class="gold-text" style="margin-bottom: 25px;">Edit Profile</h3>
+            <form id="updateProfileForm">
+                <div id="updateAlert" class="alert hidden"></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                    <div style="grid-column: 1 / -1;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                            <div><label>First Name</label><input type="text" id="upFirstName"></div>
+                            <div><label>Surname</label><input type="text" id="upSurname"></div>
+                            <div><label>Middle Name</label><input type="text" id="upMiddleName"></div>
+                            <div><label>ID Number</label><input type="text" id="upIdNumber"></div>
+                            <div><label>Birth Date</label><input type="date" id="upBirthDate"></div>
+                            <div><label>Age</label><input type="text" id="upAge" readonly></div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                            <div><label>Mobile</label><input type="text" id="upMobilePhone"></div>
+                            <div><label>Street</label><input type="text" id="upStreet"></div>
+                            <div><label>Number</label><input type="text" id="upStreetNumber"></div>
+                            <div><label>Floor</label><input type="text" id="upFloor"></div>
+                            <div><label>Apartment</label><input type="text" id="upApartment"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <label>Alias</label><input type="text" id="upAlias">
+                        <label>Bio</label><textarea id="upBio" rows="4"></textarea>
+                    </div>
+                    <div>
+                        <label>Category</label><div id="displayQuality" class="quality-badge quality-standard">Standard</div>
+                        <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="upOwnApartment"> Own apartment</label>
+                        <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="upFantasyWardrobe"> Fantasy wardrobe</label>
+                        <select id="upServices" multiple size="5" style="display:none;">
+                            <option value="Massage">Massage</option>
+                            <option value="Virtual Connection">Virtual Connection</option>
+                        </select>
+                        <label>Attributes</label><input type="text" id="upAttributes">
+                        <label>Measurements</label><input type="text" id="upMeasurements">
+                        <label>Height</label><input type="text" id="upHeight">
+                    </div>
+                </div>
+                <button type="submit">Update Profile</button>
+            </form>
+        </div>
+    `;
+
+    const overlays = document.getElementById('dashboardOverlays');
+    if (overlays) content.appendChild(overlays);
+}
+
 export async function loadDashboard() {
+    if (dashboardLoadInFlight) return dashboardLoadInFlight;
+
+    dashboardLoadInFlight = (async () => {
     const content = document.getElementById('dashboardContent');
     const loader = document.getElementById('loader');
     if (!content) return;
+
+    beginDashboardLoad('dashboardContent', 'loader', { clearContent: true });
 
     try {
         const token = localStorage.getItem('token');
@@ -343,11 +430,13 @@ export async function loadDashboard() {
 
                 renderAdminGrid(gridContainer);
                 
-                if (loader) loader.classList.add('hidden');
-                content.classList.remove('hidden');
+                finishDashboardLoad('dashboardContent', 'loader');
                 applyStaticTranslations(content);
                 return; // Stop execution to prevent loading professional specific data
             }
+
+            renderProfessionalMainDashboardShell(content);
+            bindProfessionalProfileForm();
 
             const prof = user.professionalProfile || {};
             const isApproved = user.verificationStatus === 'approved';
@@ -368,11 +457,11 @@ export async function loadDashboard() {
                     <button id="dismissWelcomeBtn" style="position: absolute; top: 15px; right: 15px; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold); padding: 4px 8px; font-size: 0.8rem; border-radius: 4px; cursor: pointer; transition: background 0.3s;" onmouseover="this.style.background='rgba(212,175,55,0.1)'" onmouseout="this.style.background='transparent'">${t('Dismiss')}</button>
                     <h3 class="gold-text" style="margin-bottom: 15px;">📖 ${t('Welcome Guide & How It Works')}</h3>
                     <ul style="line-height: 1.6; color: #ccc; margin-left: 20px; font-size: 0.95rem;">
-                        <li style="margin-bottom: 10px;"><strong>${t('Privacy Guarantee:')}</strong> Our platform uses zero cookies and zero third-party trackers. Your identity and client interactions remain completely confidential.</li>
-                        <li style="margin-bottom: 10px;"><strong>${t('Visibility Control:')}</strong> You can instantly hide or show your profile on the public grid using the "Show in public directory" checkbox below.</li>
-                        <li style="margin-bottom: 10px;"><strong>${t('Uploading Photos:')}</strong> Once approved, use the dashed rectangle in the "Manage Photos" section to upload or re-arrange your gallery.</li>
-                        <li style="margin-bottom: 10px;"><strong>${t('WhatsApp Connections:')}</strong> Clients connect directly via your provided WhatsApp number. We charge zero commissions per connection.</li>
-                        <li style="margin-bottom: 10px;"><strong>${t('Profile Tiers:')}</strong> Your category (Elite, Premium, etc.) is automatically calculated based on your assets (apartment, wardrobe, location).</li>
+                        <li style="margin-bottom: 10px;"><strong>${t('Free evaluation month:')}</strong> ${t('Your first 30 days are free. During this period your profile appears in a random category so you can experience how visibility works.')}</li>
+                        <li style="margin-bottom: 10px;"><strong>${t('Your chosen category:')}</strong> ${t('After your first paid month is validated by Admin, you move to the category you selected at registration and pay that rate.')}</li>
+                        <li style="margin-bottom: 10px;"><strong>${t('Vacations:')}</strong> ${t('While on vacation your profile shows as inactive. Up to 15 vacation days per month are discounted from your monthly balance.')}</li>
+                        <li style="margin-bottom: 10px;"><strong>${t('Monthly payment:')}</strong> ${t('Use Pago mensual to upload your receipt. Tap Cómo pagar for transfer details.')}</li>
+                        <li style="margin-bottom: 10px;"><strong>${t('Privacy Guarantee:')}</strong> ${t('Our platform uses zero cookies and zero third-party trackers. Your identity and client interactions remain completely confidential.')}</li>
                     </ul>
                 `;
                 content.insertBefore(welcomeSection, insertRef);
@@ -410,8 +499,17 @@ export async function loadDashboard() {
                     alertsHtml += `<div style="background: rgba(255,0,0,0.1); border-left: 4px solid var(--accent-red); padding: 10px; margin-bottom: 10px;">💰 <strong>Rate Update:</strong> Please acknowledge the new pricing rates in the alert above to maintain your visibility.</div>`;
                 }
 
-                // Trial & Prorated Billing Engine Display
-                if (prof.subscriptionStatus === 'trial') {
+                // Trial & Evaluation Period
+                if (prof.isEvaluationPeriod && prof.subscriptionStatus === 'trial') {
+                    const trialEnd = new Date(prof.trialEndDate);
+                    const desired = prof.desiredQuality || prof.quality || 'Standard';
+                    alertsHtml += `<div style="background: rgba(212,175,55,0.1); border-left: 4px solid var(--primary-gold); padding: 15px; margin-bottom: 10px;">
+                        💎 <strong>${t('Evaluation period (free month)')}</strong><br>
+                        ${t('Visible category now')}: <strong>${prof.quality || 'Standard'}</strong> (${t('random during evaluation')}).<br>
+                        ${t('Your chosen category after first validated payment')}: <strong>${desired}</strong>.<br>
+                        ${t('Trial ends')}: ${trialEnd.toLocaleDateString()}.
+                    </div>`;
+                } else if (prof.subscriptionStatus === 'trial') {
                     const trialEnd = new Date(prof.trialEndDate);
                     const now = new Date();
                     if (trialEnd > now) {
@@ -507,14 +605,19 @@ export async function loadDashboard() {
                 
                 const catInfo = document.createElement('div');
                 const qMeta = CATEGORY_META[prof.quality || 'Standard'];
-                catInfo.innerHTML = `<p style="margin-bottom: 15px;"><strong>Category:</strong> <span style="color: var(--primary-gold);">${qMeta ? t(qMeta.name) : (prof.quality || 'Standard')}</span></p>
-                    <label style="display: block; margin-bottom: 5px;">${t('Category:')}</label>
+                const desiredQ = prof.desiredQuality || prof.quality || 'Standard';
+                const evalNote = prof.isEvaluationPeriod
+                    ? `<p style="font-size:0.85rem;color:#aaa;margin-bottom:10px;">${t('Evaluation period')}: ${t('visible now')} <strong style="color:var(--primary-gold);">${prof.quality}</strong>. ${t('Chosen category')}: <strong>${desiredQ}</strong> (${t('applied after first validated payment')}).</p>`
+                    : '';
+                catInfo.innerHTML = `<p style="margin-bottom: 15px;"><strong>${t('Category:')}</strong> <span style="color: var(--primary-gold);">${qMeta ? t(qMeta.name) : (prof.quality || 'Standard')}</span></p>
+                    ${evalNote}
+                    <label style="display: block; margin-bottom: 5px;">${prof.isEvaluationPeriod ? t('Desired category:') : t('Category:')}</label>
                     <select id="upQuality" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid var(--primary-gold); border-radius: 4px; margin-bottom: 15px;">
-                        <option value="Elite" ${prof.quality === 'Elite' ? 'selected' : ''}>${t(CATEGORY_META['Elite'].name)}</option>
-                        <option value="Premium" ${prof.quality === 'Premium' ? 'selected' : ''}>${t(CATEGORY_META['Premium'].name)}</option>
-                        <option value="Gold" ${prof.quality === 'Gold' ? 'selected' : ''}>${t(CATEGORY_META['Gold'].name)}</option>
-                        <option value="Silver" ${prof.quality === 'Silver' ? 'selected' : ''}>${t(CATEGORY_META['Silver'].name)}</option>
-                        <option value="Standard" ${prof.quality === 'Standard' ? 'selected' : ''}>${t(CATEGORY_META['Standard'].name)}</option>
+                        <option value="Elite" ${(prof.isEvaluationPeriod ? desiredQ : prof.quality) === 'Elite' ? 'selected' : ''}>${t(CATEGORY_META['Elite'].name)}</option>
+                        <option value="Premium" ${(prof.isEvaluationPeriod ? desiredQ : prof.quality) === 'Premium' ? 'selected' : ''}>${t(CATEGORY_META['Premium'].name)}</option>
+                        <option value="Gold" ${(prof.isEvaluationPeriod ? desiredQ : prof.quality) === 'Gold' ? 'selected' : ''}>${t(CATEGORY_META['Gold'].name)}</option>
+                        <option value="Silver" ${(prof.isEvaluationPeriod ? desiredQ : prof.quality) === 'Silver' ? 'selected' : ''}>${t(CATEGORY_META['Silver'].name)}</option>
+                        <option value="Standard" ${(prof.isEvaluationPeriod ? desiredQ : prof.quality) === 'Standard' ? 'selected' : ''}>${t(CATEGORY_META['Standard'].name)}</option>
                     </select>
                 `;
                 const catSelect = catInfo.querySelector('#upQuality');
@@ -855,7 +958,7 @@ export async function loadDashboard() {
                     vacBlock.style.border = '1px solid var(--primary-gold)';
                     vacBlock.innerHTML = `
                         <h3 class="gold-text" style="margin-bottom: 5px;">Miscellaneous (Vacation)</h3>
-                        <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 15px;">Max 20 calendar days. No more than 1 vacation request per year.</p>
+                        <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 15px;">${t('Max 20 calendar days per request. Up to 15 days per month are discounted from your monthly balance. One vacation request per year.')}</p>
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                             <div style="flex: 1; min-width: 150px;">
                                 <label style="display: block; margin-bottom: 5px;">Start Date</label>
@@ -1109,8 +1212,10 @@ export async function loadDashboard() {
                 if (upForm) { upForm.style.opacity = '0.3'; upForm.style.pointerEvents = 'none'; }
             }
 
-            if (loader) loader.classList.add('hidden');
-            if (content) content.classList.remove('hidden');
+            if (user.role === 'professional') {
+                setupProfessionalPaymentUI(data.paymentInstructions);
+            }
+            finishDashboardLoad('dashboardContent', 'loader');
             applyStaticTranslations(content);
         } else {
             console.error('Dashboard auth error:', data.error);
@@ -1124,14 +1229,18 @@ export async function loadDashboard() {
                     </div>
                 </div>
             `;
-            if (loader) loader.classList.add('hidden');
-            content.classList.remove('hidden');
+            finishDashboardLoad('dashboardContent', 'loader');
             applyStaticTranslations(content);
         }
     } catch (err) {
         console.error('Dashboard rendering error:', err);
-        if (loader) loader.innerHTML = `<p style="color: var(--accent-red)">Error loading vault. See console.</p>`;
+        failDashboardLoad('dashboardContent', 'loader', `<p style="color: var(--accent-red); text-align:center; padding:40px;">Error loading vault. See console.</p>`);
+    } finally {
+        dashboardLoadInFlight = null;
     }
+    })();
+
+    return dashboardLoadInFlight;
 }
 
 let currentLogFilters = {};
@@ -1293,22 +1402,39 @@ export async function openViewLeadsModal() {
         });
 
         container.innerHTML = `
-            <h2 class="gold-text" style="margin-bottom: 20px;">Scraped Phone Leads</h2>
-            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                <button id="refreshLeadsBtn">Refresh List</button>
+            <h2 class="gold-text" style="margin-bottom: 10px;">${t('Scraped Phone Leads')}</h2>
+            <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 16px;">${t('WhatsApp outreach uses the welcome message with platform registration link.')}</p>
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
+                <button id="refreshLeadsBtn">${t('Refresh List')}</button>
+                <button id="previewInviteBtn" type="button" style="background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold);">${t('Preview invite message')}</button>
+                <button id="bulkWhatsappBtn" type="button" style="background: #25D366; color: #fff; font-weight: bold; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer;">${t('Bulk WhatsApp (pending)')}</button>
+            </div>
+            <div id="bulkWhatsappPanel" class="hidden" style="margin-bottom: 20px; padding: 16px; border: 1px solid rgba(37,211,102,0.4); border-radius: 8px; background: rgba(37,211,102,0.08);">
+                <h4 class="gold-text" style="margin: 0 0 10px 0;">${t('Bulk outreach progress')}</h4>
+                <p id="bulkWhatsappStatusText" style="color: #ccc; margin: 0 0 12px 0; font-size: 0.9rem;">—</p>
+                <div id="bulkWhatsappQrWrap" class="hidden" style="margin-bottom: 12px; text-align: center;">
+                    <p style="color: #aaa; font-size: 0.85rem; margin-bottom: 8px;">${t('Scan QR with WhatsApp on your phone')}</p>
+                    <img id="bulkWhatsappQrImg" alt="WhatsApp QR" style="max-width: 220px; background: white; padding: 8px; border-radius: 8px;">
+                </div>
+                <div style="background: #222; border-radius: 4px; height: 10px; overflow: hidden; margin-bottom: 8px;">
+                    <div id="bulkWhatsappBar" style="height: 100%; width: 0%; background: #25D366; transition: width 0.3s ease;"></div>
+                </div>
+                <p id="bulkWhatsappCounts" style="color: #888; font-size: 0.85rem; margin: 0;">0 / 0</p>
             </div>
             <div style="overflow-x: auto;">
                 <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
                     <thead>
                         <tr style="border-bottom: 1px solid var(--primary-gold);">
-                            <th style="padding: 10px;">Date Added</th>
-                            <th style="padding: 10px;">Phone Number</th>
-                            <th style="padding: 10px;">Source</th>
-                            <th style="padding: 10px;">Status</th>
+                            <th style="padding: 10px;">${t('Date Added')}</th>
+                            <th style="padding: 10px;">${t('Alias')}</th>
+                            <th style="padding: 10px;">${t('Phone Number')}</th>
+                            <th style="padding: 10px;">${t('Source')}</th>
+                            <th style="padding: 10px;">${t('Status')}</th>
+                            <th style="padding: 10px;">WhatsApp</th>
                         </tr>
                     </thead>
                     <tbody id="leadsTableBody">
-                        <tr><td colspan="4" style="padding: 10px; text-align: center;">Loading...</td></tr>
+                        <tr><td colspan="6" style="padding: 10px; text-align: center;">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1320,19 +1446,21 @@ export async function openViewLeadsModal() {
         applyStaticTranslations(modal);
 
         document.getElementById('refreshLeadsBtn').onclick = loadLeads;
+        document.getElementById('previewInviteBtn').onclick = previewInviteMessage;
+        document.getElementById('bulkWhatsappBtn').onclick = startBulkWhatsappOutreach;
     }
 
     modal.style.display = 'flex';
     loadLeads();
+    pollBulkWhatsappStatus();
 }
 
 export async function loadLeads() {
     const tbody = document.getElementById('leadsTableBody');
-    tbody.innerHTML = '<tr><td colspan="4" style="padding: 10px; text-align: center;">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="padding: 10px; text-align: center;">Loading...</td></tr>';
     
     try {
         const token = localStorage.getItem('token');
-        // Added credentials: 'include' to ensure auth cookie is sent
         const res = await fetch(`${API_URL}/admin/potential-professionals`, { 
             headers: { 'Authorization': `Bearer ${token}` },
             credentials: 'include'
@@ -1342,7 +1470,7 @@ export async function loadLeads() {
         if (data.success) {
             tbody.innerHTML = '';
             if (data.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="padding: 10px; text-align: center;">No leads found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="padding: 10px; text-align: center;">No leads found.</td></tr>';
                 return;
             }
             
@@ -1352,27 +1480,174 @@ export async function loadLeads() {
                 try { sourceHost = new URL(lead.sourceUrl).hostname; } catch(e) {}
 
                 const statusColor = lead.status === 'contacted' ? 'green' : (lead.status === 'rejected' ? 'red' : 'orange');
+                const waLink = lead.whatsappLink || '#';
+                const waDisabled = !lead.whatsappLink;
 
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid #333';
                 tr.innerHTML = `
                     <td style="padding: 10px;">${dateAdded}</td>
+                    <td style="padding: 10px;">${lead.alias || '—'}</td>
                     <td style="padding: 10px;">${lead.phone}</td>
-                    <td style="padding: 10px;"><a href="${lead.sourceUrl}" target="_blank" style="color: var(--primary-gold);">${sourceHost}</a></td>
+                    <td style="padding: 10px;"><a href="${lead.sourceUrl}" target="_blank" style="color: var(--primary-gold);">${sourceHost || '—'}</a></td>
                     <td style="padding: 10px;">
                         <span style="padding: 3px 8px; border-radius: 12px; background: ${statusColor}; color: white; font-size: 0.8rem; text-transform: capitalize;">
                             ${lead.status || 'pending'}
                         </span>
                     </td>
+                    <td style="padding: 10px;">
+                        <a href="${waLink}" target="_blank" rel="noopener noreferrer" data-lead-id="${lead._id}" class="lead-whatsapp-btn" style="display:inline-block;padding:6px 12px;background:#25D366;color:#fff;text-decoration:none;border-radius:4px;font-weight:bold;${waDisabled ? 'opacity:0.4;pointer-events:none;' : ''}">WhatsApp</a>
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
-            applyStaticTranslations(tbody);
-        } else {
-            tbody.innerHTML = `<tr><td colspan="4" style="padding: 10px; color: var(--accent-red);">Error: ${data.error}</td></tr>`;
+
+            document.querySelectorAll('.lead-whatsapp-btn').forEach((btn) => {
+                btn.addEventListener('click', () => markLeadContacted(btn.getAttribute('data-lead-id')));
+            });
         }
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="4" style="padding: 10px; color: var(--accent-red);">Network Error</td></tr>`;
+        tbody.innerHTML = '<tr><td colspan="6" style="padding: 10px; text-align: center; color: var(--accent-red);">Failed to load leads.</td></tr>';
+    }
+}
+
+async function markLeadContacted(id) {
+    if (!id) return;
+    try {
+        const token = localStorage.getItem('token');
+        await fetch(`${API_URL}/admin/potential-professionals/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ status: 'contacted' })
+        });
+    } catch (err) {
+        console.error('Failed to mark lead as contacted', err);
+    }
+}
+
+async function previewInviteMessage() {
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/admin/outreach/invite-message?alias=hermosa`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+            credentials: 'include'
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert(data.data.message);
+        }
+    } catch (err) {
+        alert('Could not load invite message preview.');
+    }
+}
+
+let bulkWhatsappPollTimer = null;
+
+function renderBulkWhatsappStatus(status) {
+    const panel = document.getElementById('bulkWhatsappPanel');
+    const textEl = document.getElementById('bulkWhatsappStatusText');
+    const barEl = document.getElementById('bulkWhatsappBar');
+    const countsEl = document.getElementById('bulkWhatsappCounts');
+    const qrWrap = document.getElementById('bulkWhatsappQrWrap');
+    const qrImg = document.getElementById('bulkWhatsappQrImg');
+    if (!panel || !status) return;
+
+    panel.classList.remove('hidden');
+
+    const processed = (status.sent || 0) + (status.failed || 0) + (status.skipped || 0);
+    const total = status.total || 0;
+    const pct = total > 0 ? Math.min(100, Math.round((processed / total) * 100)) : 0;
+
+    if (barEl) barEl.style.width = `${pct}%`;
+    if (countsEl) countsEl.textContent = `${processed} / ${total} — ${t('Sent')}: ${status.sent || 0}, ${t('Failed')}: ${status.failed || 0}, ${t('Skipped')}: ${status.skipped || 0}`;
+
+    if (status.phase === 'qr' && status.qr && qrWrap && qrImg) {
+        qrWrap.classList.remove('hidden');
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(status.qr)}`;
+        if (textEl) textEl.textContent = t('Waiting for WhatsApp login — scan the QR code.');
+    } else if (qrWrap) {
+        qrWrap.classList.add('hidden');
+    }
+
+    const phaseText = {
+        idle: t('Ready'),
+        initializing: t('Connecting to WhatsApp...'),
+        qr: t('Waiting for WhatsApp login — scan the QR code.'),
+        sending: `${t('Sending messages...')} ${status.currentLead ? `(${status.currentLead})` : ''}`,
+        complete: t('Bulk outreach complete.'),
+        error: status.lastError || t('Bulk outreach failed.')
+    };
+
+    if (textEl && status.phase !== 'qr') {
+        textEl.textContent = phaseText[status.phase] || status.phase;
+    }
+
+    if (status.phase === 'complete' || status.phase === 'error') {
+        if (bulkWhatsappPollTimer) {
+            clearInterval(bulkWhatsappPollTimer);
+            bulkWhatsappPollTimer = null;
+        }
+        const btn = document.getElementById('bulkWhatsappBtn');
+        if (btn) btn.disabled = false;
+        loadLeads();
+    } else if (status.phase === 'sending' || status.phase === 'qr' || status.phase === 'initializing') {
+        const btn = document.getElementById('bulkWhatsappBtn');
+        if (btn) btn.disabled = true;
+        if (!bulkWhatsappPollTimer) {
+            bulkWhatsappPollTimer = setInterval(pollBulkWhatsappStatus, 2500);
+        }
+    }
+}
+
+async function pollBulkWhatsappStatus() {
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/admin/outreach/bulk-whatsapp/status`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+            credentials: 'include'
+        });
+        const data = await res.json();
+        if (data.success) renderBulkWhatsappStatus(data.data);
+    } catch (err) {
+        console.error('Bulk WhatsApp status poll failed', err);
+    }
+}
+
+async function startBulkWhatsappOutreach() {
+    if (!confirm(t('Send the welcome WhatsApp message to ALL pending leads? This cannot be undone easily.'))) return;
+
+    const btn = document.getElementById('bulkWhatsappBtn');
+    if (btn) btn.disabled = true;
+
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/admin/outreach/bulk-whatsapp`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+        const data = await res.json();
+        if (!data.success) {
+            alert(data.error || t('Could not start bulk outreach'));
+            if (btn) btn.disabled = false;
+            return;
+        }
+
+        renderBulkWhatsappStatus(data.data);
+
+        if (bulkWhatsappPollTimer) clearInterval(bulkWhatsappPollTimer);
+        bulkWhatsappPollTimer = setInterval(pollBulkWhatsappStatus, 2500);
+        pollBulkWhatsappStatus();
+    } catch (err) {
+        alert(t('Could not start bulk outreach'));
+        if (btn) btn.disabled = false;
     }
 }
 

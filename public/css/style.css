@@ -655,17 +655,52 @@ input {
     width: 100%;
 }
 
-/* Floating discovery controls */
+/* Floating discovery controls — gold icons readable on dark and light backgrounds */
 .floating-controls-bar .floating-menu-btn {
-    color: #50C878;
+    background: transparent;
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    color: var(--primary-gold);
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.floating-controls-bar .floating-menu-btn svg {
+    width: 22px;
+    height: 22px;
+    vertical-align: middle;
+    stroke-width: 2.75;
+    filter:
+        drop-shadow(0 0 1px rgba(0, 0, 0, 0.95))
+        drop-shadow(0 0 1px rgba(255, 255, 255, 0.45));
 }
 
 .floating-controls-bar .floating-menu-btn:hover {
-    color: #6ee7a8;
+    color: #F0D060;
+    transform: scale(1.06);
+}
+
+.floating-controls-bar .floating-menu-btn.is-active {
+    color: var(--primary-gold);
+}
+
+.floating-controls-bar .floating-menu-btn.is-dim {
+    color: rgba(212, 175, 55, 0.55);
 }
 
 #floatingProgressWrapper {
     transition: opacity 0.25s ease;
+    border-left-color: rgba(212, 175, 55, 0.35) !important;
+}
+
+#floatingProgressText {
+    color: var(--primary-gold) !important;
+}
+
+#floatingProgressBar {
+    background: var(--primary-gold) !important;
 }
 
 .lang-switcher {

@@ -1,4 +1,24 @@
 const PotentialProfessional = require('../models/PotentialProfessional');
+const { buildProfessionalInviteMessage, buildWhatsAppUrl, REGISTER_URL, PUBLIC_URL } = require('../utils/professionalInviteMessage');
+
+// @desc    Preview outreach invite message
+// @route   GET /api/v1/admin/outreach/invite-message
+// @access  Private/Admin
+exports.getInviteMessage = async (req, res, next) => {
+  try {
+    const alias = req.query.alias || 'hermosa';
+    res.status(200).json({
+      success: true,
+      data: {
+        message: buildProfessionalInviteMessage(alias),
+        registerUrl: REGISTER_URL,
+        publicUrl: PUBLIC_URL
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
 
 // @desc    Get all potential professionals
 // @route   GET /api/v1/admin/potential-professionals
@@ -29,7 +49,13 @@ exports.getPotentialProfessionals = async (req, res, next) => {
         limit: parseInt(limit, 10),
         total
       },
-      data: potentials
+      data: potentials.map((lead) => {
+        const obj = lead.toObject ? lead.toObject() : lead;
+        return {
+          ...obj,
+          whatsappLink: buildWhatsAppUrl(obj.phone, obj.alias)
+        };
+      })
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });

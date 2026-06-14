@@ -89,6 +89,88 @@ input[type="submit"],
     min-width: 0;
 }
 
+/* Page load shell — no ghost content from HTML or bfcache */
+html.page-pending #dashboardContent,
+html.page-pending #profDashboardContent,
+html.page-pending #treasureGrid,
+html.page-pending #treasureContent {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+html.page-pending #loader,
+html.page-pending #pageLoader {
+    display: block !important;
+}
+
+#pageLoader {
+    text-align: center;
+    padding: 50px;
+    color: var(--primary-gold, #D4AF37);
+}
+
+#pageLoader.hidden,
+#loader.hidden {
+    display: none !important;
+}
+
+/* Admin Professionals Directory — keep cards inside decorative frame */
+#adminGridContent .admin-prof-category {
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+#adminGridContent .admin-prof-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    width: 100%;
+    max-width: 100%;
+}
+
+#adminGridContent .admin-prof-card {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+#adminGridContent .admin-prof-thumb {
+    max-width: 100%;
+}
+
+#adminGridContent .admin-prof-thumb-img {
+    max-width: 100%;
+}
+
+@media (max-width: 1200px) {
+    #adminGridContent .admin-prof-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 992px) {
+    #adminGridContent .admin-prof-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 600px) {
+    #adminGridContent .admin-prof-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    #adminGridContent .admin-prof-category {
+        padding: 16px 18px !important;
+    }
+}
+
+@media (max-width: 400px) {
+    #adminGridContent .admin-prof-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Professional dashboard */
 .prof-dash-header {
     display: flex;

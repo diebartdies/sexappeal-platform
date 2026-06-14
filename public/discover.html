@@ -7,8 +7,8 @@
     <link rel="alternate icon" href="/favicon.ico">
     <title>Discover Treasures - SexAppeal</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/style.css?v=7.4">
-    <link rel="stylesheet" href="/css/responsive.css?v=7.4">
+    <link rel="stylesheet" href="/css/style.css?v=7.5">
+    <link rel="stylesheet" href="/css/responsive.css?v=7.5">
     <!-- SEO & Open Graph Tags -->
     <meta name="description" content="SexAppeal - The Architecture of Intimacy. Directorio exclusivo de acompañantes VIP y Living Treasures.">
     <meta property="og:title" content="SexAppeal Platform">
@@ -17,6 +17,7 @@
     <meta property="og:url" content="https://sexappeal.drsrv.net.ar">
     <meta property="og:type" content="website">
     <meta name="theme-color" content="#D4AF37">
+    <script>document.documentElement.classList.add('page-pending');</script>
 </head>
 <body>
     <div class="container">
@@ -30,12 +31,8 @@
 
         <section id="discovery">
             <h2 class="gold-text">Revealed Treasures</h2>
-            <div id="treasureGrid" class="grid">
-                <!-- Treasures will be loaded here -->
-                <div class="card" style="grid-column: 1 / -1; text-align: center;">
-                    Preparing the collection...
-                </div>
-            </div>
+            <div id="pageLoader"><p>Preparing the collection...</p></div>
+            <div id="treasureGrid" class="grid hidden"></div>
         </section>
 
         <!-- Premium Ads Placeholder -->
@@ -55,14 +52,6 @@
         </section>
     </div>
 
-    <script src="/js/app.js?v=7.4" type="module"></script>
-    <script>
-        // Auto-load treasures if we are on this page
-        window.addEventListener('load', () => {
-            if (document.getElementById('treasureGrid')) {
-                loadTreasures();
-            }
-        });
-    </script>
+    <script src="/js/app.js?v=7.5" type="module"></script>
 </body>
 </html>
