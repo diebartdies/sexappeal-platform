@@ -25,6 +25,7 @@ const config = {
   maxBioLength: 500,
   maxAliasLength: 50,
   minPasswordLength: 6,
+  verificationCodeExpireMinutes: 20,
   rateLimitWindow: 10 * 60 * 1000, // 10 minutes
   rateLimitMax: 100,
 

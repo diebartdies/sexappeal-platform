@@ -261,8 +261,8 @@ UserSchema.methods.getResetPasswordToken = function() {
   // Set resetPasswordToken field
   this.resetPasswordToken = resetToken;
 
-  // Set expire (10 minutes)
-  this.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+  // Set expire
+  this.resetPasswordExpire = Date.now() + config.verificationCodeExpireMinutes * 60 * 1000;
 
   return resetToken;
 };

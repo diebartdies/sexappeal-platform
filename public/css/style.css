@@ -703,6 +703,45 @@ input {
     background: var(--primary-gold) !important;
 }
 
+.payment-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 10050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.payment-modal-overlay.hidden {
+    display: none !important;
+}
+
+.payment-modal-panel {
+    max-width: 520px;
+    width: 100%;
+    position: relative;
+    z-index: 1;
+}
+
+.payment-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--primary-gold);
+    color: var(--primary-gold);
+    font-size: 1.4rem;
+    line-height: 1;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 0;
+}
+
 .lang-switcher {
     display: flex;
     align-items: center;

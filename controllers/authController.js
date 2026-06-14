@@ -108,8 +108,8 @@ exports.register = async (req, res, next) => {
 
     // Generate a 6-digit verification code
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-    // Set expiration to 10 minutes from now
-    const verificationCodeExpire = new Date(Date.now() + 10 * 60 * 1000);
+    const codeExpireMs = config.verificationCodeExpireMinutes * 60 * 1000;
+    const verificationCodeExpire = new Date(Date.now() + codeExpireMs);
 
     // Category chosen at registration (admin pricing table); legacy auto-score removed.
     // Convert uploaded files to Base64 strings to store directly in the database
@@ -169,7 +169,7 @@ exports.register = async (req, res, next) => {
 
     // Craft a luxurious welcome message specifically for professionals
     let emailSubject = 'SexAppeal Platform - Email Verification Code';
-    let emailMessage = `Welcome to the SexAppeal Platform!\n\nYour verification code is: ${verificationCode}\n\nThis code will expire in 10 minutes.`;
+    let emailMessage = `Welcome to the SexAppeal Platform!\n\nYour verification code is: ${verificationCode}\n\nThis code will expire in ${config.verificationCodeExpireMinutes} minutes.`;
 
     if (role === 'professional') {
       emailSubject = 'Bienvenida a SexAppeal — Tu mes de evaluación comienza';
@@ -178,7 +178,7 @@ exports.register = async (req, res, next) => {
 Bienvenida a SexAppeal, el santuario donde tu presencia se convierte en una Living Treasure.
 
 Tu código de verificación es: ${verificationCode}
-(Este código vence en 10 minutos)
+(Este código vence en ${config.verificationCodeExpireMinutes} minutos)
 
 ✨ TU PRIMER MES, SIN COSTO
 Durante los próximos 30 días disfrutás de un período de evaluación completamente gratuito. Es tu oportunidad de conocer la plataforma, recibir contactos reales y descubrir el valor de estar visible en un espacio exclusivo, discreto y sin comisiones por conexión.
@@ -389,7 +389,7 @@ exports.forgotPassword = async (req, res, next) => {
 
     // Generate a 6-digit recovery code
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const resetCodeExpire = new Date(Date.now() + 10 * 60 * 1000);
+    const resetCodeExpire = new Date(Date.now() + config.verificationCodeExpireMinutes * 60 * 1000);
 
     // We reuse the emailVerificationCode fields to store the reset code 
     // since we know they exist in the User schema.
@@ -401,7 +401,7 @@ exports.forgotPassword = async (req, res, next) => {
       await sendEmail({
         email: user.email,
         subject: 'SexAppeal Platform - Password Reset Code',
-        message: `You requested a password reset.\n\nYour reset code is: ${resetCode}\n\nThis code will expire in 10 minutes.`
+        message: `You requested a password reset.\n\nYour reset code is: ${resetCode}\n\nThis code will expire in ${config.verificationCodeExpireMinutes} minutes.`
       });
 
       res.status(200).json({ success: true, message: 'Email sent' });

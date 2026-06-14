@@ -33,7 +33,7 @@
 
         <main id="dashboardContent" class="hidden" aria-live="polite"></main>
 
-        <div id="dashboardOverlays">
+        <div id="dashboardOverlays" class="hidden">
             <div id="rateAlert" class="card hidden" style="border-color: var(--accent-red); background: rgba(139, 0, 0, 0.1); margin-top: 20px;">
                 <h3 style="color: var(--accent-red);">Action Required: Rate Change</h3>
                 <p>The platform price rates have been updated. You must acknowledge this change to continue with transactions.</p>
@@ -49,9 +49,9 @@
                 </div>
             </div>
 
-            <div id="paymentModalOverlay" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 4000; display: flex; align-items: center; justify-content: center; padding: 20px;">
-                <div class="card" style="max-width: 480px; width: 100%; position: relative;">
-                    <button type="button" id="closePaymentModal" style="position: absolute; top: 12px; right: 12px; background: transparent; border: none; color: var(--primary-gold); font-size: 1.4rem; cursor: pointer;">&times;</button>
+            <div id="paymentModalOverlay" class="hidden payment-modal-overlay" aria-hidden="true">
+                <div class="card payment-modal-panel">
+                    <button type="button" id="closePaymentModal" class="payment-modal-close" aria-label="Cerrar">&times;</button>
                     <h3 class="gold-text" style="margin-bottom: 20px;">Registrar comprobante de pago</h3>
                     <form id="receiptForm" style="display: flex; flex-direction: column; gap: 15px;">
                         <div id="receiptAlert" class="alert hidden" style="padding: 10px; border-radius: 4px; border: 1px solid transparent;"></div>
@@ -62,11 +62,12 @@
                 </div>
             </div>
 
-            <div id="howToPayOverlay" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 4000; display: flex; align-items: center; justify-content: center; padding: 20px;">
-                <div class="card" style="max-width: 520px; width: 100%; position: relative;">
-                    <button type="button" id="closeHowToPayModal" style="position: absolute; top: 12px; right: 12px; background: transparent; border: none; color: var(--primary-gold); font-size: 1.4rem; cursor: pointer;">&times;</button>
+            <div id="howToPayOverlay" class="hidden payment-modal-overlay" aria-hidden="true">
+                <div class="card payment-modal-panel">
+                    <button type="button" id="closeHowToPayModal" class="payment-modal-close" aria-label="Cerrar">&times;</button>
                     <h3 class="gold-text" style="margin-bottom: 16px;">Cómo pagar</h3>
                     <div id="howToPayContent" style="color: #ccc; line-height: 1.7; font-size: 0.95rem;"></div>
+                    <button type="button" id="btnCloseHowToPayFooter" style="margin-top: 20px; width: 100%; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold);">Cerrar</button>
                 </div>
             </div>
         </div>

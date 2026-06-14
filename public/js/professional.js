@@ -4,7 +4,287 @@ import { t, applyStaticTranslations } from './i18n.js';
 import { renderSpecialtyDropdown, setupLocationDropdowns } from './helpers.js';
 import { beginDashboardLoad, finishDashboardLoad, failDashboardLoad } from './dashboardShell.js';
 
-// Update Profile
+export function hideProfessionalPaymentOverlays() {
+    const overlays = document.getElementById('dashboardOverlays');
+    if (overlays) {
+        overlays.classList.add('hidden');
+        overlays.style.display = 'none';
+    }
+}
+
+export function mountProfessionalPaymentOverlays() {
+    const overlays = document.getElementById('dashboardOverlays');
+    if (!overlays) return;
+    overlays.classList.remove('hidden');
+    overlays.style.display = 'block';
+}
+
+export function renderProfessionalMainDashboardShell(content) {
+    content.innerHTML = `
+        <h2 class="gold-text" style="margin-bottom: 40px;">Your Sanctuary Dashboard</h2>
+        <div class="grid">
+            <div class="card">
+                <h3 class="gold-text">Identity Status</h3>
+                <p id="verificationStatus" style="margin: 15px 0; font-size: 1.2rem;">Checking...</p>
+                <div id="revelationStatus" class="tag" style="display: inline-block;">Veiled</div>
+            </div>
+            <div class="card">
+                <h3 class="gold-text">Duo Connection</h3>
+                <div id="duoStatus" style="margin: 15px 0;"><p>Not currently in a Duo.</p></div>
+            </div>
+            <div class="card">
+                <h3 class="gold-text">Your Performance</h3>
+                <div style="margin: 15px 0; display: flex; justify-content: space-around;">
+                    <div style="text-align: center;">
+                        <h4 id="statProfileViews" style="font-size: 2rem; color: var(--primary-gold);">0</h4>
+                        <p style="font-size: 0.8rem; opacity: 0.8;">Profile Views</p>
+                    </div>
+                    <div style="text-align: center;">
+                        <h4 id="statWaClicks" style="font-size: 2rem; color: #00ff50;">0</h4>
+                        <p style="font-size: 0.8rem; opacity: 0.8;">WhatsApp Clicks</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card" style="margin-top: 40px;">
+            <h3 class="gold-text" style="margin-bottom: 25px;">Edit Profile</h3>
+            <form id="updateProfileForm">
+                <div id="updateAlert" class="alert hidden"></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                    <div style="grid-column: 1 / -1;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                            <div><label>First Name</label><input type="text" id="upFirstName"></div>
+                            <div><label>Surname</label><input type="text" id="upSurname"></div>
+                            <div><label>Middle Name</label><input type="text" id="upMiddleName"></div>
+                            <div><label>ID Number</label><input type="text" id="upIdNumber"></div>
+                            <div><label>Birth Date</label><input type="date" id="upBirthDate"></div>
+                            <div><label>Age</label><input type="text" id="upAge" readonly></div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                            <div><label>Mobile</label><input type="text" id="upMobilePhone"></div>
+                            <div><label>Street</label><input type="text" id="upStreet"></div>
+                            <div><label>Number</label><input type="text" id="upStreetNumber"></div>
+                            <div><label>Floor</label><input type="text" id="upFloor"></div>
+                            <div><label>Apartment</label><input type="text" id="upApartment"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <label>Alias</label><input type="text" id="upAlias">
+                        <label>Bio</label><textarea id="upBio" rows="4"></textarea>
+                    </div>
+                    <div>
+                        <label>Category</label><div id="displayQuality" class="quality-badge quality-standard">Standard</div>
+                        <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="upOwnApartment"> Own apartment</label>
+                        <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="upFantasyWardrobe"> Fantasy wardrobe</label>
+                        <select id="upServices" multiple size="5" style="display:none;">
+                            <option value="Massage">Massage</option>
+                            <option value="Virtual Connection">Virtual Connection</option>
+                        </select>
+                        <label>Attributes</label><input type="text" id="upAttributes">
+                        <label>Measurements</label><input type="text" id="upMeasurements">
+                        <label>Height</label><input type="text" id="upHeight">
+                    </div>
+                </div>
+                <button type="submit">Update Profile</button>
+            </form>
+        </div>
+    `;
+}
+
+/** Welcome guide, billing reminders, and payment upload UI — professionals only (not admin). */
+export function injectProfessionalDashboardGuides(content, data, insertRef) {
+    const user = data.data;
+    const prof = user.professionalProfile || {};
+    const isApproved = user.verificationStatus === 'approved';
+
+    if (!localStorage.getItem('hideWelcomeGuide') && !document.getElementById('welcomeGuideSection')) {
+        const welcomeSection = document.createElement('div');
+        welcomeSection.id = 'welcomeGuideSection';
+        welcomeSection.className = 'card';
+        welcomeSection.style.marginBottom = '20px';
+        welcomeSection.style.background = 'rgba(212, 175, 55, 0.05)';
+        welcomeSection.style.border = '1px solid rgba(212, 175, 55, 0.4)';
+        welcomeSection.style.position = 'relative';
+
+        welcomeSection.innerHTML = `
+            <button id="dismissWelcomeBtn" style="position: absolute; top: 15px; right: 15px; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold); padding: 4px 8px; font-size: 0.8rem; border-radius: 4px; cursor: pointer; transition: background 0.3s;" onmouseover="this.style.background='rgba(212,175,55,0.1)'" onmouseout="this.style.background='transparent'">${t('Dismiss')}</button>
+            <h3 class="gold-text" style="margin-bottom: 15px;">📖 ${t('Welcome Guide & How It Works')}</h3>
+            <ul style="line-height: 1.6; color: #ccc; margin-left: 20px; font-size: 0.95rem;">
+                <li style="margin-bottom: 10px;"><strong>${t('Free evaluation month:')}</strong> ${t('Your first 30 days are free. During this period your profile appears in a random category so you can experience how visibility works.')}</li>
+                <li style="margin-bottom: 10px;"><strong>${t('Your chosen category:')}</strong> ${t('After your first paid month is validated by Admin, you move to the category you selected at registration and pay that rate.')}</li>
+                <li style="margin-bottom: 10px;"><strong>${t('Vacations:')}</strong> ${t('While on vacation your profile shows as inactive. Up to 15 vacation days per month are discounted from your monthly balance.')}</li>
+                <li style="margin-bottom: 10px;"><strong>${t('Monthly payment:')}</strong> ${t('Use Pago mensual to upload your receipt. Tap Cómo pagar for transfer details.')}</li>
+                <li style="margin-bottom: 10px;"><strong>${t('Privacy Guarantee:')}</strong> ${t('Our platform uses zero cookies and zero third-party trackers. Your identity and client interactions remain completely confidential.')}</li>
+            </ul>
+        `;
+        content.insertBefore(welcomeSection, insertRef);
+
+        document.getElementById('dismissWelcomeBtn').addEventListener('click', () => {
+            localStorage.setItem('hideWelcomeGuide', 'true');
+            welcomeSection.remove();
+        });
+    }
+
+    if (!document.getElementById('notificationCenter')) {
+        const notifSection = document.createElement('div');
+        notifSection.id = 'notificationCenter';
+        notifSection.className = 'card fileteado-section';
+        notifSection.style.marginBottom = '20px';
+        notifSection.style.border = '1px solid var(--primary-gold)';
+
+        let alertsHtml = '';
+
+        if (user.allowResubmission) {
+            alertsHtml += getResubmissionBannerHtml(user).replace('id="resubmissionSection"', 'id="dashboardResubmissionNotice"');
+            alertsHtml += `<div style="margin-bottom: 10px;"><a href="${appPath('profDashboard.html')}" style="display:inline-block;padding:10px 16px;background:var(--primary-gold);color:var(--dark-bg);text-decoration:none;font-weight:bold;border-radius:4px;">${t('Open profile editor to fix verification')}</a></div>`;
+        } else if (user.verificationStatus === 'pending') {
+            alertsHtml += `<div style="background: rgba(255,165,0,0.12); border-left: 4px solid orange; padding: 12px 15px; margin-bottom: 10px; line-height: 1.5;">⏳ <strong>${t('Pending Admin Approval')}</strong><br><span style="font-size: 0.9rem; color: #ddd;">${t('Your profile is under review (typically up to 48 hours). Profile changes can only be made after admin approval. You will receive an email when your account is approved — please check your Spam folder too.')}</span></div>`;
+        } else if (user.verificationStatus === 'rejected') {
+            alertsHtml += getGeneralRejectionBannerHtml(user.rejectionDetails);
+        }
+
+        if (isApproved && (!prof.photos || prof.photos.length === 0)) {
+            alertsHtml += `<div style="background: rgba(212,175,55,0.1); border-left: 4px solid var(--primary-gold); padding: 15px; margin-bottom: 10px; line-height: 1.5;">🎉 <strong style="color: var(--primary-gold);">${t('Welcome to SexAppeal!')}</strong><br>${t('You are now approved and ready to upload your personal photos. Note: The first photo will be treated as your profile Thumbnail. You can drag and drop photos below to change their order at any time.')}</div>`;
+        }
+
+        if (!data.isReadyForTransactions && isApproved) {
+            alertsHtml += `<div style="background: rgba(255,0,0,0.1); border-left: 4px solid var(--accent-red); padding: 10px; margin-bottom: 10px;">💰 <strong>Rate Update:</strong> Please acknowledge the new pricing rates in the alert above to maintain your visibility.</div>`;
+        }
+
+        if (prof.isEvaluationPeriod && prof.subscriptionStatus === 'trial') {
+            const trialEnd = new Date(prof.trialEndDate);
+            const desired = prof.desiredQuality || prof.quality || 'Standard';
+            alertsHtml += `<div style="background: rgba(212,175,55,0.1); border-left: 4px solid var(--primary-gold); padding: 15px; margin-bottom: 10px;">
+                💎 <strong>${t('Evaluation period (free month)')}</strong><br>
+                ${t('Visible category now')}: <strong>${prof.quality || 'Standard'}</strong> (${t('random during evaluation')}).<br>
+                ${t('Your chosen category after first validated payment')}: <strong>${desired}</strong>.<br>
+                ${t('Trial ends')}: ${trialEnd.toLocaleDateString()}.
+            </div>`;
+        } else if (prof.subscriptionStatus === 'trial') {
+            const trialEnd = new Date(prof.trialEndDate);
+            const now = new Date();
+            if (trialEnd > now) {
+                const endYear = trialEnd.getFullYear();
+                const endMonth = trialEnd.getMonth();
+                const daysInMonth = new Date(endYear, endMonth + 1, 0).getDate();
+                const remainingDays = daysInMonth - trialEnd.getDate() + 1;
+
+                let proratedAmt = 0;
+                if (remainingDays > 0 && trialEnd.getDate() !== 1) {
+                    const globalPrices = data.globalPricing || { Standard: 15000, Silver: 20000, Gold: 30000, Premium: 40000, Elite: 50000 };
+                    const catPrice = globalPrices[prof.quality || 'Standard'];
+                    const pricePerDay = catPrice / daysInMonth;
+                    proratedAmt = Math.round(pricePerDay * remainingDays);
+                }
+
+                alertsHtml += `<div style="background: rgba(212,175,55,0.1); border-left: 4px solid var(--primary-gold); padding: 15px; margin-bottom: 10px;">
+                    💎 <strong>First Month Free:</strong> Your trial ends on ${trialEnd.toLocaleDateString()}.
+                    ${proratedAmt > 0 ? `<br>Since your trial ends mid-month, you will only be charged a prorated amount of <strong>${new Intl.NumberFormat('es-AR').format(proratedAmt)} ARS</strong> for the remainder of that month.` : ''}
+                </div>`;
+            }
+        }
+
+        if (prof.subscriptionStatus === 'suspended') {
+            const pendingInv = (prof.invoices || []).find(i => i.status === 'pending');
+            const feeText = pendingInv && pendingInv.lateFeeApplied ? ` A 2% late fee has been applied. Your new balance is $${new Intl.NumberFormat('es-AR').format(pendingInv.amount)} ARS.` : '';
+            alertsHtml += `<div style="background: rgba(255,0,0,0.1); border-left: 4px solid var(--accent-red); padding: 10px; margin-bottom: 10px;">🛑 <strong>Account Suspended:</strong> Your profile is hidden due to unpaid balances.${feeText} Upload your receipt to restore access.</div>`;
+        }
+
+        if (!alertsHtml) {
+            alertsHtml = `<div style="color: #888; font-style: italic;">${t('No pending actions at this time.')}</div>`;
+        }
+
+        notifSection.innerHTML = `
+            <h3 class="gold-text" style="margin-bottom: 15px;">🔔 ${t('Notifications & Pending Items')}</h3>
+            ${alertsHtml}
+        `;
+        content.insertBefore(notifSection, insertRef);
+    }
+
+    mountProfessionalPaymentOverlays();
+    setupProfessionalPaymentUI(data.paymentInstructions);
+}
+
+function showPaymentOverlay(overlayId) {
+    const el = document.getElementById(overlayId);
+    if (!el) return;
+    el.classList.remove('hidden');
+    el.style.display = 'flex';
+    el.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+}
+
+function hidePaymentOverlay(overlayId) {
+    const el = document.getElementById(overlayId);
+    if (!el) return;
+    el.classList.add('hidden');
+    el.style.display = 'none';
+    el.setAttribute('aria-hidden', 'true');
+    const payOpen = !document.getElementById('paymentModalOverlay')?.classList.contains('hidden');
+    const howOpen = !document.getElementById('howToPayOverlay')?.classList.contains('hidden');
+    if (!payOpen && !howOpen) document.body.style.overflow = '';
+}
+
+function fillHowToPayContent(paymentInstructions) {
+    const howToPayContent = document.getElementById('howToPayContent');
+    if (!paymentInstructions || !howToPayContent) return;
+    howToPayContent.innerHTML = `
+        <p>${paymentInstructions.intro}</p>
+        <p style="margin-top: 12px;"><strong>Mercado Pago</strong><br>
+        Alias: <span style="color: var(--primary-gold);">${paymentInstructions.mercadoPago.alias}</span><br>
+        CVU: <span style="color: var(--primary-gold);">${paymentInstructions.mercadoPago.cvu}</span></p>
+        <p style="margin-top: 12px;"><strong>Transferencia bancaria</strong><br>
+        Alias: <span style="color: var(--primary-gold);">${paymentInstructions.bankTransfer.alias}</span><br>
+        CBU: <span style="color: var(--primary-gold);">${paymentInstructions.bankTransfer.cbu}</span></p>
+    `;
+}
+
+// Upload Payment Receipt
+export function setupProfessionalPaymentUI(paymentInstructions) {
+    mountProfessionalPaymentOverlays();
+
+    const paymentSection = document.getElementById('paymentSection');
+    const root = document.getElementById('dashboardOverlays');
+    if (paymentSection) paymentSection.classList.remove('hidden');
+    fillHowToPayContent(paymentInstructions);
+    if (!root || root.dataset.paymentUiBound === '1') return;
+    root.dataset.paymentUiBound = '1';
+
+    root.addEventListener('click', (e) => {
+        const target = e.target;
+        if (target.closest('#btnOpenPaymentModal')) {
+            e.preventDefault();
+            showPaymentOverlay('paymentModalOverlay');
+            return;
+        }
+        if (target.closest('#btnHowToPay')) {
+            e.preventDefault();
+            showPaymentOverlay('howToPayOverlay');
+            return;
+        }
+        if (target.closest('#closePaymentModal')) {
+            e.preventDefault();
+            e.stopPropagation();
+            hidePaymentOverlay('paymentModalOverlay');
+            return;
+        }
+        if (target.closest('#closeHowToPayModal, #btnCloseHowToPayFooter')) {
+            e.preventDefault();
+            e.stopPropagation();
+            hidePaymentOverlay('howToPayOverlay');
+            return;
+        }
+        if (target.id === 'paymentModalOverlay') hidePaymentOverlay('paymentModalOverlay');
+        if (target.id === 'howToPayOverlay') hidePaymentOverlay('howToPayOverlay');
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        hidePaymentOverlay('howToPayOverlay');
+        hidePaymentOverlay('paymentModalOverlay');
+    });
+}
+
 let profileFormBound = false;
 
 export function bindProfessionalProfileForm() {
@@ -196,43 +476,6 @@ export function bindProfessionalProfileForm() {
 
 bindProfessionalProfileForm();
 
-// Upload Payment Receipt
-export function setupProfessionalPaymentUI(paymentInstructions) {
-    const paymentSection = document.getElementById('paymentSection');
-    const paymentOverlay = document.getElementById('paymentModalOverlay');
-    const howToPayOverlay = document.getElementById('howToPayOverlay');
-    const howToPayContent = document.getElementById('howToPayContent');
-    const btnOpen = document.getElementById('btnOpenPaymentModal');
-    const btnHow = document.getElementById('btnHowToPay');
-    const btnClosePay = document.getElementById('closePaymentModal');
-    const btnCloseHow = document.getElementById('closeHowToPayModal');
-
-    if (paymentSection) paymentSection.classList.remove('hidden');
-
-    const showOverlay = (el) => { if (el) { el.classList.remove('hidden'); el.style.display = 'flex'; } };
-    const hideOverlay = (el) => { if (el) { el.classList.add('hidden'); el.style.display = 'none'; } };
-
-    btnOpen?.addEventListener('click', () => showOverlay(paymentOverlay));
-    btnClosePay?.addEventListener('click', () => hideOverlay(paymentOverlay));
-    paymentOverlay?.addEventListener('click', (e) => { if (e.target === paymentOverlay) hideOverlay(paymentOverlay); });
-
-    if (paymentInstructions && howToPayContent) {
-        howToPayContent.innerHTML = `
-            <p>${paymentInstructions.intro}</p>
-            <p style="margin-top: 12px;"><strong>Mercado Pago</strong><br>
-            Alias: <span style="color: var(--primary-gold);">${paymentInstructions.mercadoPago.alias}</span><br>
-            CVU: <span style="color: var(--primary-gold);">${paymentInstructions.mercadoPago.cvu}</span></p>
-            <p style="margin-top: 12px;"><strong>Transferencia bancaria</strong><br>
-            Alias: <span style="color: var(--primary-gold);">${paymentInstructions.bankTransfer.alias}</span><br>
-            CBU: <span style="color: var(--primary-gold);">${paymentInstructions.bankTransfer.cbu}</span></p>
-        `;
-    }
-
-    btnHow?.addEventListener('click', () => showOverlay(howToPayOverlay));
-    btnCloseHow?.addEventListener('click', () => hideOverlay(howToPayOverlay));
-    howToPayOverlay?.addEventListener('click', (e) => { if (e.target === howToPayOverlay) hideOverlay(howToPayOverlay); });
-}
-
 const receiptForm = document.getElementById('receiptForm');
 if (receiptForm) {
     receiptForm.addEventListener('submit', async (e) => {
@@ -269,8 +512,7 @@ if (receiptForm) {
             if (data.success) {
                 showAlert(alert, 'Comprobante enviado. Será verificado por el administrador.', false);
                 receiptForm.reset();
-                const paymentOverlay = document.getElementById('paymentModalOverlay');
-                if (paymentOverlay) { paymentOverlay.classList.add('hidden'); paymentOverlay.style.display = 'none'; }
+                hidePaymentOverlay('paymentModalOverlay');
             } else {
                 showAlert(alert, data.error || 'Failed to upload receipt');
             }
