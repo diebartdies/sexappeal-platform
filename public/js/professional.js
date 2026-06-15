@@ -12,6 +12,20 @@ import {
     needsProfessionalCategorySetup
 } from './professionalSetup.js';
 
+import {
+    resolvePaymentInstructions,
+    renderHowToPayHtml,
+    DEFAULT_PAYMENT_INSTRUCTIONS
+} from './paymentInstructions.js';
+
+let currentPaymentInstructions = DEFAULT_PAYMENT_INSTRUCTIONS;
+
+function attachOverlayToBody(id) {
+    const el = document.getElementById(id);
+    if (!el || el.parentElement === document.body) return;
+    document.body.appendChild(el);
+}
+
 export function hideProfessionalPaymentOverlays() {
     const overlays = document.getElementById('dashboardOverlays');
     const sidebar = document.getElementById('profPaymentSidebar');
@@ -25,13 +39,12 @@ export function hideProfessionalPaymentOverlays() {
 }
 
 export function mountProfessionalPaymentOverlays() {
-    const overlays = document.getElementById('dashboardOverlays');
+    attachOverlayToBody('paymentModalOverlay');
+    attachOverlayToBody('howToPayOverlay');
+    attachOverlayToBody('deleteProfileOverlay');
+
     const sidebar = document.getElementById('profPaymentSidebar');
     const paymentSection = document.getElementById('paymentSection');
-    if (overlays) {
-        overlays.classList.remove('hidden');
-        overlays.style.display = 'block';
-    }
     if (sidebar) sidebar.classList.remove('hidden');
     if (paymentSection) paymentSection.classList.remove('hidden');
 }
@@ -246,53 +259,12 @@ function hidePaymentOverlay(overlayId) {
     if (wasVisible) endModalSession();
 }
 
-function escapePaymentHtml(value) {
-    return String(value || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-}
-
 function fillHowToPayContent(paymentInstructions) {
+    currentPaymentInstructions = resolvePaymentInstructions(paymentInstructions);
     const howToPayContent = document.getElementById('howToPayContent');
-    if (!howToPayContent) return;
-
-    if (!paymentInstructions) {
-        howToPayContent.innerHTML = '<p>No hay datos de pago disponibles. Contactá al administrador.</p>';
-        return;
+    if (howToPayContent) {
+        howToPayContent.innerHTML = renderHowToPayHtml(currentPaymentInstructions);
     }
-
-    const mp = paymentInstructions.mercadoPago || {};
-    const bank = paymentInstructions.bankTransfer || {};
-    const bankName = bank.bankName || 'BBVA';
-
-    howToPayContent.innerHTML = `
-        <p class="how-to-pay-intro">${escapePaymentHtml(paymentInstructions.intro)}</p>
-        <div class="how-to-pay-grid">
-            <section class="how-to-pay-card">
-                <div class="how-to-pay-heading">
-                    <img src="/images/mercadopago.svg" alt="Mercado Pago" class="how-to-pay-logo how-to-pay-logo-mp" width="140" height="32">
-                    <strong>Mercado Pago:</strong>
-                </div>
-                <dl class="how-to-pay-details">
-                    <div><dt>Alias</dt><dd>${escapePaymentHtml(mp.alias)}</dd></div>
-                    <div><dt>CVU</dt><dd>${escapePaymentHtml(mp.cvu)}</dd></div>
-                </dl>
-            </section>
-            <section class="how-to-pay-card">
-                <div class="how-to-pay-heading">
-                    <span class="how-to-pay-bank-label">Banco:</span>
-                    <img src="/images/bbva.svg" alt="${escapePaymentHtml(bankName)}" class="how-to-pay-logo how-to-pay-logo-bbva" width="72" height="32">
-                    <strong>${escapePaymentHtml(bankName)}</strong>
-                </div>
-                <dl class="how-to-pay-details">
-                    <div><dt>Alias</dt><dd>${escapePaymentHtml(bank.alias)}</dd></div>
-                    <div><dt>CBU</dt><dd>${escapePaymentHtml(bank.cbu)}</dd></div>
-                </dl>
-            </section>
-        </div>
-    `;
 }
 
 let professionalPaymentUiBound = false;
@@ -309,7 +281,7 @@ export function setupProfessionalPaymentUI(paymentInstructions) {
 
     const paymentSection = document.getElementById('paymentSection');
     if (paymentSection) paymentSection.classList.remove('hidden');
-    fillHowToPayContent(paymentInstructions);
+    currentPaymentInstructions = resolvePaymentInstructions(paymentInstructions);
 
     if (professionalPaymentUiBound) return;
     professionalPaymentUiBound = true;
@@ -321,6 +293,7 @@ export function setupProfessionalPaymentUI(paymentInstructions) {
 
     document.getElementById('btnHowToPay')?.addEventListener('click', (e) => {
         e.preventDefault();
+        fillHowToPayContent(currentPaymentInstructions);
         showPaymentOverlay('howToPayOverlay');
     });
 
@@ -1082,6 +1055,8 @@ export async function loadProfDashboard() {
     const content = document.getElementById('profDashboardContent');
     const layout = document.getElementById('profDashboardLayout');
     if (!formObj || !content || !layout) return;
+
+    mountProfessionalPaymentOverlays();
 
     beginDashboardLoad('profDashboardLayout', 'loader', { clearContent: false });
     formObj.innerHTML = '';

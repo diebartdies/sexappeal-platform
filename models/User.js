@@ -94,6 +94,16 @@ const UserSchema = new mongoose.Schema({
       type: String,
       enum: ['Standard', 'Silver', 'Gold', 'Premium', 'Elite']
     },
+    lastCatModDate: Date,
+    qualityBeforeLastMod: {
+      type: String,
+      enum: ['Standard', 'Silver', 'Gold', 'Premium', 'Elite']
+    },
+    categoryChangeLog: [{
+      changedAt: { type: Date, default: Date.now },
+      fromQuality: String,
+      toQuality: String
+    }],
     isEvaluationPeriod: {
       type: Boolean,
       default: true

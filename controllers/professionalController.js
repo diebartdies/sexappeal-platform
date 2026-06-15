@@ -12,6 +12,7 @@ const ConnectionRequest = require('../models/ConnectionRequest');
 const { isUploadPath, resolvePhotoForClient, resolvePhotosForClient, normalizePhotosForStorage, resolveFirstPhotoForClient } = require('../utils/photoUtils');
 const { getProfessionalIdNumberError, normalizeProfessionalIdNumber } = require('../utils/idNumber');
 const { resolveWhatsappNumber, hasContactNumber } = require('../utils/contactNumber');
+const { recordCategoryChange, normalizeQuality } = require('../utils/categoryBilling');
 
 // Simple in-memory cache setup
 const cache = new Map();
@@ -418,6 +419,9 @@ exports.getMe = async (req, res, next) => {
       globalPricing,
       paymentInstructions: user.role === 'professional' ? {
         intro: 'Transferí tu pago mensual por Mercado Pago o por transferencia bancaria a las siguientes cuentas:',
+        billingNote: 'La facturación mensual se calcula según la categoría seleccionada en tu perfil. Si cambiás de categoría durante el mes, el importe se prorratea por los días en cada tarifa (guardamos la fecha del cambio en tu perfil).',
+        currentQuality: user.professionalProfile?.quality || 'Standard',
+        currentCategoryPrice: globalPricing[user.professionalProfile?.quality || 'Standard'] || globalPricing.Standard,
         mercadoPago: { alias: config.payment.mercadoPago.alias, cvu: config.payment.mercadoPago.cvu },
         bankTransfer: {
           bankName: config.payment.bankTransfer.bankName || 'BBVA',
@@ -638,11 +642,17 @@ exports.updateProfile = async (req, res, next) => {
     }
 
     if (req.body.quality) {
+        const requestedQuality = normalizeQuality(req.body.quality);
+        professionalProfile.categoryChangeLog = [...(oldProf.categoryChangeLog || [])];
         if (oldProf.isEvaluationPeriod) {
-          professionalProfile.desiredQuality = req.body.quality;
+          professionalProfile.desiredQuality = requestedQuality;
           professionalProfile.quality = oldProf.quality || 'Standard';
         } else {
-          professionalProfile.quality = req.body.quality;
+          const previousQuality = normalizeQuality(oldProf.quality);
+          if (requestedQuality !== previousQuality) {
+            recordCategoryChange(professionalProfile, previousQuality, requestedQuality);
+          }
+          professionalProfile.quality = requestedQuality;
         }
     } else {
         professionalProfile.quality = oldProf.quality || 'Standard';

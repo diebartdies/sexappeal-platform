@@ -29,6 +29,7 @@ services:
       - ./public:/app/public
       - ./controllers:/app/controllers
       - ./utils:/app/utils
+      - ./config:/app/config
       - ./server.js:/app/server.js
     depends_on:
       mongo:

@@ -442,6 +442,39 @@ input {
     min-height: 280px;
 }
 
+.landing-brand-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    flex-wrap: nowrap;
+    margin: 0 0 14px;
+    line-height: 1;
+}
+
+.landing-brand-name {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.25rem, 3vw, 1.65rem);
+    color: var(--primary-gold);
+    letter-spacing: 0.1em;
+    font-weight: 400;
+}
+
+.landing-brochure-link {
+    margin-left: 0.35em;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: clamp(0.72rem, 1.8vw, 0.82rem);
+    color: #aaa;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    letter-spacing: 0.04em;
+    text-transform: lowercase;
+}
+
+.landing-brochure-link:hover,
+.landing-brochure-link:focus-visible {
+    color: var(--primary-gold);
+}
+
 .landing-logo {
     display: block;
     max-width: 100%;
@@ -842,9 +875,21 @@ body.small-grid-mode #treasureGrid .treasure-card {
 }
 
 .how-to-pay-intro {
-    margin: 0 0 16px;
+    margin: 0 0 12px;
     color: #ccc;
     line-height: 1.6;
+}
+
+.how-to-pay-billing-note,
+.how-to-pay-category-line {
+    margin: 0 0 12px;
+    color: #bbb;
+    line-height: 1.55;
+    font-size: 0.92rem;
+}
+
+.how-to-pay-category-line {
+    color: #ddd;
 }
 
 .how-to-pay-grid {
@@ -925,6 +970,64 @@ body.small-grid-mode #treasureGrid .treasure-card {
     .payment-modal-panel {
         max-width: 100%;
     }
+}
+
+.payment-sidebar-accounts-wrap {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(212, 175, 55, 0.25);
+}
+
+.payment-sidebar-accounts-title {
+    margin: 0 0 12px;
+    color: var(--primary-gold);
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.payment-sidebar-accounts {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.payment-sidebar-account-block {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    border-radius: 6px;
+    padding: 10px 12px;
+}
+
+.payment-sidebar-account-heading {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+    color: #eee;
+    font-size: 0.88rem;
+}
+
+.payment-sidebar-account-block p {
+    margin: 0 0 6px;
+    font-size: 0.82rem;
+    color: #ddd;
+    word-break: break-all;
+}
+
+.payment-sidebar-account-block p:last-child {
+    margin-bottom: 0;
+}
+
+.payment-sidebar-account-block p span {
+    display: inline-block;
+    min-width: 42px;
+    color: #999;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
 }
 
 .payment-modal-close {

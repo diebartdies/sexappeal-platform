@@ -11,6 +11,7 @@ const path = require('path');
 const os = require('os');
 const connectDB = require('./config/database');
 const User = require('./models/User');
+const { calculateMonthlyInvoiceAmount } = require('./utils/categoryBilling');
 const ActivityLog = require('./models/ActivityLog');
 const sendEmail = require('./sendEmail');
 const { resolveWhatsappNumber } = require('./utils/contactNumber');
@@ -461,9 +462,13 @@ setInterval(async () => {
         billableDays -= vacationDaysInMonth;
         if (billableDays < 0) billableDays = 0;
 
-        const category = user.professionalProfile.quality || 'Standard';
-        const monthlyAmount = globalPricing[category] || 15000;
-        const amountToBill = Math.round((monthlyAmount / daysInMonth) * billableDays);
+        const amountToBill = calculateMonthlyInvoiceAmount(
+          user.professionalProfile,
+          globalPricing,
+          today.getFullYear(),
+          today.getMonth(),
+          billableDays
+        );
 
         if (amountToBill > 0) {
           user.professionalProfile.paymentReceiptUrl = undefined;

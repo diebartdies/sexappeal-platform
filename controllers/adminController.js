@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const { recordCategoryChange, normalizeQuality } = require('../utils/categoryBilling');
 const ActivityLog = require('../models/ActivityLog');
 const sendEmail = require('../sendEmail');
 const { isValidRejectionReason, buildRejectionEmail } = require('../utils/rejectionMessages');
@@ -374,7 +375,13 @@ exports.acknowledgePayment = async (req, res, next) => {
     user.professionalProfile.subscriptionStatus = 'active';
 
     if (user.professionalProfile.desiredQuality) {
-      user.professionalProfile.quality = user.professionalProfile.desiredQuality;
+      const previousQuality = normalizeQuality(user.professionalProfile.quality);
+      const nextQuality = normalizeQuality(user.professionalProfile.desiredQuality);
+      if (previousQuality !== nextQuality) {
+        user.professionalProfile.categoryChangeLog = [...(user.professionalProfile.categoryChangeLog || [])];
+        recordCategoryChange(user.professionalProfile, previousQuality, nextQuality);
+      }
+      user.professionalProfile.quality = nextQuality;
     }
     user.professionalProfile.isEvaluationPeriod = false;
 
@@ -433,11 +440,30 @@ exports.updateProfessionalProfile = async (req, res, next) => {
           delete req.body.professionalProfile.photos;
       }
 
+      const previousQuality = normalizeQuality(user.professionalProfile.quality);
+      const existingCategoryLog = [...(user.professionalProfile.categoryChangeLog || [])];
+      const incomingQuality = req.body.professionalProfile.quality !== undefined
+        ? normalizeQuality(req.body.professionalProfile.quality)
+        : null;
+
       user.professionalProfile = {
         ...user.professionalProfile.toObject(),
         ...req.body.professionalProfile
       };
       user.professionalProfile.whatsappNumber = resolveWhatsappNumber(user.professionalProfile);
+
+      if (!req.body.professionalProfile.categoryChangeLog) {
+        user.professionalProfile.categoryChangeLog = existingCategoryLog;
+      }
+
+      if (
+        incomingQuality &&
+        incomingQuality !== previousQuality &&
+        !user.professionalProfile.isEvaluationPeriod
+      ) {
+        user.professionalProfile.categoryChangeLog = [...(user.professionalProfile.categoryChangeLog || [])];
+        recordCategoryChange(user.professionalProfile, previousQuality, incomingQuality);
+      }
     }
 
     await user.save();

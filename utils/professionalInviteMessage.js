@@ -34,6 +34,12 @@ Cuando finalice tu mes gratuito y tu primer pago sea validado por nuestro equipo
 🏖️ VACACIONES
 Si necesitás ausentarte, podés registrar vacaciones desde tu panel. Durante ese período tu perfil figurará como inactivo y, en tu facturación mensual, se descontarán hasta 15 días de vacaciones del saldo a abonar.
 
+💰 FACTURACIÓN INTELIGENTE POR CATEGORÍA
+Tu abono mensual se calcula según la categoría que elijas (Standard, Silver, Gold, Premium o Elite). Si durante el mes cambiás de categoría por decisión propia, el sistema registra la fecha del cambio y prorratea automáticamente los días en cada tarifa — sin sorpresas ni cálculos manuales.
+
+🔒 PLATAFORMA SEGURA Y TRAZABLE
+Perfiles verificados con documentación y selfie de gesto, contacto protegido anti-scraping, registro de actividad trazable (incluso navegación anónima sin cookies de seguimiento) y acuerdo de respeto integrado en cada interacción.
+
 🔗 REGISTRATE EN LA PLATAFORMA
 ${REGISTER_URL}
 
