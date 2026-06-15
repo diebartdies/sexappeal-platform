@@ -457,12 +457,8 @@ body.has-global-topbar {
 /* Categories three-frame layout — tablet/mobile */
 @media (max-width: 1024px) {
     .categories-shell {
-        grid-template-columns: minmax(128px, 22%) minmax(0, 1fr) minmax(48px, 8%);
+        grid-template-columns: minmax(48px, 8%) minmax(0, 1fr) minmax(48px, 8%);
         gap: 10px;
-    }
-
-    .categories-frame-left {
-        padding: 20px 14px;
     }
 }
 

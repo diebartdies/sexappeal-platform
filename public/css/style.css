@@ -1637,7 +1637,7 @@ body.categories-page header.page-header {
 
 .categories-shell {
     display: grid;
-    grid-template-columns: minmax(176px, 22%) minmax(0, 1fr) minmax(88px, 11%);
+    grid-template-columns: minmax(88px, 11%) minmax(0, 1fr) minmax(88px, 11%);
     gap: 14px;
     align-items: stretch;
     min-height: calc(100vh - 100px);
@@ -1659,15 +1659,10 @@ body.categories-page header.page-header {
     min-height: 320px;
 }
 
+/* Left frame mirrors the right side frame: same box, sizing and padding.
+   Equal height is handled by the grid's align-items: stretch. */
 .categories-frame-left {
-    position: sticky;
-    top: 72px;
-    align-self: stretch;
-    min-height: calc(100vh - 100px);
-    height: calc(100vh - 100px);
-    max-height: calc(100vh - 100px);
-    padding: 28px 20px;
-    box-sizing: border-box;
+    justify-content: flex-start;
 }
 
 .categories-brand-logo {
@@ -1765,15 +1760,16 @@ body.launch-curtain-active.categories-page .categories-filter-source {
     position: relative;
     width: 100%;
     box-sizing: border-box;
-    min-height: clamp(260px, 42vh, 480px);
+    min-height: clamp(320px, 52vh, 560px);
     margin: 0;
     border-radius: 4px;
     overflow: hidden;
     background:
-        radial-gradient(ellipse at center, rgba(20, 8, 8, 0.95) 0%, rgba(5, 5, 5, 1) 70%),
-        linear-gradient(180deg, #120808 0%, #050505 100%);
+        radial-gradient(ellipse 55% 30% at 50% 92%, rgba(255, 214, 150, 0.40) 0%, rgba(150, 95, 40, 0.12) 45%, transparent 72%),
+        linear-gradient(180deg, transparent 76%, rgba(120, 75, 35, 0.50) 78%, rgba(70, 42, 18, 0.88) 100%),
+        linear-gradient(180deg, #1a0a0a 0%, #0a0505 55%, #140a06 100%);
     border: 1px solid rgba(212, 175, 55, 0.35);
-    box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.9);
+    box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.92);
 }
 
 /* Match .grid margin-top on discovery/home pages */
@@ -1781,69 +1777,87 @@ body.launch-curtain-active:not(.categories-page) .treasure-grid-slot .launch-cur
     margin-top: 50px;
 }
 
+/* Top valance (cenefa) with draped swags */
 .launch-curtain-gauze {
     position: absolute;
-    inset: 0;
-    z-index: 2;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: clamp(56px, 12vh, 104px);
+    z-index: 5;
     pointer-events: none;
     background:
         repeating-linear-gradient(
             90deg,
-            rgba(255, 255, 255, 0.03) 0,
-            rgba(255, 255, 255, 0.03) 1px,
-            transparent 1px,
-            transparent 6px
+            rgba(0, 0, 0, 0.30) 0,
+            rgba(0, 0, 0, 0.30) 5px,
+            rgba(150, 25, 40, 0.0) 12px,
+            rgba(255, 220, 200, 0.10) 16px,
+            rgba(0, 0, 0, 0.30) 24px
         ),
-        repeating-linear-gradient(
-            0deg,
-            rgba(255, 255, 255, 0.025) 0,
-            rgba(255, 255, 255, 0.025) 1px,
-            transparent 1px,
-            transparent 8px
-        );
-    opacity: 0.55;
-    mix-blend-mode: soft-light;
+        linear-gradient(180deg, #a01828 0%, #82111f 42%, #5e0b16 100%);
+    border-top: 2px solid rgba(212, 175, 55, 0.55);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.55), inset 0 -10px 22px rgba(0, 0, 0, 0.55);
+    -webkit-mask: radial-gradient(30px at 50% 100%, #0000 96%, #000 100%) 50% 0 / 66px 100% repeat-x;
+            mask: radial-gradient(30px at 50% 100%, #0000 96%, #000 100%) 50% 0 / 66px 100% repeat-x;
+    transition: transform 2.6s cubic-bezier(0.65, 0, 0.35, 1);
 }
 
+/* Velvet side drapes with vertical pleats, gathered and tied back */
 .launch-curtain-panel {
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 52%;
+    width: 40%;
     z-index: 3;
-    background:
-        linear-gradient(180deg, #4a0810 0%, #7b1020 18%, #5c0c18 55%, #2a0408 100%);
-    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.65);
-    transition: transform 2.8s cubic-bezier(0.65, 0, 0.35, 1);
-}
-
-.launch-curtain-panel::before {
-    content: '';
-    position: absolute;
-    inset: 0;
     background:
         repeating-linear-gradient(
             90deg,
-            rgba(255, 255, 255, 0.04) 0,
-            rgba(255, 255, 255, 0.04) 2px,
-            transparent 2px,
-            transparent 14px
+            #3a060c 0px,
+            #620e1a 13px,
+            #8c1626 25px,
+            #620e1a 37px,
+            #3a060c 50px
         );
-    opacity: 0.7;
+    box-shadow: inset 0 0 70px rgba(0, 0, 0, 0.75);
+    transition: transform 2.8s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* Gold tieback knot near the inner edge */
+.launch-curtain-panel::before {
+    content: '';
+    position: absolute;
+    top: 47%;
+    width: 48px;
+    height: 32px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #f7e3a1 0%, #d4af37 45%, #9c7711 100%);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.55), inset 0 -3px 6px rgba(0, 0, 0, 0.4);
+    z-index: 4;
 }
 
 .launch-curtain-panel-left {
     left: 0;
-    border-right: 3px solid rgba(212, 175, 55, 0.45);
+    border-right: 2px solid rgba(212, 175, 55, 0.40);
     transform-origin: left center;
-    clip-path: polygon(0 0, 100% 0, 88% 100%, 0 100%);
+    clip-path: polygon(0 0, 100% 0, 100% 58%, 60% 100%, 0 92%);
+    border-bottom-right-radius: 80% 45%;
+}
+
+.launch-curtain-panel-left::before {
+    right: 2px;
 }
 
 .launch-curtain-panel-right {
     right: 0;
-    border-left: 3px solid rgba(212, 175, 55, 0.45);
+    border-left: 2px solid rgba(212, 175, 55, 0.40);
     transform-origin: right center;
-    clip-path: polygon(12% 0, 100% 0, 100% 100%, 0 100%);
+    clip-path: polygon(0 0, 100% 0, 100% 92%, 40% 100%, 0 58%);
+    border-bottom-left-radius: 80% 45%;
+}
+
+.launch-curtain-panel-right::before {
+    left: 2px;
 }
 
 body.launch-curtain-opening .launch-curtain-panel-left {
@@ -1855,8 +1869,7 @@ body.launch-curtain-opening .launch-curtain-panel-right {
 }
 
 body.launch-curtain-opening .launch-curtain-gauze {
-    opacity: 0;
-    transition: opacity 1.2s ease;
+    transform: translateY(-110%);
 }
 
 .launch-curtain-center {
@@ -1868,7 +1881,7 @@ body.launch-curtain-opening .launch-curtain-gauze {
     justify-content: center;
     text-align: center;
     min-height: inherit;
-    padding: 48px 24px;
+    padding: clamp(78px, 15vh, 128px) 24px 48px;
 }
 
 .launch-curtain-kicker {

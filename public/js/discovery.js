@@ -557,6 +557,24 @@ export function initTreasureGridControls(onOpenFilters = null) {
         const bar = document.getElementById('floatingControlsBar');
         if (!bar) return;
         const barHeight = bar.offsetHeight || 44;
+
+        // On pages with a dedicated central frame (categories.html), keep the
+        // menu centered over that frame on BOTH axes. The viewport center is
+        // off here because of the left/right side frames.
+        const centerFrame = document.querySelector('.categories-frame-center');
+        if (centerFrame) {
+            const rect = centerFrame.getBoundingClientRect();
+            const visibleTop = Math.max(rect.top, 0);
+            const visibleBottom = Math.min(rect.bottom, window.innerHeight);
+            const centerY = (visibleTop + visibleBottom) / 2 - barHeight / 2;
+            bar.style.top = `${centerY}px`;
+            bar.style.bottom = 'auto';
+            bar.style.left = `${rect.left + rect.width / 2}px`;
+            bar.style.transform = 'translateX(-50%)';
+            return;
+        }
+
+        // Other pages: animate from bottom to vertical center on scroll.
         const scrollRange = Math.max(180, Math.min(window.innerHeight * 0.6, 520));
         const scrollProgress = Math.min(1, window.scrollY / scrollRange);
         const bottomOffset = 30;

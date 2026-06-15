@@ -11,6 +11,19 @@ import { saveLaunchCurtainEnabled, loadLaunchCurtainAdminState } from './launchC
 
 const ADMIN_CATEGORY_ORDER = ['Elite', 'Premium', 'Gold', 'Silver', 'Standard', 'Uncategorized'];
 
+// Build request headers with the bearer token only when it is a real value.
+// Sending "Bearer null"/"Bearer undefined" makes the server prefer the broken
+// header over the valid auth cookie and reply 401 Not authorized. When the
+// token is valid this returns exactly the same headers as before.
+function authHeaders(extra = {}) {
+    const token = localStorage.getItem('token');
+    const headers = { ...extra };
+    if (token && token !== 'null' && token !== 'undefined') {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+}
+
 function openAdminOverlay(modal) {
     if (!modal) return;
     beginModalSession();
@@ -164,13 +177,13 @@ export async function loadAdminGridData() {
         url = new URL(`${API_URL}/admin/professionals`);
         url.searchParams.set('limit', '0');
         url.searchParams.set('_', new Date().getTime());
-        let res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+        let res = await fetch(url, { headers: authHeaders(), credentials: 'include' });
         
         if (!res.ok) {
             // Fallback to public endpoint if the custom admin route isn't available
             url = new URL(`${API_URL}/professionals`);
             url.searchParams.set('limit', '0');
-            res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+            res = await fetch(url, { headers: authHeaders(), credentials: 'include' });
         }
         const data = await res.json();
 
@@ -272,7 +285,7 @@ export async function loadDashboard() {
         // Added credentials: 'include' to ensure the auth cookie is sent with the request.
         // This is the likely fix for the login redirect loop.
         const res = await fetch(`${API_URL}/professionals/me?_=${new Date().getTime()}`, {
-            headers: { 'Authorization': `Bearer ${token}` },
+            headers: authHeaders(),
             credentials: 'include'
         });
         const data = await res.json();
@@ -1221,7 +1234,7 @@ export async function loadActivityLogs() {
 
         // Added credentials: 'include' to ensure auth cookie is sent
         const res = await fetch(url, { 
-            headers: { 'Authorization': `Bearer ${token}` },
+            headers: authHeaders(),
             credentials: 'include'
         });
         const data = await res.json();
@@ -1352,7 +1365,7 @@ export async function loadLeads() {
     try {
         const token = localStorage.getItem('token');
         const res = await fetch(`${API_URL}/admin/potential-professionals`, { 
-            headers: { 'Authorization': `Bearer ${token}` },
+            headers: authHeaders(),
             credentials: 'include'
         });
         const data = await res.json();
@@ -1424,7 +1437,7 @@ async function applyInvitationToSelectedLeads() {
         const res = await fetch(`${API_URL}/admin/outreach/whatsapp/targeted`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                ...authHeaders(),
                 'Content-Type': 'application/json'
             },
             credentials: 'include',
@@ -1454,7 +1467,7 @@ async function markLeadContacted(id) {
         await fetch(`${API_URL}/admin/potential-professionals/${id}`, {
             method: 'PUT',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                ...authHeaders(),
                 'Content-Type': 'application/json'
             },
             credentials: 'include',
@@ -1469,7 +1482,7 @@ async function previewInviteMessage() {
     try {
         const token = localStorage.getItem('token');
         const res = await fetch(`${API_URL}/admin/outreach/invite-message?alias=hermosa`, {
-            headers: { 'Authorization': `Bearer ${token}` },
+            headers: authHeaders(),
             credentials: 'include'
         });
         const data = await res.json();
@@ -1547,7 +1560,7 @@ async function pollBulkWhatsappStatus() {
     try {
         const token = localStorage.getItem('token');
         const res = await fetch(`${API_URL}/admin/outreach/bulk-whatsapp/status`, {
-            headers: { 'Authorization': `Bearer ${token}` },
+            headers: authHeaders(),
             credentials: 'include'
         });
         const data = await res.json();
@@ -1568,7 +1581,7 @@ async function startBulkWhatsappOutreach() {
         const res = await fetch(`${API_URL}/admin/outreach/bulk-whatsapp`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                ...authHeaders(),
                 'Content-Type': 'application/json'
             },
             credentials: 'include'
@@ -1652,7 +1665,7 @@ export async function loadPaymentVerifications() {
     try {
         const token = localStorage.getItem('token');
         const res = await fetch(`${API_URL}/admin/payments/pending`, { 
-            headers: { 'Authorization': `Bearer ${token}` },
+            headers: authHeaders(),
             credentials: 'include'
         });
         const data = await res.json();
@@ -1714,7 +1727,7 @@ export async function acknowledgePayment(id) {
             method: 'PUT',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                ...authHeaders()
             },
             credentials: 'include'
         });
@@ -1798,7 +1811,7 @@ export async function loadPendingVerifications() {
         const token = localStorage.getItem('token');
         // Added credentials: 'include' to ensure auth cookie is sent
         const res = await fetch(`${API_URL}/admin/verifications/pending`, { 
-            headers: { 'Authorization': `Bearer ${token}` },
+            headers: authHeaders(),
             credentials: 'include'
         });
         const data = await res.json();
@@ -1967,7 +1980,7 @@ export async function updateVerificationStatus(id, status, extra = {}) {
             method: 'PUT',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                ...authHeaders()
             },
             credentials: 'include',
             body: JSON.stringify({ status, ...extra })
@@ -2119,7 +2132,7 @@ export async function openMailBroadcastModal() {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
+                        ...authHeaders()
                     },
                     credentials: 'include',
                     body: JSON.stringify(payload)
@@ -2147,7 +2160,7 @@ export async function openMailBroadcastModal() {
 async function fetchAdminProfessionalsForPicker() {
     const token = localStorage.getItem('token');
     const res = await fetch(`${API_URL}/admin/professionals`, {
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: authHeaders(),
         credentials: 'include'
     });
     const data = await res.json();
@@ -2157,7 +2170,7 @@ async function fetchAdminProfessionalsForPicker() {
 async function fetchAdminLeadsForPicker() {
     const token = localStorage.getItem('token');
     const res = await fetch(`${API_URL}/admin/potential-professionals`, {
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: authHeaders(),
         credentials: 'include'
     });
     const data = await res.json();
@@ -2257,7 +2270,7 @@ export async function openMailSpecialModal() {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
+                        ...authHeaders()
                     },
                     credentials: 'include',
                     body: JSON.stringify({
@@ -2386,7 +2399,7 @@ export async function openWaSpecialModal() {
                 const res = await fetch(`${API_URL}/admin/outreach/whatsapp/targeted`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${token}`,
+                        ...authHeaders(),
                         'Content-Type': 'application/json'
                     },
                     credentials: 'include',
@@ -2511,7 +2524,7 @@ async function pollWaSpecialStatus() {
     try {
         const token = localStorage.getItem('token');
         const res = await fetch(`${API_URL}/admin/outreach/bulk-whatsapp/status`, {
-            headers: { 'Authorization': `Bearer ${token}` },
+            headers: authHeaders(),
             credentials: 'include'
         });
         const data = await res.json();
@@ -2606,7 +2619,7 @@ export async function renderProfessionalList(aliasSearch = '') {
 
         // Added credentials: 'include' to ensure auth cookie is sent
         const res = await fetch(url, { 
-            headers: { 'Authorization': `Bearer ${token}` },
+            headers: authHeaders(),
             credentials: 'include'
         });
         const data = await res.json();
@@ -2859,7 +2872,7 @@ export function renderEditForm(prof) {
                 method: 'PUT',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    ...authHeaders()
                 },
                 credentials: 'include',
                 body: JSON.stringify(payload)
@@ -2966,7 +2979,7 @@ export async function openEditPricingModal(currentPricing) {
                 const token = localStorage.getItem('token');
                 const res = await fetch(`${API_URL}/professionals/updateprofile`, {
                     method: 'PUT',
-                    headers: { 'Authorization': `Bearer ${token}` },
+                    headers: authHeaders(),
                     credentials: 'include',
                     body: formData
                 });
@@ -2977,7 +2990,7 @@ export async function openEditPricingModal(currentPricing) {
                     try {
                         await fetch(`${API_URL}/admin/notify-rate-change`, {
                             method: 'POST',
-                            headers: { 'Authorization': `Bearer ${token}` },
+                            headers: authHeaders(),
                             credentials: 'include'
                         });
                     } catch (e) { console.warn('Rate change emails:', e); }
@@ -3157,7 +3170,7 @@ async function pollWhatsAppConfigStatus() {
     try {
         const token = localStorage.getItem('token');
         const res = await fetch(`${API_URL}/admin/whatsapp/register/status`, {
-            headers: { 'Authorization': `Bearer ${token}` },
+            headers: authHeaders(),
             credentials: 'include'
         });
         const data = await res.json();
@@ -3174,7 +3187,7 @@ async function loadWhatsAppConfigPanel() {
     try {
         const token = localStorage.getItem('token');
         const res = await fetch(`${API_URL}/admin/whatsapp/config`, {
-            headers: { 'Authorization': `Bearer ${token}` },
+            headers: authHeaders(),
             credentials: 'include'
         });
         const data = await res.json();
@@ -3201,10 +3214,23 @@ export async function openDashboardConfigModal() {
             flexDirection: 'column', padding: '20px', overflowY: 'auto'
         });
 
+        // Header row constrained to the same width as the card so the
+        // close button sits at the card's top-right (its click area matches
+        // the visible button instead of floating at the screen edge).
+        const closeBar = document.createElement('div');
+        Object.assign(closeBar.style, {
+            width: '100%', maxWidth: '720px', margin: '0 auto 10px',
+            display: 'flex', justifyContent: 'flex-end'
+        });
+
         const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
         closeBtn.textContent = t('Close');
-        closeBtn.style.alignSelf = 'flex-end';
-        closeBtn.style.marginBottom = '10px';
+        Object.assign(closeBtn.style, {
+            width: 'auto',
+            maxWidth: 'max-content',
+            display: 'inline-block'
+        });
         closeBtn.onclick = () => {
             if (waConfigPollTimer) {
                 clearInterval(waConfigPollTimer);
@@ -3212,6 +3238,7 @@ export async function openDashboardConfigModal() {
             }
             closeAdminOverlay(modal);
         };
+        closeBar.appendChild(closeBtn);
 
         const container = document.createElement('div');
         Object.assign(container.style, {
@@ -3274,7 +3301,7 @@ export async function openDashboardConfigModal() {
             </section>
         `;
 
-        modal.appendChild(closeBtn);
+        modal.appendChild(closeBar);
         modal.appendChild(container);
         document.body.appendChild(modal);
         applyStaticTranslations(modal);
@@ -3294,7 +3321,7 @@ export async function openDashboardConfigModal() {
                 const res = await fetch(`${API_URL}/admin/whatsapp/config`, {
                     method: 'PUT',
                     headers: {
-                        'Authorization': `Bearer ${token}`,
+                        ...authHeaders(),
                         'Content-Type': 'application/json'
                     },
                     credentials: 'include',
@@ -3324,7 +3351,7 @@ export async function openDashboardConfigModal() {
                 const res = await fetch(`${API_URL}/admin/whatsapp/register`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${token}`,
+                        ...authHeaders(),
                         'Content-Type': 'application/json'
                     },
                     credentials: 'include'

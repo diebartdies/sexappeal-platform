@@ -20,10 +20,14 @@ function splitCountdown(msRemaining) {
 export async function fetchLaunchCurtainStatus() {
   try {
     const res = await fetch(`${API_URL}/public/launch-curtain`);
+    // A non-OK response (e.g. 429 rate limit) must NOT be treated as
+    // "curtain off"; return an error sentinel so callers keep the current
+    // state instead of wrongly opening the curtain.
+    if (!res.ok) return { error: true };
     const data = await res.json();
-    return data.success ? data.data : { curtainVisible: false };
+    return data.success ? data.data : { error: true };
   } catch {
-    return { curtainVisible: false };
+    return { error: true };
   }
 }
 
@@ -171,25 +175,61 @@ function playCurtainOpen(onComplete) {
   }, 3200);
 }
 
-function startCountdown(status, onOpen) {
+// Re-check with the server every 30s (not every second) to avoid tripping the
+// API rate limit. The visible countdown ticks locally from this anchor.
+const RESYNC_EVERY_TICKS = 30;
+
+function stopCountdown() {
   if (countdownTimer) clearInterval(countdownTimer);
+  countdownTimer = null;
+}
+
+function openNow(onOpen) {
+  stopCountdown();
+  if (!openingHandled) {
+    openingHandled = true;
+    playCurtainOpen(onOpen);
+  }
+}
+
+function startCountdown(status, onOpen) {
+  stopCountdown();
+
+  // Anchor the opening moment from the server's remaining time at fetch moment,
+  // so we can count down locally without further requests (avoids 429).
+  let openingTime = Date.now() + Math.max(0, Number(status.msRemaining) || 0);
+  let ticksSinceSync = 0;
 
   const tick = async () => {
-    const fresh = await fetchLaunchCurtainStatus();
-    if (!fresh.curtainVisible) {
-      if (countdownTimer) clearInterval(countdownTimer);
-      countdownTimer = null;
-      if (!openingHandled) {
-        openingHandled = true;
-        playCurtainOpen(onOpen);
+    const msRemaining = openingTime - Date.now();
+    updateCountdownDisplay({ msRemaining: Math.max(0, msRemaining) });
+
+    if (msRemaining <= 0) {
+      stopCountdown();
+      // Confirm with the server before opening to respect any clock skew.
+      const fresh = await fetchLaunchCurtainStatus();
+      if (!fresh.error && fresh.curtainVisible) {
+        startCountdown(fresh, onOpen); // still closed per server; re-anchor
+        return;
       }
+      openNow(onOpen);
       return;
     }
 
-    updateCountdownDisplay(fresh);
+    // Periodic re-sync to catch the admin turning the curtain off early.
+    if (++ticksSinceSync >= RESYNC_EVERY_TICKS) {
+      ticksSinceSync = 0;
+      const fresh = await fetchLaunchCurtainStatus();
+      if (fresh.error) return; // transient error: keep counting locally
+      if (!fresh.curtainVisible) {
+        openNow(onOpen);
+        return;
+      }
+      openingTime = Date.now() + Math.max(0, Number(fresh.msRemaining) || 0);
+    }
   };
 
-  updateCountdownDisplay(status);
+  updateCountdownDisplay({ msRemaining: Math.max(0, openingTime - Date.now()) });
   countdownTimer = setInterval(tick, 1000);
 }
 
@@ -200,7 +240,9 @@ function startCountdown(status, onOpen) {
 export async function resolveLaunchCurtain(onOpen) {
   const status = await fetchLaunchCurtainStatus();
 
-  if (!status.curtainVisible) {
+  // On a transient error (e.g. 429) we cannot know the real state; leave the
+  // current state untouched and let the grids load normally.
+  if (status.error || !status.curtainVisible) {
     removeLaunchCurtain();
     return false;
   }
@@ -210,14 +252,22 @@ export async function resolveLaunchCurtain(onOpen) {
   return true;
 }
 
-export async function saveLaunchCurtainEnabled(enabled) {
+function buildAuthHeaders(extra = {}) {
   const token = localStorage.getItem('token');
+  const headers = { ...extra };
+  // Only attach the bearer token when it is a real value. Sending
+  // "Bearer null"/"Bearer undefined" makes the server prefer the broken
+  // header over the valid auth cookie and reply 401 Not authorized.
+  if (token && token !== 'null' && token !== 'undefined') {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+export async function saveLaunchCurtainEnabled(enabled) {
   const res = await fetch(`${API_URL}/admin/launch-curtain`, {
     method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
+    headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
     credentials: 'include',
     body: JSON.stringify({ enabled: Boolean(enabled) })
   });
@@ -229,9 +279,8 @@ export async function saveLaunchCurtainEnabled(enabled) {
 }
 
 export async function loadLaunchCurtainAdminState() {
-  const token = localStorage.getItem('token');
   const res = await fetch(`${API_URL}/admin/launch-curtain`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: buildAuthHeaders(),
     credentials: 'include'
   });
   const data = await res.json();
