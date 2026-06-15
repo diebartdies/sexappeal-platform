@@ -77,6 +77,9 @@ const UserSchema = new mongoose.Schema({
       phoneNumber: { type: String, default: '5491178280156' },
       registeredAt: Date,
       lastConnectedAt: Date
+    },
+    launchCurtain: {
+      enabled: { type: Boolean, default: false }
     }
   },
   professionalProfile: {

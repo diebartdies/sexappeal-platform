@@ -90,7 +90,7 @@ bash /root/SexAppeal-platform/scripts/install-housekeeping-cron.sh   # after fir
 - **Category metadata (`globals.js`)**: Each tier now includes `alias` (Rolls-Royce, Bentley, etc.), `monthlyPrice`, and `priceUnit` (ARS).
 - **Admin pricing**: Button renamed to **Change prices**; saving triggers `POST /api/v1/admin/notify-rate-change` to email all professionals about updated monthly charges.
 - **Verification gesture display**: Admin pending list shows emoji + label (e.g. ☝️ 1 finger up) instead of raw codes like `1FU`. Shared map in `globals.js` (`VERIFICATION_GESTURES`, `getVerificationGesture`).
-- **Seed data (`seed.js`)**: Sample photos stored as base64 data URIs; uses `WORKING_SAMPLE_PHOTO_URLS`.
+- **Seed data (`seed.js`)**: Geography only (provinces, cities, CABA neighborhoods). User accounts are **not** seeded. Optional dummy leads: `node seed.js --with-leads`. Wipe non-admin users: `node scripts/clean-users.js --confirm` (keeps `role: admin`).
 - **`migrate-frontend.js`**: Merged duplicate HTML update passes (one log line per file on startup).
 - **Docker Compose**: Mounts `./utils` and `./server.js` into `sexappeal_app` so server-side fixes deploy without full image rebuild.
 - **Index / login links**: Professional registration at `/register.html`; root-absolute navigation links.
@@ -109,7 +109,7 @@ bash /root/SexAppeal-platform/scripts/install-housekeeping-cron.sh   # after fir
 ### Notes / Ops
 - **Photos in MongoDB**: Restored prod backup mostly contains **HTTP URLs**, not embedded base64. Only manual uploads appear as `data:image/…`. Run `node embed_external_photos.js` once (with internet) then take a local `.archive` backup to preserve embedded photos.
 - **Dev port**: Use `PORT=5000` (`.env` default). Port 5001 was a one-off workaround when 5000 was occupied.
-- **Do not run `seed.js` on production** with real users — use backup restore instead.
+- **`seed.js` never creates User documents.** On production, restore real users from backup; use `scripts/clean-users.js --confirm` only on dev/staging.
 
 ---
 

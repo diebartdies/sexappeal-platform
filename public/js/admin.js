@@ -7,6 +7,7 @@ import { renderSpecialtyDropdown, setupLocationDropdowns } from './helpers.js';
 import { addPhotoToGrid, openPendingConnectionsModal, bindProfessionalProfileForm, hideProfessionalPaymentOverlays, renderProfessionalMainDashboardShell, injectProfessionalDashboardGuides } from './professional.js';
 import { buildCategoryQueue, resetLazyCategoryLoader, startLazyCategoryLoader } from './lazyCategoryLoader.js';
 import { beginModalSession, endModalSession, navigateWithReturn } from './navReturn.js';
+import { saveLaunchCurtainEnabled, loadLaunchCurtainAdminState } from './launchCurtain.js';
 
 const ADMIN_CATEGORY_ORDER = ['Elite', 'Premium', 'Gold', 'Silver', 'Standard', 'Uncategorized'];
 
@@ -359,6 +360,13 @@ export async function loadDashboard() {
                             <h4 style="color: #888; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; padding-left: 10px;">System Settings</h4>
                             <div style="display: flex; flex-direction: column; gap: 5px;">
                                 <button id="btnEditPricing" class="admin-nav-btn" style="color: var(--primary-gold); border-color: rgba(212, 175, 55, 0.3);">💰 ${t('Change prices')}</button>
+                                <div class="admin-launch-switch" style="margin: 8px 4px 0;">
+                                    <span class="admin-launch-switch-label">🎭 ${t('Hide grids (launch curtain)')}</span>
+                                    <label class="admin-toggle-switch" title="${t('Launch curtain')}">
+                                        <input type="checkbox" id="adminLaunchCurtainQuickToggle" aria-label="${t('Hide grids (launch curtain)')}">
+                                        <span class="admin-toggle-slider"></span>
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -389,6 +397,8 @@ export async function loadDashboard() {
                 ['btnDashboardConfig'].forEach(id => {
                     document.getElementById(id).addEventListener('click', openDashboardConfigModal);
                 });
+
+                initLaunchCurtainQuickToggle();
 
                 document.getElementById('btnMailSpecial').addEventListener('click', openMailSpecialModal);
                 document.getElementById('btnMailBroadcast').addEventListener('click', openMailBroadcastModal);
@@ -1271,7 +1281,8 @@ export async function openViewLeadsModal() {
 
         container.innerHTML = `
             <h2 class="gold-text" style="margin-bottom: 10px;">${t('Apply Invitations to Potential Professionals')}</h2>
-            <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 16px;">${t('Send the welcome WhatsApp invitation with platform and registration links from the potential professionals table.')}</p>
+            <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 12px;">${t('Send the welcome WhatsApp invitation with platform and registration links from the potential professionals table.')}</p>
+            <p style="color: #bbb; font-size: 0.85rem; margin: 0 0 16px; padding: 10px 12px; border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 8px; background: rgba(212, 175, 55, 0.08);">${t('Prefer a small selected batch first, then Apply to all pending if all looks good.')}</p>
             <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
                 <button id="refreshLeadsBtn">${t('Refresh List')}</button>
                 <button id="previewInviteBtn" type="button" style="background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold);">${t('Preview invite message')}</button>
@@ -2992,6 +3003,90 @@ export async function openEditPricingModal(currentPricing) {
     openAdminOverlay(modal);
 }
 
+function formatLaunchCurtainStatusLine(status) {
+    if (!status) return '';
+    if (!status.enabled) {
+        return t('Launch curtain is off — treasure grids are visible to visitors.');
+    }
+    if (status.hasOpened) {
+        return t('Grand opening date has passed — grids stay visible even with the curtain enabled.');
+    }
+    const days = status.daysRemaining ?? 0;
+    const hours = status.hoursRemaining ?? 0;
+    return t('Launch curtain is on — grids hidden until Friday, June 19, 2026 ({days}d {hours}h remaining).')
+        .replace('{days}', String(days))
+        .replace('{hours}', String(hours));
+}
+
+function syncLaunchCurtainToggles(enabled) {
+    const quick = document.getElementById('adminLaunchCurtainQuickToggle');
+    const config = document.getElementById('launchCurtainConfigToggle');
+    if (quick) quick.checked = Boolean(enabled);
+    if (config) config.checked = Boolean(enabled);
+}
+
+async function handleLaunchCurtainToggle(enabled, sourceEl) {
+    const toggles = [
+        document.getElementById('adminLaunchCurtainQuickToggle'),
+        document.getElementById('launchCurtainConfigToggle')
+    ].filter(Boolean);
+
+    toggles.forEach((el) => { el.disabled = true; });
+
+    try {
+        const status = await saveLaunchCurtainEnabled(enabled);
+        syncLaunchCurtainToggles(status.enabled);
+        const statusLine = document.getElementById('launchCurtainStatusLine');
+        if (statusLine) statusLine.textContent = formatLaunchCurtainStatusLine(status);
+        announceMessage(status.enabled
+            ? t('Launch curtain enabled — visitor grids are now hidden.')
+            : t('Launch curtain disabled — visitor grids are visible.'));
+    } catch (err) {
+        if (sourceEl) sourceEl.checked = !enabled;
+        const alertEl = document.getElementById('launchCurtainAlert') || document.getElementById('waConfigAlert');
+        if (alertEl) showAlert(alertEl, err.message || t('Could not update launch curtain'));
+        else announceMessage(err.message || t('Could not update launch curtain'));
+    } finally {
+        toggles.forEach((el) => { el.disabled = false; });
+    }
+}
+
+function wireLaunchCurtainToggle(input) {
+    if (!input || input.dataset.launchCurtainWired === '1') return;
+    input.dataset.launchCurtainWired = '1';
+    input.addEventListener('change', () => {
+        handleLaunchCurtainToggle(input.checked, input);
+    });
+}
+
+async function initLaunchCurtainQuickToggle() {
+    const quick = document.getElementById('adminLaunchCurtainQuickToggle');
+    if (!quick) return;
+
+    wireLaunchCurtainToggle(quick);
+
+    try {
+        const status = await loadLaunchCurtainAdminState();
+        syncLaunchCurtainToggles(status.enabled);
+    } catch {
+        // keep default unchecked
+    }
+}
+
+async function loadLaunchCurtainConfigPanel() {
+    const statusLine = document.getElementById('launchCurtainStatusLine');
+    const configToggle = document.getElementById('launchCurtainConfigToggle');
+    if (!statusLine && !configToggle) return;
+
+    try {
+        const status = await loadLaunchCurtainAdminState();
+        syncLaunchCurtainToggles(status.enabled);
+        if (statusLine) statusLine.textContent = formatLaunchCurtainStatusLine(status);
+    } catch {
+        if (statusLine) statusLine.textContent = t('Could not load launch curtain settings');
+    }
+}
+
 let waConfigPollTimer = null;
 
 function renderWhatsAppConfigStatus(data) {
@@ -3130,6 +3225,20 @@ export async function openDashboardConfigModal() {
             <div id="waConfigAlert" class="alert hidden" style="padding:10px;border-radius:4px;border:1px solid transparent;margin-bottom:16px;"></div>
 
             <section style="border:1px solid rgba(212,175,55,0.25);border-radius:8px;padding:20px;margin-bottom:20px;">
+                <h3 class="gold-text" style="margin:0 0 6px 0;">${t('Launch Curtain')}</h3>
+                <p style="color:#888;font-size:0.85rem;margin:0 0 16px 0;">${t('Hide treasure grids on categories, discover, and home until the grand opening. Visitors see a theater curtain with a countdown to Friday, June 19, 2026 at midnight.')}</p>
+                <div id="launchCurtainAlert" class="alert hidden" style="padding:10px;border-radius:4px;border:1px solid transparent;margin-bottom:12px;"></div>
+                <div class="admin-launch-switch">
+                    <span class="admin-launch-switch-label">${t('Hide treasure grids (launch curtain)')}</span>
+                    <label class="admin-toggle-switch" title="${t('Launch curtain')}">
+                        <input type="checkbox" id="launchCurtainConfigToggle" aria-label="${t('Hide treasure grids (launch curtain)')}">
+                        <span class="admin-toggle-slider"></span>
+                    </label>
+                </div>
+                <p id="launchCurtainStatusLine" style="color:#888;font-size:0.82rem;margin:12px 0 0;line-height:1.45;">—</p>
+            </section>
+
+            <section style="border:1px solid rgba(212,175,55,0.25);border-radius:8px;padding:20px;margin-bottom:20px;">
                 <h3 class="gold-text" style="margin:0 0 6px 0;">${t('WhatsApp Configuration')}</h3>
                 <p style="color:#888;font-size:0.85rem;margin:0 0 16px 0;">${t('All outbound WhatsApp messages from the platform are sent from this number.')}</p>
 
@@ -3237,10 +3346,12 @@ export async function openDashboardConfigModal() {
                 btn.disabled = false;
             }
         };
+
+        wireLaunchCurtainToggle(document.getElementById('launchCurtainConfigToggle'));
     }
 
     openAdminOverlay(modal);
-    await loadWhatsAppConfigPanel();
+    await Promise.all([loadWhatsAppConfigPanel(), loadLaunchCurtainConfigPanel()]);
 }
 
 window.openImageModal = openImageModal;

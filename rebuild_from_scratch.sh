@@ -55,7 +55,7 @@ echo "[8/8] Waiting for MongoDB and Node.js to fully boot (15 seconds)..."
 sleep 15
 
 echo "==================================================="
-echo "🌱 Seeding the fresh database..."
+echo "🌱 Seeding reference data (provinces/cities/neighborhoods — no users)..."
 docker exec sexappeal_app node seed.js
 
 echo "==================================================="

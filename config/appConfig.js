@@ -66,6 +66,11 @@ const config = {
   platform: {
     publicUrl: process.env.PLATFORM_URL || 'https://sexappeal.drsrv.net.ar',
     registerUrl: process.env.PLATFORM_REGISTER_URL || 'https://sexappeal.drsrv.net.ar/register.html'
+  },
+
+  // Grand opening curtain (America/Argentina/Buenos_Aires)
+  launchCurtain: {
+    openingAt: process.env.LAUNCH_OPENING_AT || '2026-06-19T00:00:00-03:00'
   }
 };
 

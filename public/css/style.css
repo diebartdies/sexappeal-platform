@@ -1719,5 +1719,271 @@ body.categories-page #treasureGrid .grid {
 }
 
 body.categories-page #treasureGrid {
+    padding-bottom: 0;
+}
+
+/* Shared mount point for pageLoader, treasure grid, and launch curtain */
+.treasure-grid-slot {
+    width: 100%;
+    min-width: 0;
+    position: relative;
+}
+
+body.categories-page .treasure-grid-slot {
     padding-bottom: 80px;
+}
+
+.treasure-grid-slot.launch-curtain-slot-active #pageLoader,
+.treasure-grid-slot.launch-curtain-slot-active #treasureGrid {
+    display: none !important;
+}
+
+/* Launch curtain — theater telón until grand opening */
+body.launch-curtain-active {
+    overflow-x: hidden;
+}
+
+body.launch-curtain-active.categories-page .categories-filter-source {
+    display: none !important;
+}
+
+.launch-curtain-stage {
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: clamp(260px, 42vh, 480px);
+    margin: 0;
+    border-radius: 4px;
+    overflow: hidden;
+    background:
+        radial-gradient(ellipse at center, rgba(20, 8, 8, 0.95) 0%, rgba(5, 5, 5, 1) 70%),
+        linear-gradient(180deg, #120808 0%, #050505 100%);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.9);
+}
+
+/* Match .grid margin-top on discovery/home pages */
+body.launch-curtain-active:not(.categories-page) .treasure-grid-slot .launch-curtain-stage {
+    margin-top: 50px;
+}
+
+.launch-curtain-gauze {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background:
+        repeating-linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.03) 0,
+            rgba(255, 255, 255, 0.03) 1px,
+            transparent 1px,
+            transparent 6px
+        ),
+        repeating-linear-gradient(
+            0deg,
+            rgba(255, 255, 255, 0.025) 0,
+            rgba(255, 255, 255, 0.025) 1px,
+            transparent 1px,
+            transparent 8px
+        );
+    opacity: 0.55;
+    mix-blend-mode: soft-light;
+}
+
+.launch-curtain-panel {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 52%;
+    z-index: 3;
+    background:
+        linear-gradient(180deg, #4a0810 0%, #7b1020 18%, #5c0c18 55%, #2a0408 100%);
+    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.65);
+    transition: transform 2.8s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.launch-curtain-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        repeating-linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.04) 0,
+            rgba(255, 255, 255, 0.04) 2px,
+            transparent 2px,
+            transparent 14px
+        );
+    opacity: 0.7;
+}
+
+.launch-curtain-panel-left {
+    left: 0;
+    border-right: 3px solid rgba(212, 175, 55, 0.45);
+    transform-origin: left center;
+    clip-path: polygon(0 0, 100% 0, 88% 100%, 0 100%);
+}
+
+.launch-curtain-panel-right {
+    right: 0;
+    border-left: 3px solid rgba(212, 175, 55, 0.45);
+    transform-origin: right center;
+    clip-path: polygon(12% 0, 100% 0, 100% 100%, 0 100%);
+}
+
+body.launch-curtain-opening .launch-curtain-panel-left {
+    transform: translateX(-105%);
+}
+
+body.launch-curtain-opening .launch-curtain-panel-right {
+    transform: translateX(105%);
+}
+
+body.launch-curtain-opening .launch-curtain-gauze {
+    opacity: 0;
+    transition: opacity 1.2s ease;
+}
+
+.launch-curtain-center {
+    position: relative;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: inherit;
+    padding: 48px 24px;
+}
+
+.launch-curtain-kicker {
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    margin: 0 0 12px;
+}
+
+.launch-curtain-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    color: #fff;
+    margin: 0 0 12px;
+    text-shadow: 0 4px 24px rgba(0, 0, 0, 0.8);
+}
+
+.launch-curtain-subtitle {
+    max-width: 34rem;
+    color: rgba(255, 255, 255, 0.72);
+    margin: 0 0 28px;
+    line-height: 1.5;
+}
+
+.launch-curtain-countdown {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.launch-curtain-unit {
+    min-width: 72px;
+    padding: 14px 10px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    box-shadow: inset 0 0 20px rgba(212, 175, 55, 0.08);
+}
+
+.launch-curtain-value {
+    display: block;
+    font-size: clamp(1.6rem, 4vw, 2.2rem);
+    font-weight: 700;
+    color: var(--primary-gold);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+}
+
+.launch-curtain-label {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.launch-curtain-footnote {
+    margin: 0;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.45);
+    font-style: italic;
+}
+
+.admin-launch-switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    background: #111;
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.admin-launch-switch-label {
+    flex: 1;
+    font-size: 0.9rem;
+    color: #ddd;
+}
+
+.admin-toggle-switch {
+    position: relative;
+    width: 52px;
+    height: 28px;
+    flex-shrink: 0;
+}
+
+.admin-toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.admin-toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: #444;
+    border-radius: 999px;
+    transition: background 0.25s ease;
+    border: 1px solid #555;
+}
+
+.admin-toggle-slider::before {
+    content: '';
+    position: absolute;
+    height: 22px;
+    width: 22px;
+    left: 2px;
+    bottom: 2px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.25s ease;
+}
+
+.admin-toggle-switch input:checked + .admin-toggle-slider {
+    background: rgba(212, 175, 55, 0.85);
+    border-color: var(--primary-gold);
+}
+
+.admin-toggle-switch input:checked + .admin-toggle-slider::before {
+    transform: translateX(24px);
+}
+
+.admin-toggle-switch input:focus-visible + .admin-toggle-slider {
+    outline: 2px solid var(--primary-gold);
+    outline-offset: 2px;
 }

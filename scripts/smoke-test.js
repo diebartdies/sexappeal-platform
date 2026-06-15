@@ -150,7 +150,7 @@ async function main() {
       });
       log('Prof dashboard', profOk);
     } else {
-      log('Prof dashboard', false, 'skipped — pro login failed (run seed.js if needed)');
+      log('Prof dashboard', false, 'skipped — pro login failed (create a pro account or restore backup)');
     }
 
     const moduleErrors = errors.filter((e) =>

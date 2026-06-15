@@ -285,10 +285,15 @@ app.post('/api/v1/admin/notifications/mail/broadcast', protect, authorize('admin
 app.post('/api/v1/admin/notifications/mail/targeted', protect, authorize('admin'), adminController.sendTargetedEmail);
 
 const whatsappController = require('./controllers/whatsappController');
+const launchCurtainController = require('./controllers/launchCurtainController');
+
+app.get('/api/v1/public/launch-curtain', launchCurtainController.getPublicLaunchCurtainStatus);
 app.get('/api/v1/admin/whatsapp/config', protect, authorize('admin'), whatsappController.getWhatsAppConfig);
 app.put('/api/v1/admin/whatsapp/config', protect, authorize('admin'), whatsappController.updateWhatsAppPhone);
 app.post('/api/v1/admin/whatsapp/register', protect, authorize('admin'), whatsappController.startWhatsAppRegistration);
 app.get('/api/v1/admin/whatsapp/register/status', protect, authorize('admin'), whatsappController.getWhatsAppRegistrationStatus);
+app.get('/api/v1/admin/launch-curtain', protect, authorize('admin'), launchCurtainController.getAdminLaunchCurtainConfig);
+app.put('/api/v1/admin/launch-curtain', protect, authorize('admin'), launchCurtainController.updateLaunchCurtainConfig);
 
 if (process.env.NODE_ENV !== 'production') {
   const testingController = require('./controllers/testingController');

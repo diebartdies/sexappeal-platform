@@ -6,6 +6,7 @@ import { navigateBack } from './ui.js';
 import { navigateWithReturn } from './navReturn.js';
 import { renderSpecialtyDropdown } from './helpers.js';
 import { beginPageLoad, finishPageLoad, failPageLoad } from './dashboardShell.js';
+import { resolveLaunchCurtain } from './launchCurtain.js';
 import {
     buildCategoryQueue,
     resetLazyCategoryLoader,
@@ -122,9 +123,16 @@ function updateFloatingProgress(data, append) {
     progressText.textContent = `${percentage}%`;
 }
 
-export async function loadTreasures(page = 1, append = false) {
+export async function loadTreasures(page = 1, append = false, options = {}) {
     const grid = document.getElementById('treasureGrid');
     if (!grid) return;
+
+    if (!append && page === 1 && !options.skipCurtainCheck) {
+        const blocked = await resolveLaunchCurtain(() => {
+            loadTreasures(1, false, { skipCurtainCheck: true });
+        });
+        if (blocked) return;
+    }
 
     if (!append) {
         currentDiscoveryPage = 1;

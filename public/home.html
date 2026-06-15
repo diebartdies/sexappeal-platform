@@ -7,8 +7,8 @@
     <link rel="alternate icon" href="/favicon.ico">
     <title>Living Treasures — Colección exclusiva | SexAppeal</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/style.css?v=7.8">
-    <link rel="stylesheet" href="/css/responsive.css?v=7.8">
+    <link rel="stylesheet" href="/css/style.css?v=8.1">
+    <link rel="stylesheet" href="/css/responsive.css?v=8.1">
     <meta name="description" content="Colección de Living Treasures en SexAppeal: perfiles de acompañantes elite verificadas, disponibles en Argentina.">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://sexappeal.drsrv.net.ar/home.html">
@@ -39,12 +39,14 @@
                 <p style="color: #aaa; font-size: 1.1rem;">Explore our veiled collection of elite companions.</p>
             </div>
             
-            <div id="pageLoader"><p>Unveiling the collection...</p></div>
-            <div id="treasureGrid" class="grid hidden"></div>
+            <div class="treasure-grid-slot" id="treasureGridSlot">
+                <div id="pageLoader"><p>Unveiling the collection...</p></div>
+                <div id="treasureGrid" class="grid hidden"></div>
+            </div>
         </section>
     </div>
 
-    <script src="/js/app.js?v=7.5" type="module"></script>
+    <script src="/js/app.js?v=8.1" type="module"></script>
     <script>
         window.addEventListener('DOMContentLoaded', () => {
             const userStr = localStorage.getItem('user');

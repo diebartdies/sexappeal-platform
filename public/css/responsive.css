@@ -500,4 +500,25 @@ body.has-global-topbar {
     .categories-frame-center {
         padding: 10px 8px 20px;
     }
+
+    body.categories-page .treasure-grid-slot {
+        padding-bottom: 48px;
+    }
+
+    .launch-curtain-stage {
+        min-height: clamp(220px, 36vh, 380px);
+    }
+
+    .launch-curtain-center {
+        padding: 28px 14px;
+    }
+
+    .launch-curtain-countdown {
+        gap: 10px;
+    }
+
+    .launch-curtain-unit {
+        min-width: 64px;
+        padding: 10px 8px;
+    }
 }
