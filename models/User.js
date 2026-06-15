@@ -72,6 +72,11 @@ const UserSchema = new mongoose.Schema({
       Gold: { type: Number, default: 30000 },
       Silver: { type: Number, default: 20000 },
       Standard: { type: Number, default: 15000 }
+    },
+    whatsapp: {
+      phoneNumber: { type: String, default: '5491178280156' },
+      registeredAt: Date,
+      lastConnectedAt: Date
     }
   },
   professionalProfile: {

@@ -14,17 +14,26 @@ import {
 
 export function hideProfessionalPaymentOverlays() {
     const overlays = document.getElementById('dashboardOverlays');
+    const sidebar = document.getElementById('profPaymentSidebar');
+    const paymentSection = document.getElementById('paymentSection');
     if (overlays) {
         overlays.classList.add('hidden');
         overlays.style.display = 'none';
     }
+    if (sidebar) sidebar.classList.add('hidden');
+    if (paymentSection) paymentSection.classList.add('hidden');
 }
 
 export function mountProfessionalPaymentOverlays() {
     const overlays = document.getElementById('dashboardOverlays');
-    if (!overlays) return;
-    overlays.classList.remove('hidden');
-    overlays.style.display = 'block';
+    const sidebar = document.getElementById('profPaymentSidebar');
+    const paymentSection = document.getElementById('paymentSection');
+    if (overlays) {
+        overlays.classList.remove('hidden');
+        overlays.style.display = 'block';
+    }
+    if (sidebar) sidebar.classList.remove('hidden');
+    if (paymentSection) paymentSection.classList.remove('hidden');
 }
 
 export function renderProfessionalMainDashboardShell(content) {
@@ -1027,9 +1036,10 @@ export async function loadProfDashboard() {
     const formObj = document.getElementById('updateProfileForm');
     const loader = document.getElementById('loader');
     const content = document.getElementById('profDashboardContent');
-    if (!formObj || !content) return;
+    const layout = document.getElementById('profDashboardLayout');
+    if (!formObj || !content || !layout) return;
 
-    beginDashboardLoad('profDashboardContent', 'loader', { clearContent: false });
+    beginDashboardLoad('profDashboardLayout', 'loader', { clearContent: false });
     formObj.innerHTML = '';
 
     try {
@@ -1427,19 +1437,19 @@ export async function loadProfDashboard() {
             document.getElementById('profDashHeaderBackBtn')?.addEventListener('click', () => navigateBack());
 
             loader.classList.add('hidden');
-            content.classList.remove('hidden');
+            layout.classList.remove('hidden');
             delete formObj.dataset.bound;
             bindProfessionalProfileForm();
             setupDeleteProfileUI();
             const deleteOverlay = document.getElementById('deleteProfileOverlay');
             if (deleteOverlay) applyStaticTranslations(deleteOverlay);
-            finishDashboardLoad('profDashboardContent', 'loader');
-            applyStaticTranslations(content);
+            finishDashboardLoad('profDashboardLayout', 'loader');
+            applyStaticTranslations(layout);
         } else {
             window.location.href = '/index.html';
         }
     } catch (err) {
-        failDashboardLoad('profDashboardContent', 'loader', '<p class="alert" style="text-align:center;padding:40px;">Server connection error.</p>');
+        failDashboardLoad('profDashboardLayout', 'loader', '<p class="alert" style="text-align:center;padding:40px;">Server connection error.</p>');
     } finally {
         profDashboardLoadInFlight = null;
     }

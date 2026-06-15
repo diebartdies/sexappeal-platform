@@ -8,47 +8,47 @@
     <title>Professional Dashboard - SexAppeal</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css?v=7.5">
-    <link rel="stylesheet" href="/css/responsive.css?v=7.5">
+    <link rel="stylesheet" href="/css/responsive.css?v=7.6">
     <meta name="description" content="SexAppeal - The Architecture of Intimacy. Directorio exclusivo de acompañantes VIP y Living Treasures.">
     <meta property="og:title" content="SexAppeal Platform">
     <meta property="og:description" content="El santuario definitivo para conexiones de alto nivel y discreción absoluta.">
     <meta property="og:image" content="https://sexappeal.drsrv.net.ar/SexAppeal_logo_black.png">
     <meta property="og:url" content="https://sexappeal.drsrv.net.ar">
     <meta property="og:type" content="website">
+    <meta name="robots" content="noindex, nofollow">
     <meta name="theme-color" content="#D4AF37">
     <script>document.documentElement.classList.add('page-pending');</script>
-    <!-- SEO & Open Graph Tags -->
-    <meta name="description" content="SexAppeal - The Architecture of Intimacy. Directorio exclusivo de acompañantes VIP y Living Treasures.">
-    <meta property="og:title" content="SexAppeal Platform">
-    <meta property="og:description" content="El santuario definitivo para conexiones de alto nivel y discreción absoluta.">
-    <meta property="og:image" content="https://sexappeal.drsrv.net.ar/SexAppeal_logo_black.png">
-    <meta property="og:url" content="https://sexappeal.drsrv.net.ar">
-    <meta property="og:type" content="website">
-    <meta name="theme-color" content="#D4AF37">
 </head>
 <body>
-    <div class="container" style="max-width: 900px;">
+    <div class="container prof-dashboard-page">
         <div id="loader"><p>Loading dashboard...</p></div>
-        <div id="profDashboardContent" class="hidden">
-            <form id="updateProfileForm"></form>
+
+        <div id="profDashboardLayout" class="prof-dashboard-layout hidden">
+            <aside id="profPaymentSidebar" class="prof-payment-sidebar">
+                <div class="card prof-payment-panel hidden" id="paymentSection">
+                    <h3 class="gold-text" style="margin-bottom: 12px;">Pago mensual</h3>
+                    <p style="color: #ccc; font-size: 0.9rem; margin-bottom: 16px;">Cuando recibas tu factura, registrá el comprobante de transferencia o Mercado Pago.</p>
+                    <div class="prof-payment-actions">
+                        <button type="button" id="btnOpenPaymentModal">Pago mensual</button>
+                        <button type="button" id="btnHowToPay" class="prof-payment-secondary">Cómo pagar</button>
+                    </div>
+                </div>
+            </aside>
+
+            <div id="profDashboardMain" class="prof-dashboard-main">
+                <div id="rateAlert" class="card hidden" style="border-color: var(--accent-red); background: rgba(139, 0, 0, 0.1); margin-bottom: 20px;">
+                    <h3 style="color: var(--accent-red);">Action Required: Rate Change</h3>
+                    <p>The platform price rates have been updated. You must acknowledge this change to continue with transactions.</p>
+                    <button id="ackRateBtn" style="margin-top: 15px;">Acknowledge Change</button>
+                </div>
+
+                <div id="profDashboardContent">
+                    <form id="updateProfileForm"></form>
+                </div>
+            </div>
         </div>
 
         <div id="dashboardOverlays" class="hidden">
-            <div id="rateAlert" class="card hidden" style="border-color: var(--accent-red); background: rgba(139, 0, 0, 0.1); margin-top: 20px;">
-                <h3 style="color: var(--accent-red);">Action Required: Rate Change</h3>
-                <p>The platform price rates have been updated. You must acknowledge this change to continue with transactions.</p>
-                <button id="ackRateBtn" style="margin-top: 15px;">Acknowledge Change</button>
-            </div>
-
-            <div class="card hidden" id="paymentSection" style="margin-top: 40px;">
-                <h3 class="gold-text" style="margin-bottom: 12px;">Pago mensual</h3>
-                <p style="color: #ccc; font-size: 0.9rem; margin-bottom: 16px;">Cuando recibas tu factura, registrá el comprobante de transferencia o Mercado Pago.</p>
-                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                    <button type="button" id="btnOpenPaymentModal" style="flex: 1; min-width: 160px;">Pago mensual</button>
-                    <button type="button" id="btnHowToPay" style="flex: 1; min-width: 160px; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold);">Cómo pagar</button>
-                </div>
-            </div>
-
             <div id="paymentModalOverlay" class="hidden payment-modal-overlay" aria-hidden="true">
                 <div class="card payment-modal-panel">
                     <button type="button" id="closePaymentModal" class="payment-modal-close" aria-label="Cerrar">&times;</button>
@@ -93,6 +93,6 @@
             </div>
         </div>
     </div>
-    <script src="/js/app.js?v=7.5" type="module"></script>
+    <script src="/js/app.js?v=7.6" type="module"></script>
 </body>
 </html>

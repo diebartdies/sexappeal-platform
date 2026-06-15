@@ -377,7 +377,7 @@ export async function loadDashboard() {
                 });
 
                 ['btnDashboardConfig'].forEach(id => {
-                    document.getElementById(id).addEventListener('click', () => alert('Feature coming soon!'));
+                    document.getElementById(id).addEventListener('click', openDashboardConfigModal);
                 });
 
                 document.getElementById('btnMailSpecial').addEventListener('click', openMailSpecialModal);
@@ -2874,9 +2874,10 @@ export async function openEditPricingModal(currentPricing) {
         });
 
         const closeBtn = document.createElement('button');
+        closeBtn.id = 'editPricingBackBtn';
         closeBtn.innerHTML = '&#8592; Back to Dashboard';
         Object.assign(closeBtn.style, {
-            alignSelf: 'flex-start', marginBottom: '15px', padding: '8px 12px',
+            marginTop: '10px', padding: '10px 12px', width: '100%',
             background: 'transparent', border: '1px solid var(--primary-gold)',
             color: 'var(--primary-gold)', borderRadius: '4px', cursor: 'pointer'
         });
@@ -2913,8 +2914,8 @@ export async function openEditPricingModal(currentPricing) {
             </form>
         `;
 
-        modal.appendChild(closeBtn);
         modal.appendChild(container);
+        container.querySelector('#editPricingForm').appendChild(closeBtn);
         document.body.appendChild(modal);
         applyStaticTranslations(modal);
 
@@ -2976,6 +2977,257 @@ export async function openEditPricingModal(currentPricing) {
     document.getElementById('priceStandard').value = currentPricing.Standard || 15000;
 
     openAdminOverlay(modal);
+}
+
+let waConfigPollTimer = null;
+
+function renderWhatsAppConfigStatus(data) {
+    const statusEl = document.getElementById('waConfigStatusText');
+    const qrWrap = document.getElementById('waConfigQrWrap');
+    const qrImg = document.getElementById('waConfigQrImg');
+    const phoneDisplay = document.getElementById('waConfigCurrentPhone');
+    const sessionEl = document.getElementById('waConfigSessionState');
+    const registerBtn = document.getElementById('waConfigRegisterBtn');
+
+    if (phoneDisplay && data.displayPhone) {
+        phoneDisplay.textContent = data.displayPhone;
+    }
+
+    if (sessionEl) {
+        if (data.connected) {
+            sessionEl.textContent = t('Connected');
+            sessionEl.style.color = '#25D366';
+        } else if (data.sessionSaved) {
+            sessionEl.textContent = t('Session saved — reconnect if sending fails');
+            sessionEl.style.color = '#f0ad4e';
+        } else {
+            sessionEl.textContent = t('Not registered');
+            sessionEl.style.color = '#cc6666';
+        }
+    }
+
+    const phaseLabels = {
+        idle: t('Ready to register'),
+        initializing: t('Connecting to WhatsApp...'),
+        qr: t('Scan QR with WhatsApp on your phone'),
+        ready: t('WhatsApp linked successfully'),
+        error: data.lastError || t('Registration failed')
+    };
+
+    if (statusEl) {
+        statusEl.textContent = phaseLabels[data.phase] || data.phase || '—';
+    }
+
+    if (data.phase === 'qr' && data.qr && qrWrap && qrImg) {
+        qrWrap.classList.remove('hidden');
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(data.qr)}`;
+    } else if (qrWrap) {
+        qrWrap.classList.add('hidden');
+    }
+
+    if (registerBtn) {
+        registerBtn.disabled = data.phase === 'initializing' || data.phase === 'qr';
+        if (data.connected) registerBtn.textContent = t('WhatsApp linked');
+    }
+
+    if (data.phase === 'ready' || data.phase === 'error') {
+        if (waConfigPollTimer) {
+            clearInterval(waConfigPollTimer);
+            waConfigPollTimer = null;
+        }
+        if (registerBtn && data.phase === 'ready') {
+            registerBtn.disabled = false;
+            registerBtn.textContent = t('Re-link WhatsApp');
+        } else if (registerBtn && data.phase === 'error') {
+            registerBtn.disabled = false;
+            registerBtn.textContent = t('Register number on WhatsApp');
+        }
+    }
+}
+
+async function pollWhatsAppConfigStatus() {
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/admin/whatsapp/register/status`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+            credentials: 'include'
+        });
+        const data = await res.json();
+        if (data.success) renderWhatsAppConfigStatus(data.data);
+    } catch (err) {
+        console.error('WhatsApp config poll failed', err);
+    }
+}
+
+async function loadWhatsAppConfigPanel() {
+    const alertEl = document.getElementById('waConfigAlert');
+    const phoneInput = document.getElementById('waConfigPhoneInput');
+
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/admin/whatsapp/config`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+            credentials: 'include'
+        });
+        const data = await res.json();
+        if (!data.success) {
+            showAlert(alertEl, data.error || t('Could not load WhatsApp configuration'));
+            return;
+        }
+
+        if (phoneInput) phoneInput.value = data.data.phoneNumber || '';
+        renderWhatsAppConfigStatus(data.data);
+    } catch {
+        showAlert(alertEl, t('Server connection error'));
+    }
+}
+
+export async function openDashboardConfigModal() {
+    let modal = document.getElementById('dashboardConfigModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'dashboardConfigModal';
+        Object.assign(modal.style, {
+            position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.9)', zIndex: '3000', display: 'flex',
+            flexDirection: 'column', padding: '20px', overflowY: 'auto'
+        });
+
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = t('Close');
+        closeBtn.style.alignSelf = 'flex-end';
+        closeBtn.style.marginBottom = '10px';
+        closeBtn.onclick = () => {
+            if (waConfigPollTimer) {
+                clearInterval(waConfigPollTimer);
+                waConfigPollTimer = null;
+            }
+            closeAdminOverlay(modal);
+        };
+
+        const container = document.createElement('div');
+        Object.assign(container.style, {
+            backgroundColor: 'var(--dark-bg, #1a1a1a)', padding: '20px',
+            borderRadius: '8px', color: 'white', maxWidth: '720px', margin: '0 auto', width: '100%'
+        });
+
+        container.innerHTML = `
+            <h2 class="gold-text" style="margin-bottom: 8px;">${t('Dashboard Config')}</h2>
+            <p style="color:#aaa;font-size:0.9rem;margin-bottom:24px;">${t('Platform settings for admin tools and automated notifications.')}</p>
+            <div id="waConfigAlert" class="alert hidden" style="padding:10px;border-radius:4px;border:1px solid transparent;margin-bottom:16px;"></div>
+
+            <section style="border:1px solid rgba(212,175,55,0.25);border-radius:8px;padding:20px;margin-bottom:20px;">
+                <h3 class="gold-text" style="margin:0 0 6px 0;">${t('WhatsApp Configuration')}</h3>
+                <p style="color:#888;font-size:0.85rem;margin:0 0 16px 0;">${t('All outbound WhatsApp messages from the platform are sent from this number.')}</p>
+
+                <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+                    <div style="flex:1;min-width:200px;padding:12px;background:#111;border-radius:6px;border:1px solid #333;">
+                        <div style="color:#888;font-size:0.8rem;margin-bottom:4px;">${t('Origin number')}</div>
+                        <div id="waConfigCurrentPhone" style="font-size:1.2rem;color:var(--primary-gold);">+5491178280156</div>
+                    </div>
+                    <div style="flex:1;min-width:200px;padding:12px;background:#111;border-radius:6px;border:1px solid #333;">
+                        <div style="color:#888;font-size:0.8rem;margin-bottom:4px;">${t('Session status')}</div>
+                        <div id="waConfigSessionState" style="font-size:1rem;">—</div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:24px;padding-top:16px;border-top:1px solid #333;">
+                    <h4 style="margin:0 0 10px 0;color:#ccc;">1) ${t('Change WhatsApp phone number')}</h4>
+                    <p style="color:#888;font-size:0.85rem;margin:0 0 10px 0;">${t('Set the mobile number that owns the platform WhatsApp account (country code included, no +).')}</p>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                        <input type="text" id="waConfigPhoneInput" placeholder="5491178280156" style="flex:1;min-width:220px;padding:10px;background:#222;color:white;border:1px solid #444;border-radius:4px;">
+                        <button type="button" id="waConfigSavePhoneBtn" style="padding:10px 16px;background:var(--primary-gold);color:var(--dark-bg);border:none;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Save number')}</button>
+                    </div>
+                </div>
+
+                <div style="padding-top:16px;border-top:1px solid #333;">
+                    <h4 style="margin:0 0 10px 0;color:#ccc;">2) ${t('Register number on WhatsApp')}</h4>
+                    <p style="color:#888;font-size:0.85rem;margin:0 0 12px 0;">${t('Link the platform as a WhatsApp Web device. Open WhatsApp on the origin phone → Linked devices → Link a device, then scan the QR below.')}</p>
+                    <p id="waConfigStatusText" style="color:#ccc;margin:0 0 12px 0;font-size:0.9rem;">—</p>
+                    <div id="waConfigQrWrap" class="hidden" style="margin-bottom:16px;text-align:center;">
+                        <img id="waConfigQrImg" alt="WhatsApp QR" style="max-width:240px;background:white;padding:10px;border-radius:8px;">
+                    </div>
+                    <button type="button" id="waConfigRegisterBtn" style="padding:10px 18px;background:#25D366;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Register number on WhatsApp')}</button>
+                </div>
+            </section>
+        `;
+
+        modal.appendChild(closeBtn);
+        modal.appendChild(container);
+        document.body.appendChild(modal);
+        applyStaticTranslations(modal);
+
+        document.getElementById('waConfigSavePhoneBtn').onclick = async () => {
+            const alertEl = document.getElementById('waConfigAlert');
+            const btn = document.getElementById('waConfigSavePhoneBtn');
+            const phone = document.getElementById('waConfigPhoneInput').value.trim();
+            if (!phone) {
+                showAlert(alertEl, t('Enter a phone number'));
+                return;
+            }
+
+            btn.disabled = true;
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`${API_URL}/admin/whatsapp/config`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ phoneNumber: phone })
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    showAlert(alertEl, data.error || t('Could not save phone number'));
+                    return;
+                }
+                showAlert(alertEl, t('WhatsApp phone number updated. Re-link WhatsApp if you changed the origin number.'), false);
+                await loadWhatsAppConfigPanel();
+            } catch {
+                showAlert(alertEl, t('Server connection error'));
+            } finally {
+                btn.disabled = false;
+            }
+        };
+
+        document.getElementById('waConfigRegisterBtn').onclick = async () => {
+            const alertEl = document.getElementById('waConfigAlert');
+            const btn = document.getElementById('waConfigRegisterBtn');
+            btn.disabled = true;
+
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`${API_URL}/admin/whatsapp/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    showAlert(alertEl, data.error || t('Could not start WhatsApp registration'));
+                    btn.disabled = false;
+                    return;
+                }
+
+                showAlert(alertEl, t('Scan the QR with the origin phone within 3 minutes.'), false);
+                renderWhatsAppConfigStatus(data.data);
+                if (waConfigPollTimer) clearInterval(waConfigPollTimer);
+                waConfigPollTimer = setInterval(pollWhatsAppConfigStatus, 2500);
+                pollWhatsAppConfigStatus();
+            } catch {
+                showAlert(alertEl, t('Server connection error'));
+                btn.disabled = false;
+            }
+        };
+    }
+
+    openAdminOverlay(modal);
+    await loadWhatsAppConfigPanel();
 }
 
 window.openImageModal = openImageModal;

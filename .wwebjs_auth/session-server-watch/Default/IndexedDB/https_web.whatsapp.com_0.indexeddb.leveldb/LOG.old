@@ -1,0 +1,18 @@
+2026/06/15-03:32:36.041 371c Reusing MANIFEST D:\SexAppeal-platform\.wwebjs_auth\session-server-watch\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/06/15-03:32:36.042 371c Recovering log #37
+2026/06/15-03:32:36.085 371c Reusing old log D:\SexAppeal-platform\.wwebjs_auth\session-server-watch\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/000037.log 
+2026/06/15-03:32:37.674 131c Compacting 1@1 + 1@2 files
+2026/06/15-03:32:38.063 131c Generated table #40@1: 13938 keys, 505786 bytes
+2026/06/15-03:32:38.064 131c Compacted 1@1 + 1@2 files => 505786 bytes
+2026/06/15-03:32:38.113 131c compacted to: files[ 0 0 1 0 0 0 0 ]
+2026/06/15-03:32:38.113 131c Delete type=2 #36
+2026/06/15-03:32:38.113 131c Delete type=2 #38
+2026/06/15-03:32:43.541 3ae8 Level-0 table #42: started
+2026/06/15-03:32:43.810 3ae8 Level-0 table #42: 976809 bytes OK
+2026/06/15-03:32:43.854 3ae8 Delete type=0 #37
+2026/06/15-03:32:43.858 371c Compacting 1@1 + 1@2 files
+2026/06/15-03:32:44.219 371c Generated table #43@1: 19363 keys, 749869 bytes
+2026/06/15-03:32:44.219 371c Compacted 1@1 + 1@2 files => 749869 bytes
+2026/06/15-03:32:44.257 371c compacted to: files[ 0 0 1 0 0 0 0 ]
+2026/06/15-03:32:44.257 371c Delete type=2 #40
+2026/06/15-03:32:44.257 371c Delete type=2 #42

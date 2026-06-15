@@ -7,6 +7,7 @@ const cookieParser = require('cookie-parser');
 const config = require('./config/appConfig');
 const multer = require('multer');
 const fs = require('fs');
+const path = require('path');
 const os = require('os');
 const connectDB = require('./config/database');
 const User = require('./models/User');
@@ -69,6 +70,12 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
+// SEO routes (must be registered before static files)
+const seoController = require('./controllers/seoController');
+app.get('/robots.txt', seoController.robotsTxt);
+app.get('/sitemap.xml', seoController.sitemapXml);
+app.get('/perfil/:alias', seoController.renderProfilePage);
+
 // Favicon (browsers request /favicon.ico by default)
 app.get('/favicon.ico', (req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=2592000');
@@ -77,7 +84,6 @@ app.get('/favicon.ico', (req, res) => {
 });
 
 // Set static folder
-const path = require('path');
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders: (res, filePath) => {
     if (filePath.match(/\.(jpg|jpeg|png|gif|webp|svg|css)$/i)) {
@@ -256,24 +262,16 @@ app.put('/api/v1/admin/potential-professionals/:id', protect, authorize('admin')
 app.post('/api/v1/admin/notifications/mail/broadcast', protect, authorize('admin'), adminController.sendBroadcastEmail);
 app.post('/api/v1/admin/notifications/mail/targeted', protect, authorize('admin'), adminController.sendTargetedEmail);
 
+const whatsappController = require('./controllers/whatsappController');
+app.get('/api/v1/admin/whatsapp/config', protect, authorize('admin'), whatsappController.getWhatsAppConfig);
+app.put('/api/v1/admin/whatsapp/config', protect, authorize('admin'), whatsappController.updateWhatsAppPhone);
+app.post('/api/v1/admin/whatsapp/register', protect, authorize('admin'), whatsappController.startWhatsAppRegistration);
+app.get('/api/v1/admin/whatsapp/register/status', protect, authorize('admin'), whatsappController.getWhatsAppRegistrationStatus);
+
 if (process.env.NODE_ENV !== 'production') {
   const testingController = require('./controllers/testingController');
   app.post('/api/v1/testing/verify-user', testingController.forceVerifyUser);
 }
-
-// SEO-Friendly Profile URLs (e.g., /perfil/AliasDeLaChica)
-app.get('/perfil/:alias', (req, res) => {
-  const alias = String(req.params.alias || '').toLowerCase();
-  const reservedPages = [
-    'login.html', 'register.html', 'recover.html', 'verify.html', 'index.html',
-    'categories.html', 'dashboard.html', 'profDashboard.html', 'treasure.html',
-    'discover.html', 'home.html', 'services.html', 'admin.html', 'admin-potentials.html'
-  ];
-  if (reservedPages.includes(alias)) {
-    return res.redirect(301, `/${req.params.alias}`);
-  }
-  res.sendFile(path.join(__dirname, 'public', 'treasure.html'));
-});
 
 app.get('/', (req, res) => {
   res.redirect('/index.html');

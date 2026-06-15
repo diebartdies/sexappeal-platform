@@ -1,5 +1,5 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
 const PotentialProfessional = require('../models/PotentialProfessional');
+const platformService = require('./whatsappPlatformService');
 const {
   normalizeWhatsAppPhone,
   buildProfessionalInviteMessage
@@ -20,11 +20,22 @@ const state = {
   finishedAt: null
 };
 
-let client = null;
-let queuePromise = null;
-let clientReady = false;
-
 function getStatus() {
+  const platformStatus = platformService.isClientReady()
+    ? { phase: 'ready', qr: null }
+    : { phase: platformService.getQrCode() ? 'qr' : 'idle', qr: platformService.getQrCode() };
+
+  if (BUSY_PHASES.has(state.phase) || state.phase === 'complete' || state.phase === 'error') {
+    return {
+      ...state,
+      qr: state.phase === 'qr' || platformStatus.phase === 'qr' ? (state.qr || platformStatus.qr) : null
+    };
+  }
+
+  if (platformStatus.qr) {
+    return { ...state, phase: 'qr', qr: platformStatus.qr };
+  }
+
   return { ...state };
 }
 
@@ -40,61 +51,31 @@ function resetRunCounters(total) {
   state.finishedAt = null;
 }
 
-function ensureClient() {
-  if (client) return;
+async function waitForClientReady() {
+  state.phase = platformService.getQrCode() ? 'qr' : 'initializing';
 
-  client = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: {
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+  const pollQr = setInterval(() => {
+    const qr = platformService.getQrCode();
+    if (qr) {
+      state.phase = 'qr';
+      state.qr = qr;
     }
-  });
+  }, 1000);
 
-  client.on('qr', (qr) => {
-    state.qr = qr;
-    if (state.phase !== 'sending') state.phase = 'qr';
-  });
-
-  client.on('ready', () => {
-    clientReady = true;
-    if (queuePromise) {
-      queuePromise();
-      queuePromise = null;
-    }
-  });
-
-  client.on('auth_failure', (msg) => {
-    state.phase = 'error';
-    state.lastError = msg || 'WhatsApp authentication failed';
-    state.finishedAt = new Date();
-  });
-
-  client.on('disconnected', (reason) => {
-    state.phase = 'error';
-    state.lastError = reason || 'WhatsApp disconnected';
-    state.finishedAt = new Date();
-  });
-
-  client.initialize();
-}
-
-function waitForClientReady() {
-  ensureClient();
-  if (clientReady) return Promise.resolve();
-
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('WhatsApp login timed out after 3 minutes')), 3 * 60 * 1000);
-    queuePromise = () => {
-      clearTimeout(timeout);
-      resolve();
-    };
-  });
+  try {
+    await platformService.waitForReady();
+    state.qr = null;
+  } finally {
+    clearInterval(pollQr);
+  }
 }
 
 async function processTargets(targets, options = {}) {
   const { customMessage } = options;
   state.phase = 'sending';
   state.qr = null;
+
+  const client = platformService.getSharedClient();
 
   for (const target of targets) {
     state.currentLead = target.alias || target.phone;
