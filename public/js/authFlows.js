@@ -1,5 +1,6 @@
 import { API_URL, BASE_ORIGIN, appPath } from './globals.js';
 import { showAlert } from './uiHelpers.js';
+import { announceMessage, wireAuthFormLabels } from './a11y.js';
 import { t, applyStaticTranslations } from './i18n.js';
 import { openInlinePasswordRecovery, initRecoverPage, bindForgotPasswordTriggers } from './passwordRecovery.js';
 import { pushReturnPoint, logoutToEntrance } from './navReturn.js';
@@ -110,7 +111,7 @@ async function submitLoginForm(e) {
     const originalBtnText = submitBtn?.textContent;
 
     if (!email || !password) {
-        showAlert(alert, t('Please provide an email and password'));
+        showAlert(alert, t('Please provide an email and password'), true, !email ? 'email' : 'password');
         revealLoginAlert(alert);
         return;
     }
@@ -194,7 +195,7 @@ export function resetLandingEnterButton() {
 
 function handleAgeGateEnter(btn) {
     if (window.location.protocol === 'file:') {
-        alert(`ERROR: You must open the site via a local server (e.g., ${BASE_ORIGIN}). The buttons will not work if you double-click the HTML file!`);
+        announceMessage(`ERROR: You must open the site via a local server (e.g., ${BASE_ORIGIN}). The buttons will not work if you double-click the HTML file!`);
         return;
     }
 
@@ -263,6 +264,7 @@ export function setupLandingPageAgeGate() {
 
 export function initAuthForms() {
     whenDomReady(() => {
+        wireAuthFormLabels();
         bindLoginFormOnce();
 
         const loginForm = document.getElementById('loginForm');
@@ -346,7 +348,7 @@ if (verifyForm) {
                     window.location.replace('/categories.html');
                 }
             } else {
-                showAlert(alert, data.error || 'Invalid code');
+                showAlert(alert, data.error || 'Invalid code', true, 'verifyCode');
             }
         } catch (err) {
             showAlert(alert, 'Server connection error');

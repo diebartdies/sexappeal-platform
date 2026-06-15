@@ -1,6 +1,7 @@
 import { BASE_ORIGIN, API_URL, CATEGORY_META, resolvePhotoSrc, appPath } from './globals.js';
 import { showAlert, getPendingApprovalBannerHtml, getResubmissionBannerHtml, getGeneralRejectionBannerHtml } from './uiHelpers.js';
 import { t, applyStaticTranslations } from './i18n.js';
+import { activateAccessibleModal, deactivateAccessibleModal, announceMessage, confirmDialog } from './a11y.js';
 import { renderSpecialtyDropdown, setupLocationDropdowns } from './helpers.js';
 import { beginDashboardLoad, finishDashboardLoad, failDashboardLoad } from './dashboardShell.js';
 import { navigateBack } from './ui.js';
@@ -178,7 +179,7 @@ export function injectProfessionalDashboardGuides(content, data, insertRef) {
         }
 
         if (!data.isReadyForTransactions && isApproved) {
-            alertsHtml += `<div style="background: rgba(255,0,0,0.1); border-left: 4px solid var(--accent-red); padding: 10px; margin-bottom: 10px;">💰 <strong>Rate Update:</strong> Please acknowledge the new pricing rates in the alert above to maintain your visibility.</div>`;
+            alertsHtml += `<div style="background: rgba(255,0,0,0.1); border-left: 4px solid var(--accent-red); padding: 10px; margin-bottom: 10px;">💰 ${t('Rate Update: Please acknowledge the new pricing rates in the alert above to maintain your visibility.')}</div>`;
         }
 
         if (prof.isEvaluationPeriod && prof.subscriptionStatus === 'trial') {
@@ -207,17 +208,20 @@ export function injectProfessionalDashboardGuides(content, data, insertRef) {
                     proratedAmt = Math.round(pricePerDay * remainingDays);
                 }
 
-                alertsHtml += `<div style="background: rgba(212,175,55,0.1); border-left: 4px solid var(--primary-gold); padding: 15px; margin-bottom: 10px;">
-                    💎 <strong>First Month Free:</strong> Your trial ends on ${trialEnd.toLocaleDateString()}.
-                    ${proratedAmt > 0 ? `<br>Since your trial ends mid-month, you will only be charged a prorated amount of <strong>${new Intl.NumberFormat('es-AR').format(proratedAmt)} ARS</strong> for the remainder of that month.` : ''}
-                </div>`;
+                let trialBlock = t('First Month Free: Your trial ends on {date}.').replace('{date}', trialEnd.toLocaleDateString());
+                if (proratedAmt > 0) {
+                    trialBlock += `<br>${t('Since your trial ends mid-month, you will only be charged a prorated amount of {amount} ARS for the remainder of that month.').replace('{amount}', `<strong>${new Intl.NumberFormat('es-AR').format(proratedAmt)}</strong>`)}`;
+                }
+                alertsHtml += `<div style="background: rgba(212,175,55,0.1); border-left: 4px solid var(--primary-gold); padding: 15px; margin-bottom: 10px;">💎 ${trialBlock}</div>`;
             }
         }
 
         if (prof.subscriptionStatus === 'suspended') {
             const pendingInv = (prof.invoices || []).find(i => i.status === 'pending');
-            const feeText = pendingInv && pendingInv.lateFeeApplied ? ` A 2% late fee has been applied. Your new balance is $${new Intl.NumberFormat('es-AR').format(pendingInv.amount)} ARS.` : '';
-            alertsHtml += `<div style="background: rgba(255,0,0,0.1); border-left: 4px solid var(--accent-red); padding: 10px; margin-bottom: 10px;">🛑 <strong>Account Suspended:</strong> Your profile is hidden due to unpaid balances.${feeText} Upload your receipt to restore access.</div>`;
+            const feeText = pendingInv && pendingInv.lateFeeApplied
+                ? ` ${t('A 2% late fee has been applied. Your new balance is {amount} ARS.').replace('{amount}', `$${new Intl.NumberFormat('es-AR').format(pendingInv.amount)}`)}`
+                : '';
+            alertsHtml += `<div style="background: rgba(255,0,0,0.1); border-left: 4px solid var(--accent-red); padding: 10px; margin-bottom: 10px;">🛑 <strong>${t('Account Suspended: Your profile is hidden due to unpaid balances.')}</strong>${feeText} ${t('Upload your receipt to restore access.')}</div>`;
         }
 
         if (!alertsHtml) {
@@ -244,11 +248,21 @@ function showPaymentOverlay(overlayId) {
     el.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
     if (wasHidden) beginModalSession();
+    const titleIds = {
+        paymentModalOverlay: 'paymentModalTitle',
+        howToPayOverlay: 'howToPayModalTitle'
+    };
+    activateAccessibleModal(el, {
+        labelId: titleIds[overlayId],
+        onClose: () => hidePaymentOverlay(overlayId),
+        initialFocusSelector: '.payment-modal-close'
+    });
 }
 
 function hidePaymentOverlay(overlayId) {
     const el = document.getElementById(overlayId);
     if (!el) return;
+    deactivateAccessibleModal(el);
     const wasVisible = !el.classList.contains('hidden');
     el.classList.add('hidden');
     el.style.display = 'none';
@@ -565,7 +579,7 @@ if (receiptForm) {
             if (btn) { btn.textContent = originalText; btn.disabled = false; }
             
             if (data.success) {
-                showAlert(alert, 'Comprobante enviado. Será verificado por el administrador.', false);
+                showAlert(alert, 'Receipt submitted. It will be verified by admin.', false);
                 receiptForm.reset();
                 hidePaymentOverlay('paymentModalOverlay');
             } else {
@@ -727,13 +741,18 @@ export async function updateConnectionStatus(id, status) {
         });
         const data = await res.json();
         if (data.success) {
-            alert(`Request ${status} successfully.`);
+            const msg = status === 'accepted'
+                ? 'Request accepted successfully.'
+                : status === 'declined'
+                    ? 'Request declined successfully.'
+                    : `Request ${status} successfully.`;
+            announceMessage(msg, { isError: false });
             loadPendingConnections(); 
         } else {
-            alert(data.error || 'Failed to update status');
+            announceMessage(data.error || 'Failed to update status');
         }
     } catch (err) {
-        alert('Server connection error');
+        announceMessage('Server connection error');
     }
 }
 
@@ -814,10 +833,12 @@ export function addPhotoToGrid(fileOrUrl) {
         img.src = 'https://via.placeholder.com/120x160?text=Photo';
     };
 
-    const overlay = document.createElement('div');
-    overlay.className = 'remove-overlay';
-    overlay.innerHTML = '&times;'; // 'x' symbol for remove
-    Object.assign(overlay.style, {
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'remove-overlay';
+    removeBtn.setAttribute('aria-label', t('Remove photo'));
+    removeBtn.innerHTML = '&times;';
+    Object.assign(removeBtn.style, {
         position: 'absolute',
         top: '5px',
         right: '5px',
@@ -835,7 +856,7 @@ export function addPhotoToGrid(fileOrUrl) {
     });
 
     item.appendChild(img);
-    item.appendChild(overlay);
+    item.appendChild(removeBtn);
 
     // --- Drag and Drop Logic ---
     item.draggable = true;
@@ -881,22 +902,21 @@ export function addPhotoToGrid(fileOrUrl) {
         }
     });
 
-    overlay.addEventListener('click', (e) => {
+    removeBtn.addEventListener('click', async (e) => {
         e.stopPropagation(); // Prevents accidental dragging interference
-        if (confirm('Are you sure you want to remove this photo from your gallery?')) {
-            if (newFilesMap.has(img.src)) {
-                URL.revokeObjectURL(img.src);
-                newFilesMap.delete(img.src);
-            }
-            item.remove();
-            markPhotosDirty();
-            const explicitSaveBtn = document.getElementById('explicitSaveBtn');
-            if (explicitSaveBtn) {
-                explicitSaveBtn.classList.remove('hidden');
-                explicitSaveBtn.click();
-            } else if (typeof window.saveProfessionalProfile === 'function') {
-                window.saveProfessionalProfile(true);
-            }
+        if (!(await confirmDialog('Are you sure you want to remove this photo from your gallery?', { destructive: true, confirmLabel: t('Remove photo') }))) return;
+        if (newFilesMap.has(img.src)) {
+            URL.revokeObjectURL(img.src);
+            newFilesMap.delete(img.src);
+        }
+        item.remove();
+        markPhotosDirty();
+        const explicitSaveBtn = document.getElementById('explicitSaveBtn');
+        if (explicitSaveBtn) {
+            explicitSaveBtn.classList.remove('hidden');
+            explicitSaveBtn.click();
+        } else if (typeof window.saveProfessionalProfile === 'function') {
+            window.saveProfessionalProfile(true);
         }
     });
 
@@ -911,7 +931,7 @@ if (newPhotoInput) {
         if (e.target.files) {
             for (const file of e.target.files) {
                 if (!file.type.startsWith('image/')) {
-                    alert('Please select valid image files only.');
+                    announceMessage('Please select valid image files only.');
                     continue;
                 }
                 addPhotoToGrid(file);
@@ -940,11 +960,17 @@ function showDeleteProfileOverlay() {
     el.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
     if (wasHidden) beginModalSession();
+    activateAccessibleModal(el, {
+        labelId: 'deleteProfileModalTitle',
+        onClose: () => hideDeleteProfileOverlay(),
+        initialFocusSelector: '#deleteProfilePassword'
+    });
 }
 
 function hideDeleteProfileOverlay() {
     const el = document.getElementById('deleteProfileOverlay');
     if (!el) return;
+    deactivateAccessibleModal(el);
     const wasVisible = !el.classList.contains('hidden');
     el.classList.add('hidden');
     el.style.display = 'none';
@@ -1192,7 +1218,7 @@ export async function loadProfDashboard() {
                         </label>
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #ccc; font-size: 0.9rem;">
                             <input type="checkbox" id="upFantasyWardrobe" ${prof.hasFantasyWardrobe ? 'checked' : ''}>
-                            ${t('Has fantasy wardrobe')} (sexy costumes, high heels)
+                            ${t('Has fantasy wardrobe (sexy costumes, high heels)')}
                         </label>
                     </div>
                 </div>
@@ -1271,7 +1297,7 @@ export async function loadProfDashboard() {
             const userServices = prof.services || [];
             specs.forEach(spec => {
                 const lbl = document.createElement('label');
-                lbl.title = spec.tooltip;
+                lbl.title = t(spec.tooltip);
                 lbl.style.cssText = 'display:flex; align-items:center; gap:5px; cursor:pointer; padding:8px 12px; background:rgba(212,175,55,0.1); border-radius:4px; border:1px solid rgba(212,175,55,0.3); font-size:0.9rem;';
                 const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = spec.name; cb.className = 'dashboard-specialty-cb';
                 cb.checked = userServices.includes(spec.name) || userServices.includes(spec.name.toLowerCase());
@@ -1316,9 +1342,9 @@ export async function loadProfDashboard() {
                 suspensionAlert.style.border = '2px solid var(--accent-red)';
                 const pendingInv = (prof.invoices || []).find(i => i.status === 'pending');
                 const feeText = pendingInv && pendingInv.lateFeeApplied
-                    ? ` A 2% late fee has been applied. Your new total is <strong>$${new Intl.NumberFormat('es-AR').format(pendingInv.amount)} ARS</strong>.`
+                    ? ` ${t('A 2% late fee has been applied. Your new total is {amount} ARS.').replace('{amount}', `<strong>$${new Intl.NumberFormat('es-AR').format(pendingInv.amount)}</strong>`)}`
                     : '';
-                suspensionAlert.innerHTML = `<h3 style="color: var(--accent-red); margin-top: 0;">Account Suspended</h3><p>Your profile has been removed from the public grid due to an unpaid balance past the 5-business-day grace period.${feeText}</p><p>To restore your access, please upload your payment receipt below. Once verified by an admin, your profile will reappear on the directory.</p>`;
+                suspensionAlert.innerHTML = `<h3 style="color: var(--accent-red); margin-top: 0;">${t('Account Suspended')}</h3><p>${t('Your profile has been removed from the public grid due to an unpaid balance past the 5-business-day grace period.')}${feeText}</p><p>${t('To restore your access, please upload your payment receipt below. Once verified by an admin, your profile will reappear on the directory.')}</p>`;
                 content.insertBefore(suspensionAlert, formObj);
                 formObj.style.opacity = '0.3';
                 formObj.style.pointerEvents = 'none';
@@ -1437,10 +1463,10 @@ export async function loadProfDashboard() {
             document.getElementById('explicitSaveBtn').onclick = async () => {
                 if (typeof window.saveProfessionalProfile === 'function') {
                     const btn = document.getElementById('explicitSaveBtn');
-                    btn.textContent = 'Saving...';
+                    btn.textContent = t('Saving...');
                     btn.style.opacity = '0.7';
                     await window.saveProfessionalProfile(false); // False = show success alert to the user
-                    btn.textContent = '💾 Save Changes';
+                    btn.textContent = t('💾 Save Changes');
                     btn.style.opacity = '1';
                     btn.classList.add('hidden'); // Hide the button again until next change
                 }
@@ -1468,7 +1494,7 @@ export async function loadProfDashboard() {
             window.location.href = '/index.html';
         }
     } catch (err) {
-        failDashboardLoad('profDashboardLayout', 'loader', '<p class="alert" style="text-align:center;padding:40px;">Server connection error.</p>');
+        failDashboardLoad('profDashboardLayout', 'loader', `<p class="alert" style="text-align:center;padding:40px;">${t('Server connection error')}</p>`);
     } finally {
         profDashboardLoadInFlight = null;
     }

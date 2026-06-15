@@ -1,6 +1,7 @@
 import { API_URL, appPath } from './globals.js';
 import { showAlert, attachPasswordToggles } from './uiHelpers.js';
 import { t } from './i18n.js';
+import { wireAuthFormLabels } from './a11y.js';
 
 let inlinePanel = null;
 let activeEmail = '';
@@ -25,6 +26,7 @@ function recoveryMarkup() {
             <div id="recoveryStepEmail">
                 <p class="recovery-step-text">${t('Confirm your email to receive a recovery code.')}</p>
                 <div id="recoveryAlert" class="alert hidden"></div>
+                <label for="recoveryEmail">${t('Email Address')}</label>
                 <input type="email" id="recoveryEmail" placeholder="${t('Email Address')}" required autocomplete="username">
                 <button type="button" id="recoverySendCodeBtn" class="landing-btn landing-btn-login">${t('Send recovery code')}</button>
             </div>
@@ -32,8 +34,11 @@ function recoveryMarkup() {
                 <p class="recovery-step-text">${t('Recovery code sent to:')}</p>
                 <p id="recoveryDisplayEmail" class="gold-text recovery-email-display"></p>
                 <input type="hidden" id="recoveryHiddenEmail">
+                <label for="recoveryCode">${t('6-Digit Code')}</label>
                 <input type="text" id="recoveryCode" placeholder="${t('6-Digit Code')}" required maxlength="6" inputmode="numeric" autocomplete="one-time-code" class="recovery-code-input">
+                <label for="recoveryNewPassword">${t('New Password (Min 6 chars)')}</label>
                 <input type="password" id="recoveryNewPassword" placeholder="${t('New Password (Min 6 chars)')}" required minlength="6" autocomplete="new-password">
+                <label for="recoveryConfirmPassword">${t('Confirm Password')}</label>
                 <input type="password" id="recoveryConfirmPassword" placeholder="${t('Confirm Password')}" required minlength="6" autocomplete="new-password">
                 <button type="button" id="recoverySubmitBtn" class="landing-btn landing-btn-login">${t('Reset Password')}</button>
             </div>
@@ -78,6 +83,7 @@ function ensureInlinePanel(shell) {
 
     shell.card.insertAdjacentHTML('beforeend', recoveryMarkup());
     inlinePanel = document.getElementById('passwordRecoveryPanel');
+    wireAuthFormLabels();
     bindInlineRecoveryEvents(shell);
     return inlinePanel;
 }
@@ -169,13 +175,13 @@ async function sendRecoveryCode(email, alertEl) {
     return false;
 }
 
-async function submitPasswordReset(email, code, password, confirmPassword, alertEl) {
+async function submitPasswordReset(email, code, password, confirmPassword, alertEl, fieldIds = { password: 'recoveryNewPassword', confirm: 'recoveryConfirmPassword', code: 'recoveryCode' }) {
     if (password !== confirmPassword) {
-        showAlert(alertEl, t('Passwords do not match'));
+        showAlert(alertEl, t('Passwords do not match'), true, fieldIds.confirm);
         return false;
     }
     if (password.length < 6) {
-        showAlert(alertEl, t('Password must be at least 6 characters'));
+        showAlert(alertEl, t('Password must be at least 6 characters'), true, fieldIds.password);
         return false;
     }
 
@@ -186,7 +192,7 @@ async function submitPasswordReset(email, code, password, confirmPassword, alert
     });
     const data = await res.json();
     if (!data.success) {
-        showAlert(alertEl, t(data.error || 'Reset failed'));
+        showAlert(alertEl, t(data.error || 'Reset failed'), true, fieldIds.code);
         return false;
     }
     return true;
@@ -202,7 +208,7 @@ function bindInlineRecoveryEvents(shell) {
         const alertEl = document.getElementById('recoveryAlert');
         const email = emailInput?.value.trim();
         if (!email) {
-            showAlert(alertEl, t('Please provide an email address'));
+            showAlert(alertEl, t('Please provide an email address'), true, 'recoveryEmail');
             emailInput?.focus();
             return;
         }
@@ -301,6 +307,7 @@ export function initRecoverPage() {
     if (!forgotForm && !resetForm) return;
     if (document.body.dataset.recoverBound === '1') return;
     document.body.dataset.recoverBound = '1';
+    wireAuthFormLabels();
 
     const params = new URLSearchParams(window.location.search);
     const emailFromUrl = params.get('email');
@@ -312,7 +319,7 @@ export function initRecoverPage() {
         const email = document.getElementById('forgotEmail')?.value.trim();
         const alert = document.getElementById('forgotAlert');
         if (!email) {
-            showAlert(alert, t('Please provide an email address'));
+            showAlert(alert, t('Please provide an email address'), true, 'forgotEmail');
             revealRecoveryAlert(alert);
             return;
         }
@@ -341,7 +348,11 @@ export function initRecoverPage() {
         const alert = document.getElementById('resetAlert');
 
         try {
-            const ok = await submitPasswordReset(email, code, password, confirmPassword, alert);
+            const ok = await submitPasswordReset(email, code, password, confirmPassword, alert, {
+                password: 'resetNewPassword',
+                confirm: 'resetConfirmPassword',
+                code: 'resetCode'
+            });
             if (ok) {
                 showAlert(alert, t('Password reset successful!'), false);
                 setTimeout(() => { window.location.href = appPath('index.html'); }, 2000);

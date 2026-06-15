@@ -1,5 +1,6 @@
 import { appPath } from './globals.js';
-import { t, applyStaticTranslations, currentLang } from './i18n.js';
+import { t, applyStaticTranslations } from './i18n.js';
+import { initA11y, syncDocumentLang } from './a11y.js';
 import { injectGlobalStyles, injectPlausible, initGlobalTopBar, initPrivacyShield } from './ui.js';
 import { attachPasswordToggles } from './uiHelpers.js';
 import { setupLocationDropdowns } from './helpers.js';
@@ -181,9 +182,10 @@ export function initBootstrap() {
         initPrivacyShield();
         injectGlobalStyles();
         injectPlausible();
+        initA11y();
         applyStaticTranslations();
         applyPendingScrollRestore();
-        document.documentElement.lang = currentLang === 'es' ? 'es' : 'en';
+        syncDocumentLang();
 
         if (document.getElementById('registerForm')) {
             initProfessionalRegistration();

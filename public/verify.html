@@ -29,7 +29,10 @@
     <form id="verifyForm">
                     <div id="verifyAlert" class="alert hidden"></div>
                     <input type="hidden" id="verifyEmail">
-                    <input type="text" placeholder="6-Digit Code" required id="verifyCode" maxlength="6" style="text-align: center; font-size: 1.5rem; letter-spacing: 5px;">
+                    <div class="form-group">
+                        <label for="verifyCode">6-Digit Code</label>
+                        <input type="text" placeholder="6-Digit Code" required id="verifyCode" maxlength="6" style="text-align: center; font-size: 1.5rem; letter-spacing: 5px;">
+                    </div>
                     <button type="submit" style="width: 100%; margin-top: 20px;">Verify</button>
                 </form>
             </div>

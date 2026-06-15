@@ -7,8 +7,8 @@
     <link rel="alternate icon" href="/favicon.ico">
     <title>SexAppeal - Professional Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/style.css?v=8.4">
-    <link rel="stylesheet" href="/css/responsive.css?v=8.4">
+    <link rel="stylesheet" href="/css/style.css?v=8.5">
+    <link rel="stylesheet" href="/css/responsive.css?v=8.5">
     <meta name="description" content="SexAppeal - The Architecture of Intimacy. Directorio exclusivo de acompañantes VIP y Living Treasures.">
     <meta property="og:title" content="SexAppeal Platform">
     <meta property="og:description" content="El santuario definitivo para conexiones de alto nivel y discreción absoluta.">
@@ -51,9 +51,9 @@
 
         <div id="dashboardOverlays" class="hidden">
             <div id="paymentModalOverlay" class="hidden payment-modal-overlay" aria-hidden="true">
-                <div class="card payment-modal-panel">
+                <div class="card payment-modal-panel" data-modal-panel>
                     <button type="button" id="closePaymentModal" class="payment-modal-close" aria-label="Close">&times;</button>
-                    <h3 class="gold-text" style="margin-bottom: 20px;">Register payment receipt</h3>
+                    <h3 id="paymentModalTitle" class="gold-text" style="margin-bottom: 20px;">Register payment receipt</h3>
                     <form id="receiptForm" style="display: flex; flex-direction: column; gap: 15px;">
                         <div id="receiptAlert" class="alert hidden" style="padding: 10px; border-radius: 4px; border: 1px solid transparent;"></div>
                         <label>Upload photo or PDF of receipt</label>
@@ -64,9 +64,9 @@
             </div>
 
             <div id="howToPayOverlay" class="hidden payment-modal-overlay" aria-hidden="true">
-                <div class="card payment-modal-panel" style="max-width: 720px;">
+                <div class="card payment-modal-panel" data-modal-panel style="max-width: 720px;">
                     <button type="button" id="closeHowToPayModal" class="payment-modal-close" aria-label="Close">&times;</button>
-                    <h3 class="gold-text" style="margin-bottom: 16px;">How to pay</h3>
+                    <h3 id="howToPayModalTitle" class="gold-text" style="margin-bottom: 16px;">How to pay</h3>
                     <div id="howToPayContent" style="color: #ccc; line-height: 1.7; font-size: 0.95rem;"></div>
                     <button type="button" id="btnCloseHowToPayFooter" style="margin-top: 20px; width: 100%; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold);">Close</button>
                 </div>
@@ -74,9 +74,9 @@
         </div>
 
         <div id="deleteProfileOverlay" class="hidden payment-modal-overlay" aria-hidden="true">
-            <div class="card payment-modal-panel" style="border-color: var(--accent-red); max-width: 480px;">
+            <div class="card payment-modal-panel" data-modal-panel style="border-color: var(--accent-red); max-width: 480px;">
                 <button type="button" id="closeDeleteProfileModal" class="payment-modal-close" aria-label="Close">&times;</button>
-                <h3 style="color: var(--accent-red); margin-bottom: 12px;">Delete profile</h3>
+                <h3 id="deleteProfileModalTitle" style="color: var(--accent-red); margin-bottom: 12px;">Delete profile</h3>
                 <p style="color: #ccc; font-size: 0.9rem; line-height: 1.6; margin-bottom: 16px;">
                     This permanently removes your account, photos, statistics, and public profile. This action cannot be undone.
                 </p>
@@ -94,6 +94,6 @@
             </div>
         </div>
     </div>
-    <script src="/js/app.js?v=8.4" type="module"></script>
+    <script src="/js/app.js?v=8.5" type="module"></script>
 </body>
 </html>

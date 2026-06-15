@@ -1,6 +1,7 @@
 import { API_URL, appPath, VERIFICATION_GESTURES } from './globals.js';
 import { showAlert } from './uiHelpers.js';
 import { t, applyStaticTranslations } from './i18n.js';
+import { activateAccessibleModal, deactivateAccessibleModal, confirmDialog, wireFormLabel, linkInputHint, setFieldInvalid } from './a11y.js';
 import { setupLocationDropdowns } from './helpers.js';
 import { navigateWithReturn, returnToOrigin } from './navReturn.js';
 import {
@@ -33,6 +34,7 @@ function calcAge(birthDateStr) {
 function highlightField(el, on = true) {
     if (!el) return;
     el.classList.toggle('reg-field-error', on);
+    setFieldInvalid(el, on, document.getElementById('registerAlert'));
     if (on) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         el.focus({ preventScroll: true });
@@ -40,7 +42,10 @@ function highlightField(el, on = true) {
 }
 
 function clearFieldErrors(form) {
-    form.querySelectorAll('.reg-field-error').forEach((el) => el.classList.remove('reg-field-error'));
+    form.querySelectorAll('.reg-field-error').forEach((el) => {
+        el.classList.remove('reg-field-error');
+        setFieldInvalid(el, false, document.getElementById('registerAlert'));
+    });
 }
 
 function bindFileInput(inputId, labelId) {
@@ -54,17 +59,7 @@ function bindFileInput(inputId, labelId) {
 }
 
 function setRegLabel(forId, key, required = false) {
-    const label = document.querySelector(`label[for="${forId}"]`);
-    if (!label) return;
-    label.replaceChildren();
-    label.appendChild(document.createTextNode(t(key)));
-    if (required) {
-        label.appendChild(document.createTextNode(' '));
-        const star = document.createElement('span');
-        star.className = 'required-star';
-        star.textContent = '*';
-        label.appendChild(star);
-    }
+    wireFormLabel(forId, key, required);
 }
 
 function registrationFormHasChanges(form) {
@@ -80,18 +75,20 @@ function registrationFormHasChanges(form) {
 }
 
 function confirmLeaveRegistration(form) {
-    if (!registrationFormHasChanges(form)) return true;
-    return confirm(t('Registration is not finished. If you leave now, your changes will be lost. Continue?'));
+    if (!registrationFormHasChanges(form)) return Promise.resolve(true);
+    return confirmDialog(t('Registration is not finished. If you leave now, your changes will be lost. Continue?'));
 }
 
 function leaveRegistration(onLeave) {
     const form = document.getElementById('registerForm');
-    if (!confirmLeaveRegistration(form)) return;
-    if (typeof onLeave === 'function') {
-        onLeave();
-        return;
-    }
-    returnToOrigin(() => { window.location.href = appPath('index.html'); });
+    confirmLeaveRegistration(form).then((ok) => {
+        if (!ok) return;
+        if (typeof onLeave === 'function') {
+            onLeave();
+            return;
+        }
+        returnToOrigin(() => { window.location.href = appPath('index.html'); });
+    });
 }
 
 function setupRegistrationLeaveGuard(form) {
@@ -120,7 +117,10 @@ function setupRegistrationLeaveGuard(form) {
     const brandLogo = document.querySelector('.brand-logo');
     if (brandLogo && !brandLogo.dataset.regLeaveBound) {
         brandLogo.dataset.regLeaveBound = '1';
-        brandLogo.onclick = () => leaveRegistration();
+        brandLogo.addEventListener('click', (e) => {
+            e.preventDefault();
+            leaveRegistration();
+        });
     }
 }
 
@@ -151,8 +151,8 @@ function applyRegistrationPageLabels() {
     setRegLabel('regStreet', 'Street', true);
     setRegLabel('regStreetNumber', 'Number', true);
     setRegLabel('regFloor', 'Floor');
-    setRegLabel('regApartment', 'Apartment');
-    setRegLabel('regPostCode', 'Post Code');
+    setRegLabel('regApartment', 'Depto/Appart');
+    setRegLabel('regPostCode', 'CP/PC');
     setRegLabel('regProvince', 'Province', true);
     setRegLabel('regCity', 'City / Neighborhood', true);
     setRegLabel('regOriginCountry', 'Country', true);
@@ -185,8 +185,8 @@ function showUnderageModal(onLeave, onChangeDate) {
         modal.id = 'regUnderageModal';
         modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px;';
         modal.innerHTML = `
-            <div class="card" style="max-width:420px;width:100%;">
-                <h3 class="gold-text" style="margin-top:0;">${t('Age requirement')}</h3>
+            <div class="card" data-modal-panel style="max-width:420px;width:100%;">
+                <h3 id="regUnderageTitle" class="gold-text" style="margin-top:0;">${t('Age requirement')}</h3>
                 <p id="regUnderageMsg"></p>
                 <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">
                     <button type="button" id="regUnderageLeave" style="flex:1;background:#555;color:white;border:none;padding:10px;border-radius:4px;cursor:pointer;">${t('Leave registration')}</button>
@@ -197,8 +197,13 @@ function showUnderageModal(onLeave, onChangeDate) {
     }
     document.getElementById('regUnderageMsg').textContent = t('You must be at least 18 years old to register as a professional.');
     modal.style.display = 'flex';
-    document.getElementById('regUnderageLeave').onclick = () => { modal.style.display = 'none'; onLeave(); };
-    document.getElementById('regUnderageChange').onclick = () => { modal.style.display = 'none'; onChangeDate(); };
+    activateAccessibleModal(modal, {
+        labelId: 'regUnderageTitle',
+        onClose: () => { modal.style.display = 'none'; },
+        initialFocusSelector: '#regUnderageChange'
+    });
+    document.getElementById('regUnderageLeave').onclick = () => { deactivateAccessibleModal(modal); modal.style.display = 'none'; onLeave(); };
+    document.getElementById('regUnderageChange').onclick = () => { deactivateAccessibleModal(modal); modal.style.display = 'none'; onChangeDate(); };
 }
 
 function setupBirthDateField() {
@@ -259,7 +264,7 @@ function validateRegistrationForm(form) {
         const empty = field.type === 'file' ? !el.files?.length : !String(el.value || '').trim();
         if (empty) {
             highlightField(el, true);
-            showAlert(document.getElementById('registerAlert'), `${t('Required field missing:')} ${field.label}`);
+            showAlert(document.getElementById('registerAlert'), `${t('Required field missing:')} ${field.label}`, true, field.id);
             return false;
         }
     }
@@ -278,7 +283,7 @@ function validateRegistrationForm(form) {
     const idError = getProfessionalIdNumberError(idInput?.value);
     if (idError) {
         highlightField(idInput, true);
-        showAlert(document.getElementById('registerAlert'), t(idError));
+        showAlert(document.getElementById('registerAlert'), t(idError), true, 'regIdNumber');
         return false;
     }
     if (idInput) idInput.value = normalizeProfessionalIdNumber(idInput.value);
@@ -321,6 +326,7 @@ export function initProfessionalRegistration() {
     const idHint = document.getElementById('regIdNumberHint');
     if (idHint) {
         idHint.textContent = t('ID Number format hint');
+        linkInputHint('regIdNumber', 'regIdNumberHint');
     }
     setupCountrySelect();
     setupLocationDropdowns('regProvince', 'regCity', '', false, {});
@@ -334,7 +340,7 @@ export function initProfessionalRegistration() {
         const alert = document.getElementById('registerAlert');
         if (!validateRegistrationForm(form)) return;
 
-        if (!confirm(t('When you submit, we will email you a 6-digit verification code. Check your inbox AND your Spam/Junk folder. Continue?'))) return;
+        if (!(await confirmDialog(t('When you submit, we will email you a 6-digit verification code. Check your inbox AND your Spam/Junk folder — our emails often land there. Continue?')))) return;
 
         const submitBtn = form.querySelector('button[type="submit"]');
         const originalText = submitBtn.textContent;

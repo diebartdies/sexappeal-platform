@@ -1,10 +1,30 @@
 import { t } from './i18n.js';
+import { announceMessage } from './a11y.js';
 
-export function showAlert(element, message, isError = true) {
-    if (!element) return; // Safeguard if element is not found
-    element.textContent = message;
+export function showAlert(element, message, isError = true, relatedInputId = null) {
+    const translated = t(message);
+    if (!element) {
+        announceMessage(message, { isError });
+        return;
+    }
+    element.textContent = translated;
     element.classList.remove('hidden');
     element.style.color = isError ? 'var(--accent-red)' : '#00ff00';
+    element.setAttribute('role', 'alert');
+    element.setAttribute('aria-live', isError ? 'assertive' : 'polite');
+
+    if (relatedInputId) {
+        const input = document.getElementById(relatedInputId);
+        if (input) {
+            input.setAttribute('aria-invalid', isError ? 'true' : 'false');
+            if (element.id) input.setAttribute('data-alert-id', element.id);
+            const ids = [];
+            const hintId = input.getAttribute('data-hint-id');
+            if (hintId) ids.push(hintId);
+            if (element.id && isError) ids.push(element.id);
+            if (ids.length) input.setAttribute('aria-describedby', ids.join(' '));
+        }
+    }
 }
 
 export function attachPasswordToggles(root = document) {

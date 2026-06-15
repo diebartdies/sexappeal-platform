@@ -1,6 +1,7 @@
 import { BASE_ORIGIN, API_URL, CATEGORY_META, getVerificationGesture, appPath, resolvePhotoSrc } from './globals.js';
 import { showAlert, getPendingApprovalBannerHtml, getResubmissionBannerHtml, getGeneralRejectionBannerHtml } from './uiHelpers.js';
 import { t, applyStaticTranslations } from './i18n.js';
+import { activateAccessibleModal, deactivateAccessibleModal, announceMessage, confirmDialog } from './a11y.js';
 import { beginDashboardLoad, finishDashboardLoad, failDashboardLoad } from './dashboardShell.js';
 import { renderSpecialtyDropdown, setupLocationDropdowns } from './helpers.js';
 import { addPhotoToGrid, openPendingConnectionsModal, bindProfessionalProfileForm, hideProfessionalPaymentOverlays, renderProfessionalMainDashboardShell, injectProfessionalDashboardGuides } from './professional.js';
@@ -13,10 +14,19 @@ function openAdminOverlay(modal) {
     if (!modal) return;
     beginModalSession();
     modal.style.display = 'flex';
+    const titleEl = modal.querySelector('h2, h3');
+    if (titleEl && !titleEl.id) {
+        titleEl.id = `admin-modal-title-${Math.random().toString(36).slice(2, 9)}`;
+    }
+    activateAccessibleModal(modal, {
+        labelId: titleEl?.id,
+        onClose: () => closeAdminOverlay(modal)
+    });
 }
 
 function closeAdminOverlay(modal, afterClose) {
     if (!modal) return;
+    deactivateAccessibleModal(modal);
     modal.style.display = 'none';
     endModalSession();
     if (typeof afterClose === 'function') afterClose();
@@ -638,11 +648,12 @@ export async function loadDashboard() {
                 const formEl = document.getElementById('updateProfileForm');
                 if (formEl && !document.getElementById('yellowPenIcon')) {
                     formEl.style.position = 'relative';
-                    const yellowPen = document.createElement('span');
+                    const yellowPen = document.createElement('button');
+                    yellowPen.type = 'button';
                     yellowPen.id = 'yellowPenIcon';
+                    yellowPen.setAttribute('aria-label', t('Edit Profile (Address and Connection Info Only)'));
                     yellowPen.innerHTML = '✏️';
-                    yellowPen.style.cssText = 'position: absolute; top: 10px; right: 10px; color: yellow; font-size: 1.5rem; cursor: pointer; text-shadow: 0 0 5px rgba(255,255,0,0.5); z-index: 10;';
-                    yellowPen.title = 'Edit Profile (Address and Connection Info Only)';
+                    yellowPen.style.cssText = 'position: absolute; top: 10px; right: 10px; color: yellow; font-size: 1.5rem; cursor: pointer; text-shadow: 0 0 5px rgba(255,255,0,0.5); z-index: 10; background: transparent; border: none; padding: 0;';
                     formEl.appendChild(yellowPen);
                 }
 
@@ -656,11 +667,12 @@ export async function loadDashboard() {
                     wrapper.style.border = '1px solid var(--primary-gold)';
                     wrapper.style.borderRadius = '8px';
                     
-                    const goldPen = document.createElement('span');
+                    const goldPen = document.createElement('button');
+                    goldPen.type = 'button';
                     goldPen.id = 'goldPenIcon';
+                    goldPen.setAttribute('aria-label', t('Edit Service Description'));
                     goldPen.innerHTML = '✏️';
-                    goldPen.style.cssText = 'position: absolute; top: 10px; right: 10px; color: gold; font-size: 1.5rem; cursor: pointer; text-shadow: 0 0 5px rgba(212,175,55,0.5); z-index: 10;';
-                    goldPen.title = 'Edit Service Description';
+                    goldPen.style.cssText = 'position: absolute; top: 10px; right: 10px; color: gold; font-size: 1.5rem; cursor: pointer; text-shadow: 0 0 5px rgba(212,175,55,0.5); z-index: 10; background: transparent; border: none; padding: 0;';
                     
                     const title = document.createElement('h3');
                     title.className = 'gold-text';
@@ -685,10 +697,11 @@ export async function loadDashboard() {
                     availBlock.style.border = '1px solid var(--primary-gold)';
                     availBlock.style.position = 'relative';
 
-                    const goldPenAvail = document.createElement('span');
+                    const goldPenAvail = document.createElement('button');
+                    goldPenAvail.type = 'button';
+                    goldPenAvail.setAttribute('aria-label', t('Edit Availability'));
                     goldPenAvail.innerHTML = '✏️';
-                    goldPenAvail.style.cssText = 'position: absolute; top: 10px; right: 10px; color: gold; font-size: 1.5rem; cursor: pointer; text-shadow: 0 0 5px rgba(212,175,55,0.5); z-index: 10;';
-                    goldPenAvail.title = 'Edit Availability';
+                    goldPenAvail.style.cssText = 'position: absolute; top: 10px; right: 10px; color: gold; font-size: 1.5rem; cursor: pointer; text-shadow: 0 0 5px rgba(212,175,55,0.5); z-index: 10; background: transparent; border: none; padding: 0;';
                     availBlock.appendChild(goldPenAvail);
                     
                     const title = document.createElement('h3');
@@ -1384,11 +1397,11 @@ export async function loadLeads() {
 async function applyInvitationToSelectedLeads() {
     const leadIds = Array.from(document.querySelectorAll('.lead-invite-cb:checked')).map((cb) => cb.value);
     if (!leadIds.length) {
-        alert(t('Select at least one pending lead'));
+        announceMessage(t('Select at least one pending lead'));
         return;
     }
 
-    if (!confirm(t('Apply the platform invitation to {count} selected potential professional(s)?').replace('{count}', leadIds.length))) {
+    if (!(await confirmDialog(t('Apply the platform invitation to {count} selected potential professional(s)?').replace('{count}', leadIds.length)))) {
         return;
     }
 
@@ -1408,7 +1421,7 @@ async function applyInvitationToSelectedLeads() {
         });
         const data = await res.json();
         if (!data.success) {
-            alert(data.error || t('Could not start invitation outreach'));
+            announceMessage(data.error || t('Could not start invitation outreach'));
             if (btn) btn.disabled = false;
             return;
         }
@@ -1418,7 +1431,7 @@ async function applyInvitationToSelectedLeads() {
         bulkWhatsappPollTimer = setInterval(pollBulkWhatsappStatus, 2500);
         pollBulkWhatsappStatus();
     } catch {
-        alert(t('Could not start invitation outreach'));
+        announceMessage(t('Could not start invitation outreach'));
         if (btn) btn.disabled = false;
     }
 }
@@ -1450,10 +1463,10 @@ async function previewInviteMessage() {
         });
         const data = await res.json();
         if (data.success) {
-            alert(data.data.message);
+            announceMessage(data.data.message, { isError: false });
         }
     } catch (err) {
-        alert('Could not load invite message preview.');
+        announceMessage('Could not load invite message preview.');
     }
 }
 
@@ -1534,7 +1547,7 @@ async function pollBulkWhatsappStatus() {
 }
 
 async function startBulkWhatsappOutreach() {
-    if (!confirm(t('Apply the platform invitation to ALL pending potential professionals? This cannot be undone easily.'))) return;
+    if (!(await confirmDialog(t('Apply the platform invitation to ALL pending potential professionals? This cannot be undone easily.')))) return;
 
     const btn = document.getElementById('bulkWhatsappBtn');
     if (btn) btn.disabled = true;
@@ -1551,7 +1564,7 @@ async function startBulkWhatsappOutreach() {
         });
         const data = await res.json();
         if (!data.success) {
-            alert(data.error || t('Could not start bulk outreach'));
+            announceMessage(data.error || t('Could not start bulk outreach'));
             if (btn) btn.disabled = false;
             return;
         }
@@ -1562,7 +1575,7 @@ async function startBulkWhatsappOutreach() {
         bulkWhatsappPollTimer = setInterval(pollBulkWhatsappStatus, 2500);
         pollBulkWhatsappStatus();
     } catch (err) {
-        alert(t('Could not start bulk outreach'));
+        announceMessage(t('Could not start bulk outreach'));
         if (btn) btn.disabled = false;
     }
 }
@@ -1654,7 +1667,7 @@ export async function loadPaymentVerifications() {
                     <td style="padding: 10px;">${lastName}</td>
                     <td style="padding: 10px;">${alias}</td>
                     <td style="padding: 10px; text-align: center;">
-                        <a href="${receiptUrl}" target="_blank" style="color: var(--primary-gold); text-decoration: none; font-size: 1.2rem;" title="View Receipt">📄</a>
+                        <a href="${receiptUrl}" target="_blank" style="color: var(--primary-gold); text-decoration: none; font-size: 1.2rem;" title="${t('View Receipt')}" aria-label="${t('View receipt')}">📄</a>
                     </td>
                     <td style="padding: 10px;">
                         <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
@@ -1698,10 +1711,10 @@ export async function acknowledgePayment(id) {
         if (data.success) {
             loadPaymentVerifications(); 
         } else {
-            alert(data.error || 'Failed to acknowledge payment');
+            announceMessage(data.error || 'Failed to acknowledge payment');
         }
     } catch (err) {
-        alert('Server connection error');
+        announceMessage('Server connection error');
     }
 }
 
@@ -1794,9 +1807,9 @@ export async function loadPendingVerifications() {
                 const docs = prof.verificationDocuments && prof.verificationDocuments.length > 0
                     ? `<div style="display: flex; gap: 8px; flex-wrap: wrap;">` + prof.verificationDocuments.map((doc, idx) => {
                         const label = docLabels[idx] || `Doc ${idx + 1}`;
-                        return `<button type="button" class="view-doc-btn" data-prof-id="${prof._id}" data-doc-index="${idx}" title="View ${label}" style="padding: 0; background: #222; border: 1px solid var(--primary-gold); border-radius: 4px; cursor: pointer; overflow: hidden; width: 64px; text-align: center;">
-                            <img src="${doc}" alt="${label}" style="width: 64px; height: 64px; object-fit: cover; display: block;">
-                            <span style="display: block; font-size: 0.65rem; color: var(--primary-gold); padding: 2px;">${label}</span>
+                        return `<button type="button" class="view-doc-btn" data-prof-id="${prof._id}" data-doc-index="${idx}" title="${t('View {label}').replace('{label}', t(label))}" aria-label="${t('View {label}').replace('{label}', t(label))}" style="padding: 0; background: #222; border: 1px solid var(--primary-gold); border-radius: 4px; cursor: pointer; overflow: hidden; width: 64px; text-align: center;">
+                            <img src="${doc}" alt="${t(label)}" style="width: 64px; height: 64px; object-fit: cover; display: block;">
+                            <span style="display: block; font-size: 0.65rem; color: var(--primary-gold); padding: 2px;">${t(label)}</span>
                         </button>`;
                     }).join('') + `</div>`
                     : '<span style="color: #888;">No documents on file (registered before document storage was enabled)</span>';
@@ -1804,7 +1817,7 @@ export async function loadPendingVerifications() {
                 const gestureInfo = getVerificationGesture(gesture);
                 const gestureDisplay = gestureInfo
                     ? `<span style="display: inline-flex; align-items: center; gap: 8px; margin-top: 6px;">
-                            <span style="font-size: 2rem; line-height: 1;" title="${gesture}">${gestureInfo.emoji}</span>
+                            <span style="font-size: 2rem; line-height: 1;" title="${gestureInfo ? t(gestureInfo.labelKey) : t(gesture)}">${gestureInfo.emoji}</span>
                             <strong style="color: white;">${t(gestureInfo.labelKey)}</strong>
                        </span>`
                     : `<strong style="color: white;">${gesture}</strong>`;
@@ -1950,16 +1963,16 @@ export async function updateVerificationStatus(id, status, extra = {}) {
         });
         const data = await res.json();
         if (data.success) {
-            alert(status === 'rejected' ? t('Rejection email sent successfully.') : `Professional ${status} successfully.`);
+            announceMessage(status === 'rejected' ? t('Rejection email sent successfully.') : `Professional ${status} successfully.`, { isError: false });
             loadPendingVerifications(); 
             if (document.getElementById('adminFilterBtn')) {
                 loadAdminGridData(); 
             }
         } else {
-            alert(data.error || 'Failed to update status');
+            announceMessage(data.error || 'Failed to update status');
         }
     } catch (err) {
-        alert('Server connection error');
+        announceMessage('Server connection error');
     }
 }
 
@@ -2075,7 +2088,7 @@ export async function openMailBroadcastModal() {
             const alertEl = document.getElementById('mailBroadcastAlert');
             const submitBtn = e.target.querySelector('button[type="submit"]');
             
-            if (!confirm('Are you sure you want to send this email to the selected audience? This action cannot be undone.')) {
+            if (!(await confirmDialog('Are you sure you want to send this email to the selected audience? This action cannot be undone.'))) {
                 return;
             }
 
@@ -2220,7 +2233,7 @@ export async function openMailSpecialModal() {
                 return;
             }
 
-            if (!confirm(t('Send this email to {count} selected professional(s)?').replace('{count}', recipientIds.length))) {
+            if (!(await confirmDialog(t('Send this email to {count} selected professional(s)?').replace('{count}', recipientIds.length)))) {
                 return;
             }
 
@@ -2352,7 +2365,7 @@ export async function openWaSpecialModal() {
             }
 
             const total = leadIds.length + professionalIds.length;
-            if (!confirm(t('Send WhatsApp to {count} selected recipient(s)?').replace('{count}', total))) {
+            if (!(await confirmDialog(t('Send WhatsApp to {count} selected recipient(s)?').replace('{count}', total)))) {
                 return;
             }
 

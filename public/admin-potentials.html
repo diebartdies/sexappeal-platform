@@ -54,7 +54,7 @@
             .pagination { flex-wrap: wrap; justify-content: center; }
         }
     </style>
-    <link rel="stylesheet" href="/css/responsive.css?v=7.5">
+    <link rel="stylesheet" href="/css/responsive.css?v=8.5">
     <meta name="robots" content="noindex, nofollow">
     <meta name="theme-color" content="#D4AF37">
     <meta name="color-scheme" content="dark">
@@ -97,16 +97,24 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import { t, applyStaticTranslations, currentLang } from '/js/i18n.js?v=8.5';
+        import { announceMessage } from '/js/a11y.js?v=8.5';
+
         const API_URL = window.location.protocol === 'file:' ? 'http://localhost:5000/api/v1' : window.location.origin + '/api/v1';
         let currentPage = 1;
         const limit = 50;
+
+        document.documentElement.lang = currentLang === 'es' ? 'es' : 'en';
+        applyStaticTranslations();
+
+        const statusLabel = (value) => t(value);
 
         async function loadPotentials() {
             const status = document.getElementById('filterStatus').value;
             const token = localStorage.getItem('token');
             if (!token) {
-                alert('You must be logged in as an admin to view this page.');
+                announceMessage(t('You must be logged in as an admin to view this page.'));
                 window.location.href = 'login.html';
                 return;
             }
@@ -125,45 +133,46 @@
                     tbody.innerHTML = '';
 
                     if (data.data.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No potentials found.</td></tr>';
+                        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">${t('No potentials found.')}</td></tr>`;
                     }
 
                     data.data.forEach(p => {
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
                             <td>${p.phone}</td>
-                            <td><a href="${p.sourceUrl}" target="_blank">${p.sourceUrl || 'Unknown'}</a></td>
+                            <td><a href="${p.sourceUrl}" target="_blank">${p.sourceUrl || t('Unknown')}</a></td>
                             <td>
                                 <select class="status-select" data-id="${p._id}">
-                                    <option value="pending" ${p.status === 'pending' ? 'selected' : ''}>Pending</option>
-                                    <option value="contacted" ${p.status === 'contacted' ? 'selected' : ''}>Contacted</option>
-                                    <option value="joined" ${p.status === 'joined' ? 'selected' : ''}>Joined</option>
-                                    <option value="rejected" ${p.status === 'rejected' ? 'selected' : ''}>Rejected</option>
+                                    <option value="pending" ${p.status === 'pending' ? 'selected' : ''}>${statusLabel('pending')}</option>
+                                    <option value="contacted" ${p.status === 'contacted' ? 'selected' : ''}>${statusLabel('contacted')}</option>
+                                    <option value="joined" ${p.status === 'joined' ? 'selected' : ''}>${statusLabel('joined')}</option>
+                                    <option value="rejected" ${p.status === 'rejected' ? 'selected' : ''}>${statusLabel('rejected')}</option>
                                 </select>
                             </td>
                             <td>${new Date(p.createdAt).toLocaleString()}</td>
-                            <td><button class="btn btn-update" data-id="${p._id}">Save Status</button></td>
+                            <td><button class="btn btn-update" data-id="${p._id}">${t('Save Status')}</button></td>
                         `;
                         tbody.appendChild(tr);
                     });
 
                     const totalPages = Math.ceil(data.pagination.total / limit) || 1;
-                    document.getElementById('pageInfo').textContent = `Page ${data.pagination.page} of ${totalPages}`;
+                    document.getElementById('pageInfo').textContent = t('Page {page} of {total}')
+                        .replace('{page}', data.pagination.page)
+                        .replace('{total}', totalPages);
                     
                     document.getElementById('btnPrev').disabled = data.pagination.page <= 1;
                     document.getElementById('btnNext').disabled = data.pagination.page >= totalPages;
 
-                    // Attach update events
                     document.querySelectorAll('.btn-update').forEach(btn => {
                         btn.addEventListener('click', async (e) => {
                             const id = e.target.dataset.id;
                             const select = document.querySelector(`.status-select[data-id="${id}"]`);
                             const btnEl = e.target;
                             
-                            btnEl.textContent = 'Saving...';
+                            btnEl.textContent = t('Saving...');
                             btnEl.disabled = true;
                             await updateStatus(id, select.value);
-                            btnEl.textContent = 'Save Status';
+                            btnEl.textContent = t('Save Status');
                             btnEl.disabled = false;
                         });
                     });
@@ -172,7 +181,7 @@
                 }
             } catch (err) {
                 console.error(err);
-                document.querySelector('#potentialsTable tbody').innerHTML = `<tr><td colspan="5" style="color: var(--accent-red); text-align: center;">Failed to load data. See console.</td></tr>`;
+                document.querySelector('#potentialsTable tbody').innerHTML = `<tr><td colspan="5" style="color: var(--accent-red); text-align: center;">${t('Failed to load data. See console.')}</td></tr>`;
             }
         }
 
@@ -189,13 +198,13 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    alert('Status updated successfully');
+                    announceMessage(t('Status updated successfully'), { isError: false });
                 } else {
-                    alert('Error: ' + data.error);
+                    announceMessage('Error: ' + data.error);
                 }
             } catch (err) {
                 console.error(err);
-                alert('Failed to update status');
+                announceMessage(t('Failed to update status'));
             }
         }
 
@@ -216,7 +225,6 @@
             loadPotentials();
         });
 
-        // Initialize
         loadPotentials();
     </script>
 </body>

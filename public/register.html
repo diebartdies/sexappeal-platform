@@ -18,14 +18,16 @@
         .reg-grid-3-equal { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
         .reg-address-row {
             display: grid;
-            grid-template-columns: minmax(100px, 2fr) 72px 56px 64px 96px;
+            grid-template-columns: minmax(100px, 2fr) 72px 56px 52px 64px;
             gap: 12px;
             align-items: end;
             margin-bottom: 16px;
         }
         .reg-address-row .form-group { margin-bottom: 0; }
         .reg-field-short input { padding-left: 8px; padding-right: 8px; text-align: center; }
-        .reg-field-dept input { max-width: 100%; }
+        .reg-field-dept label,
+        .reg-field-post label { white-space: nowrap; font-size: 0.82rem; }
+        .reg-field-dept input,
         .reg-field-post input { max-width: 100%; }
         @media (max-width: 720px) {
             .reg-address-row {
@@ -152,11 +154,11 @@
                                 <input type="text" id="regFloor" class="reg-input" inputmode="numeric" maxlength="4">
                             </div>
                             <div class="form-group reg-field-short reg-field-dept">
-                                <label for="regApartment">Apartment</label>
+                                <label for="regApartment">Depto/Appart</label>
                                 <input type="text" id="regApartment" class="reg-input" maxlength="4">
                             </div>
                             <div class="form-group reg-field-short reg-field-post">
-                                <label for="regPostCode">Post Code</label>
+                                <label for="regPostCode">CP/PC</label>
                                 <input type="text" id="regPostCode" class="reg-input" maxlength="8" inputmode="numeric">
                             </div>
                         </div>

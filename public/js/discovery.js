@@ -1,5 +1,6 @@
 import { BASE_ORIGIN, API_URL, CATEGORY_META, resolvePhotoSrc, appPath, isReservedAppPage } from './globals.js';
 import { t, applyStaticTranslations, formatWorkingDays } from './i18n.js';
+import { activateAccessibleModal, deactivateAccessibleModal } from './a11y.js';
 import { getPendingApprovalBannerHtml } from './uiHelpers.js';
 import { navigateBack } from './ui.js';
 import { navigateWithReturn } from './navReturn.js';
@@ -323,7 +324,7 @@ export async function loadTreasureDetails() {
             const pendingApprovalBannerHtml = ownerPendingApproval ? getPendingApprovalBannerHtml() : '';
 
             const editBtnHtml = isOwner ? `
-                <button type="button" id="ownerEditProfileBtn" title="${t('Edit Profile')}" style="position: absolute; top: 15px; right: 105px; font-size: 1.8rem; background: transparent; color: var(--primary-gold); border: none; cursor: pointer; transition: transform 0.3s ease; z-index: 10; text-shadow: 0 0 8px rgba(212, 175, 55, 0.6);" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
+                <button type="button" id="ownerEditProfileBtn" aria-label="${t('Edit Profile')}" title="${t('Edit Profile')}" style="position: absolute; top: 15px; right: 105px; font-size: 1.8rem; background: transparent; color: var(--primary-gold); border: none; cursor: pointer; transition: transform 0.3s ease; z-index: 10; text-shadow: 0 0 8px rgba(212, 175, 55, 0.6);" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
                     ✏️
                 </button>
             ` : '';
@@ -571,7 +572,8 @@ export function initTreasureGridControls(onOpenFilters = null) {
         openFilterBtn.className = 'floating-menu-btn';
         openFilterBtn.type = 'button';
         openFilterBtn.title = t('Filters');
-        openFilterBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>`;
+        openFilterBtn.setAttribute('aria-label', t('Filters'));
+        openFilterBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>`;
         openFilterBtn.onclick = onOpenFilters;
         controlsBar.appendChild(openFilterBtn);
     }
@@ -583,13 +585,15 @@ export function initTreasureGridControls(onOpenFilters = null) {
     const btnGridLarge = document.createElement('button');
     btnGridLarge.type = 'button';
     btnGridLarge.className = 'floating-menu-btn';
-    btnGridLarge.title = '4 columns';
+    btnGridLarge.setAttribute('aria-label', t('4 columns'));
+    btnGridLarge.title = t('4 columns');
     btnGridLarge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>';
 
     const btnGridSmall = document.createElement('button');
     btnGridSmall.type = 'button';
     btnGridSmall.className = 'floating-menu-btn';
-    btnGridSmall.title = '6 columns';
+    btnGridSmall.setAttribute('aria-label', t('6 columns'));
+    btnGridSmall.title = t('6 columns');
     btnGridSmall.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="4" height="4"></rect><rect x="10" y="3" width="4" height="4"></rect><rect x="17" y="3" width="4" height="4"></rect><rect x="3" y="10" width="4" height="4"></rect><rect x="10" y="10" width="4" height="4"></rect><rect x="17" y="10" width="4" height="4"></rect><rect x="3" y="17" width="4" height="4"></rect><rect x="10" y="17" width="4" height="4"></rect><rect x="17" y="17" width="4" height="4"></rect></svg>';
 
     const updateGridButtons = (isSmall) => {
@@ -668,6 +672,7 @@ export async function initializeFilters() {
     if (parentCard && grid) {
         // --- OFF-CANVAS SLIDE-IN FILTER & GRID CONTROLS ---
         const filterDrawer = document.createElement('div');
+        filterDrawer.setAttribute('aria-hidden', 'true');
         filterDrawer.id = 'filterDrawer';
         Object.assign(filterDrawer.style, {
             position: 'fixed', top: '0', left: '-100%', width: '320px', maxWidth: '85vw',
@@ -683,9 +688,11 @@ export async function initializeFilters() {
         drawerHeader.style.justifyContent = 'space-between';
         drawerHeader.style.alignItems = 'center';
         drawerHeader.style.marginBottom = '25px';
-        drawerHeader.innerHTML = `<h3 class="gold-text" style="margin:0; font-size:1.2rem;">${t('Filters')}</h3>`;
+        drawerHeader.innerHTML = `<h3 id="filterDrawerTitle" class="gold-text" style="margin:0; font-size:1.2rem;">${t('Filters')}</h3>`;
         
         const closeDrawerBtn = document.createElement('button');
+        closeDrawerBtn.type = 'button';
+        closeDrawerBtn.setAttribute('aria-label', t('Close'));
         closeDrawerBtn.innerHTML = '&times;';
         Object.assign(closeDrawerBtn.style, {
             background: 'transparent', color: 'var(--primary-gold)', border: 'none',
@@ -710,13 +717,23 @@ export async function initializeFilters() {
         });
         document.body.appendChild(overlay);
 
+        filterDrawer.setAttribute('role', 'dialog');
+        filterDrawer.setAttribute('aria-modal', 'true');
+        filterDrawer.setAttribute('aria-labelledby', 'filterDrawerTitle');
+
         const openDrawer = () => {
             filterDrawer.style.left = '0';
             overlay.style.display = 'block';
             setTimeout(() => overlay.style.opacity = '1', 10);
             document.body.style.overflow = 'hidden';
+            activateAccessibleModal(filterDrawer, {
+                labelId: 'filterDrawerTitle',
+                onClose: closeDrawer,
+                initialFocusSelector: 'button[aria-label]'
+            });
         };
         const closeDrawer = () => {
+            deactivateAccessibleModal(filterDrawer);
             filterDrawer.style.left = '-100%';
             overlay.style.opacity = '0';
             setTimeout(() => overlay.style.display = 'none', 300);

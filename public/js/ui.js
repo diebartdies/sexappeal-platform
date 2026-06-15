@@ -1,5 +1,6 @@
 import { BASE_ORIGIN, API_URL, appPath } from './globals.js';
 import { t } from './i18n.js';
+import { syncDocumentLang } from './a11y.js';
 import {
     navigateBack as returnNavigateBack,
     clearReturnStack,
@@ -205,11 +206,14 @@ export function initGlobalTopBar() {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.title = label;
+        btn.setAttribute('aria-label', lang === 'es' ? t('Switch to Spanish') : t('Switch to English'));
+        btn.setAttribute('aria-pressed', currentLang === lang ? 'true' : 'false');
         btn.className = currentLang === lang ? 'lang-active' : 'lang-inactive';
-        btn.innerHTML = `<img class="preserve-brand-colors" src="${flagUrl}" width="28" height="21" alt="${label}">`;
+        btn.innerHTML = `<img class="preserve-brand-colors" src="${flagUrl}" width="28" height="21" alt="">`;
         btn.addEventListener('click', () => {
             if (currentLang === lang) return;
             localStorage.setItem('platform_lang', lang);
+            syncDocumentLang(lang);
             window.location.reload();
         });
         return btn;
@@ -258,7 +262,9 @@ export function initGlobalTopBar() {
 
     if (currentPage !== 'index.html') {
         const backBtn = document.createElement('button');
+        backBtn.type = 'button';
         backBtn.className = 'left-group-back';
+        backBtn.setAttribute('aria-label', t('Back'));
         backBtn.innerHTML = '&#8592; ' + t('Back');
         Object.assign(backBtn.style, {
             background: 'transparent', border: '1px solid white', borderRadius: '4px',
@@ -271,22 +277,23 @@ export function initGlobalTopBar() {
         leftGroup.appendChild(backBtn);
     }
 
-    const brandLogo = document.createElement('div');
-    brandLogo.className = 'brand-logo';
-    brandLogo.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="height: 28px; width: 28px; margin-right: 10px; border-radius: 4px; padding: 2px;">
+    const brandLink = document.createElement('a');
+    brandLink.href = appPath('index.html');
+    brandLink.className = 'brand-logo';
+    brandLink.setAttribute('aria-label', 'SexAppeal');
+    brandLink.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="height: 28px; width: 28px; margin-right: 10px; border-radius: 4px; padding: 2px;" aria-hidden="true">
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
         </svg>
         <span class="brand-text" style="font-family: 'Playfair Display', serif; font-weight: 900; letter-spacing: 1px; color: white;">SexAppeal</span>
     `;
-    brandLogo.style.display = 'flex';
-    brandLogo.style.alignItems = 'center';
-    brandLogo.style.fontSize = '1.2rem';
-    brandLogo.style.marginRight = '15px';
-    brandLogo.style.cursor = 'pointer';
-    brandLogo.onclick = () => { window.location.href = appPath('index.html'); };
+    brandLink.style.display = 'flex';
+    brandLink.style.alignItems = 'center';
+    brandLink.style.fontSize = '1.2rem';
+    brandLink.style.marginRight = '15px';
+    brandLink.style.textDecoration = 'none';
 
-    leftGroup.appendChild(brandLogo);
+    leftGroup.appendChild(brandLink);
     leftGroup.appendChild(userInfo);
 
     topBar.appendChild(leftGroup);
