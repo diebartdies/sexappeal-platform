@@ -7,14 +7,15 @@ const DEFAULT_OG_IMAGE = `${PUBLIC_URL}/SexAppeal_logo_black.png`;
 const RESERVED_PROFILE_ALIASES = new Set([
   'login.html', 'register.html', 'recover.html', 'verify.html', 'index.html',
   'categories.html', 'dashboard.html', 'profDashboard.html', 'treasure.html',
-  'discover.html', 'home.html', 'services.html', 'admin.html', 'admin-potentials.html'
+  'discover.html', 'home.html', 'services.html', 'admin.html', 'admin-potentials.html', 'plataforma.html'
 ]);
 
 const STATIC_SITEMAP_PAGES = [
   { path: '/', priority: '1.0', changefreq: 'weekly' },
   { path: '/categories.html', priority: '0.9', changefreq: 'daily' },
   { path: '/home.html', priority: '0.8', changefreq: 'daily' },
-  { path: '/services.html', priority: '0.7', changefreq: 'monthly' }
+  { path: '/services.html', priority: '0.7', changefreq: 'monthly' },
+  { path: '/plataforma.html', priority: '0.6', changefreq: 'monthly' }
 ];
 
 function escapeHtml(value) {

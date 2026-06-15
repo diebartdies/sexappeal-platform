@@ -6,7 +6,7 @@ export const API_URL = `${BASE_ORIGIN}/api/v1`;
 export const APP_PAGES = new Set([
     'index.html', 'login.html', 'register.html', 'recover.html', 'verify.html',
     'categories.html', 'dashboard.html', 'profDashboard.html', 'treasure.html',
-    'discover.html', 'home.html', 'services.html', 'admin.html', 'admin-potentials.html'
+    'discover.html', 'home.html', 'services.html', 'admin.html', 'admin-potentials.html', 'plataforma.html'
 ]);
 
 /** Root-absolute path so navigation works from /perfil/Alias URLs */

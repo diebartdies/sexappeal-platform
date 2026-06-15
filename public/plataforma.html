@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <title>Plataforma White-Label — VPS dedicado · Implementación 72 h | DRSRV</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Segoe+UI:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css?v=8.3">
+    <link rel="stylesheet" href="/css/responsive.css?v=8.3">
+    <meta name="description" content="Marketplace white-label con VPS dedicado por cliente. Implementación en 72 horas, precios accesibles, servidor cloud u offshore gestionado. Sin compartir infraestructura.">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://sexappeal.drsrv.net.ar/plataforma.html">
+    <meta property="og:title" content="Plataforma White-Label — VPS dedicado">
+    <meta property="og:description" content="Su propio servidor, su dominio, su marca. Listo en 72 horas.">
+    <meta property="og:url" content="https://sexappeal.drsrv.net.ar/plataforma.html">
+    <meta name="theme-color" content="#D4AF37">
+</head>
+<body class="b2b-page">
+    <header class="b2b-header">
+        <div class="container b2b-header-inner">
+            <a href="/plataforma.html" class="b2b-logo">DRSRV <span>Platform Engine</span></a>
+            <nav class="b2b-nav">
+                <a href="#modelo">Modelo</a>
+                <a href="#paquetes">Paquetes</a>
+                <a href="#verticals">Verticales</a>
+                <a href="/docs/SexAppeal_brochure.pdf" target="_blank" rel="noopener">Brochure PDF</a>
+                <a href="#contacto" class="b2b-nav-cta">Solicitar demo</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="b2b-hero">
+            <div class="container">
+                <p class="b2b-eyebrow">White-label · Production-ready · VPS dedicado</p>
+                <h1>Su marketplace.<br>Su servidor.<br><span class="gold-text">En 72 horas.</span></h1>
+                <p class="b2b-lead">
+                    Desplegamos la misma arquitectura probada en producción (Docker, MongoDB, Nginx, panel admin, facturación, WhatsApp, SEO)
+                    en un <strong>servidor virtual exclusivo</strong> para su proyecto — sin compartir recursos con otros clientes ni con nuestra operación productiva.
+                </p>
+                <div class="b2b-hero-actions">
+                    <a href="#contacto" class="b2b-btn b2b-btn-primary">Agendar implementación</a>
+                    <a href="/docs/SexAppeal_brochure.pdf" class="b2b-btn b2b-btn-ghost" target="_blank" rel="noopener">Descargar brochure técnico</a>
+                </div>
+                <ul class="b2b-hero-stats">
+                    <li><strong>72 h</strong> tiempo típico de entrega</li>
+                    <li><strong>443</strong> HTTPS en su VPS, no en su PC</li>
+                    <li><strong>100%</strong> aislamiento de infraestructura</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="modelo" class="b2b-section">
+            <div class="container">
+                <h2>Modelo VPS dedicado (Opción B)</h2>
+                <p class="b2b-section-intro">
+                    Cada cliente recibe su propia instancia. Nosotros gestionamos el alta del servidor, Docker, certificados SSL y mantenimiento.
+                    Usted no abre puertos en su computadora: el tráfico entra por internet directo al VPS asignado.
+                </p>
+                <div class="b2b-diagram">
+                    <pre class="b2b-diagram-pre">Internet (usuarios)
+        │
+        ▼  HTTPS :443
+┌───────────────────────────────┐
+│  VPS DEDICADO DEL CLIENTE      │  ← Cloud regional o offshore
+│  (IP y dominio propios)        │     según mercado objetivo
+│  ┌─────────┐  ┌─────────────┐ │
+│  │  Nginx  │→ │ Node + API  │ │
+│  └─────────┘  └──────┬──────┘ │
+│                      ▼         │
+│               ┌─────────────┐  │
+│               │  MongoDB    │  │
+│               └─────────────┘  │
+└───────────────────────────────┘
+
+SexAppeal productivo (91.208.206.35) → instancia separada, sin mezclar tráfico ni datos.</pre>
+                </div>
+                <div class="b2b-grid-3">
+                    <article class="b2b-card">
+                        <h3>Cloud regional</h3>
+                        <p>Hetzner, DigitalOcean, AWS Lightsail o Azure. Ideal para Argentina, LATAM, UE o USA: baja latencia y cumplimiento habitual.</p>
+                    </article>
+                    <article class="b2b-card">
+                        <h3>Offshore bajo demanda</h3>
+                        <p>Solo cuando el proyecto lo requiere por alcance internacional o política de datos. Se evalúa caso a caso en reunión comercial.</p>
+                    </article>
+                    <article class="b2b-card">
+                        <h3>Gestión incluida</h3>
+                        <p>Alta del VPS, firewall (22/80/443), despliegue Docker, backups, actualizaciones de seguridad y monitoreo básico.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="paquetes" class="b2b-section b2b-section-dark">
+            <div class="container">
+                <h2>Paquetes sugeridos</h2>
+                <p class="b2b-section-intro">Precios orientativos en USD. Todos incluyen <strong>VPS dedicado</strong> — nunca hospedamos su negocio en nuestro servidor productivo.</p>
+                <div class="b2b-pricing">
+                    <article class="b2b-price-card">
+                        <h3>Pilot</h3>
+                        <p class="b2b-price-tag">Setup <strong>USD 499</strong></p>
+                        <p class="b2b-price-month">+ USD 99 / mes</p>
+                        <ul>
+                            <li>VPS dedicado 2 GB RAM</li>
+                            <li>1 dominio + SSL Let's Encrypt</li>
+                            <li>Panel admin + registro profesionales</li>
+                            <li>Branding básico (logo, colores)</li>
+                            <li>Entrega en 72 h</li>
+                        </ul>
+                        <p class="b2b-price-note">Ideal: piloto, tutores, belleza local</p>
+                    </article>
+                    <article class="b2b-price-card b2b-price-featured">
+                        <span class="b2b-badge">Recomendado</span>
+                        <h3>Pro</h3>
+                        <p class="b2b-price-tag">Setup <strong>USD 1.200</strong></p>
+                        <p class="b2b-price-month">+ USD 199 / mes</p>
+                        <ul>
+                            <li>VPS dedicado 4 GB RAM</li>
+                            <li>Facturación por categoría + prorrateo</li>
+                            <li>WhatsApp outreach + verificación</li>
+                            <li>SEO dinámico por ubicación</li>
+                            <li>ActivityLog trazable · backups diarios</li>
+                            <li>Capacitación admin 2 h</li>
+                        </ul>
+                        <p class="b2b-price-note">Ideal: agencias, marketplace vertical en marcha</p>
+                    </article>
+                    <article class="b2b-price-card">
+                        <h3>Enterprise</h3>
+                        <p class="b2b-price-tag">Setup <strong>desde USD 2.500</strong></p>
+                        <p class="b2b-price-month">+ USD 349 / mes</p>
+                        <ul>
+                            <li>VPS 8 GB+ cloud u offshore</li>
+                            <li>Vertical personalizado (campos, categorías)</li>
+                            <li>SLA respuesta 24 h</li>
+                            <li>Staging + producción</li>
+                            <li>Migración de datos asistida</li>
+                            <li>Soporte prioritario</li>
+                        </ul>
+                        <p class="b2b-price-note">Ideal: tráfico alto, multi-país, requisitos especiales</p>
+                    </article>
+                </div>
+                <p class="b2b-pricing-footer">
+                    Comparación: un desarrollo a medida similar suele costar USD 15.000–40.000 y 3–6 meses.
+                    Nosotros entregamos motor operativo en días, a fracción del costo.
+                </p>
+            </div>
+        </section>
+
+        <section id="verticals" class="b2b-section">
+            <div class="container">
+                <h2>Un motor, muchos rubros</h2>
+                <p class="b2b-section-intro">Hoy demostramos el motor en acompañantes premium. Mañana, el mismo stack con otro copy y reglas:</p>
+                <div class="b2b-pills">
+                    <span>Médicos privados</span>
+                    <span>Profesores / tutores</span>
+                    <span>Abogados / consultores</span>
+                    <span>Belleza y estética</span>
+                    <span>Personal trainers</span>
+                    <span>Real estate boutique</span>
+                    <span>Servicios técnicos</span>
+                    <span>Arte y eventos</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="b2b-section b2b-section-dark">
+            <div class="container">
+                <h2>Qué incluye el motor</h2>
+                <div class="b2b-grid-2">
+                    <ul class="b2b-checklist">
+                        <li>Registro, verificación con gesto y panel admin</li>
+                        <li>Categorías tiered + mes de evaluación gratis</li>
+                        <li>Facturación mensual, vacaciones, comprobantes</li>
+                        <li>Contacto WhatsApp/teléfono anti-scraping</li>
+                        <li>Outreach masivo WhatsApp desde admin</li>
+                    </ul>
+                    <ul class="b2b-checklist">
+                        <li>SEO: sitemap, meta SSR, páginas por ubicación</li>
+                        <li>ActivityLog server-side (trazable, sin cookies de tracking)</li>
+                        <li>Respect Agreement · reviews moderadas</li>
+                        <li>Docker + Nginx + MongoDB containerizado</li>
+                        <li>Deploy reproducible en cualquier VPS</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="contacto" class="b2b-section b2b-contact">
+            <div class="container">
+                <h2>Solicitar demo o cotización</h2>
+                <p class="b2b-section-intro">Contanos vertical, país objetivo y tráfico estimado. Respondemos con propuesta de VPS y plazo de entrega.</p>
+                <div class="b2b-contact-grid">
+                    <div>
+                        <p><strong>Email</strong><br><a href="mailto:admin@drsrv.net.ar">admin@drsrv.net.ar</a></p>
+                        <p><strong>Web productiva (referencia)</strong><br><a href="/index.html">sexappeal.drsrv.net.ar</a></p>
+                        <p><strong>Brochure técnico</strong><br><a href="/docs/SexAppeal_brochure.pdf" target="_blank" rel="noopener">SexAppeal_brochure.pdf</a></p>
+                    </div>
+                    <div class="b2b-contact-copy">
+                        <p><strong>Asunto sugerido:</strong> Cotización VPS dedicado — [su vertical]</p>
+                        <p>Incluya: dominio deseado, país de audiencia, cantidad estimada de profesionales y si necesita cloud regional u offshore.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="b2b-footer">
+        <div class="container">
+            <p>DRSRV Platform Engine · VPS dedicado por cliente · <a href="/index.html">SexAppeal</a> · <a href="/plataforma.html">Plataforma B2B</a></p>
+        </div>
+    </footer>
+</body>
+</html>
