@@ -11,7 +11,9 @@
     "audit:fix": "npm audit fix",
     "outreach": "node whatsapp_outreach.js",
     "watch:server": "node scripts/server-watch.js",
-    "watch:whatsapp-login": "node scripts/whatsapp-watch-login.js"
+    "watch:whatsapp-login": "node scripts/whatsapp-watch-login.js",
+    "seo:locations": "node scripts/generate-seo-locations.js",
+    "seo:locations:dry-run": "node scripts/generate-seo-locations.js --dry-run"
   },
   "keywords": [],
   "author": "",

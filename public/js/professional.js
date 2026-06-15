@@ -248,7 +248,13 @@ function hidePaymentOverlay(overlayId) {
 
 function fillHowToPayContent(paymentInstructions) {
     const howToPayContent = document.getElementById('howToPayContent');
-    if (!paymentInstructions || !howToPayContent) return;
+    if (!howToPayContent) return;
+
+    if (!paymentInstructions) {
+        howToPayContent.innerHTML = '<p>No hay datos de pago disponibles. Contactá al administrador.</p>';
+        return;
+    }
+
     howToPayContent.innerHTML = `
         <p>${paymentInstructions.intro}</p>
         <p style="margin-top: 12px;"><strong>Mercado Pago</strong><br>
@@ -260,50 +266,59 @@ function fillHowToPayContent(paymentInstructions) {
     `;
 }
 
+let professionalPaymentUiBound = false;
+
+function onPaymentEscapeKey(e) {
+    if (e.key !== 'Escape') return;
+    hidePaymentOverlay('howToPayOverlay');
+    hidePaymentOverlay('paymentModalOverlay');
+}
+
 // Upload Payment Receipt
 export function setupProfessionalPaymentUI(paymentInstructions) {
     mountProfessionalPaymentOverlays();
 
     const paymentSection = document.getElementById('paymentSection');
-    const root = document.getElementById('dashboardOverlays');
     if (paymentSection) paymentSection.classList.remove('hidden');
     fillHowToPayContent(paymentInstructions);
-    if (!root || root.dataset.paymentUiBound === '1') return;
-    root.dataset.paymentUiBound = '1';
 
-    root.addEventListener('click', (e) => {
-        const target = e.target;
-        if (target.closest('#btnOpenPaymentModal')) {
-            e.preventDefault();
-            showPaymentOverlay('paymentModalOverlay');
-            return;
-        }
-        if (target.closest('#btnHowToPay')) {
-            e.preventDefault();
-            showPaymentOverlay('howToPayOverlay');
-            return;
-        }
-        if (target.closest('#closePaymentModal')) {
-            e.preventDefault();
-            e.stopPropagation();
-            hidePaymentOverlay('paymentModalOverlay');
-            return;
-        }
-        if (target.closest('#closeHowToPayModal, #btnCloseHowToPayFooter')) {
-            e.preventDefault();
-            e.stopPropagation();
-            hidePaymentOverlay('howToPayOverlay');
-            return;
-        }
-        if (target.id === 'paymentModalOverlay') hidePaymentOverlay('paymentModalOverlay');
-        if (target.id === 'howToPayOverlay') hidePaymentOverlay('howToPayOverlay');
+    if (professionalPaymentUiBound) return;
+    professionalPaymentUiBound = true;
+
+    document.getElementById('btnOpenPaymentModal')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        showPaymentOverlay('paymentModalOverlay');
     });
 
-    document.addEventListener('keydown', (e) => {
-        if (e.key !== 'Escape') return;
-        hidePaymentOverlay('howToPayOverlay');
+    document.getElementById('btnHowToPay')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        showPaymentOverlay('howToPayOverlay');
+    });
+
+    document.getElementById('closePaymentModal')?.addEventListener('click', (e) => {
+        e.preventDefault();
         hidePaymentOverlay('paymentModalOverlay');
     });
+
+    document.getElementById('closeHowToPayModal')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        hidePaymentOverlay('howToPayOverlay');
+    });
+
+    document.getElementById('btnCloseHowToPayFooter')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        hidePaymentOverlay('howToPayOverlay');
+    });
+
+    document.getElementById('paymentModalOverlay')?.addEventListener('click', (e) => {
+        if (e.target.id === 'paymentModalOverlay') hidePaymentOverlay('paymentModalOverlay');
+    });
+
+    document.getElementById('howToPayOverlay')?.addEventListener('click', (e) => {
+        if (e.target.id === 'howToPayOverlay') hidePaymentOverlay('howToPayOverlay');
+    });
+
+    document.addEventListener('keydown', onPaymentEscapeKey);
 }
 
 let profileFormBound = false;

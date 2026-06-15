@@ -9,6 +9,14 @@ const {
   applySeoToHtml,
   absoluteUrl
 } = require('../utils/seoMeta');
+const {
+  getLocationPages,
+  findLocationPage,
+  fetchProfessionalsForPage,
+  buildLocationSeo,
+  buildLocationHtml,
+  buildSubAreaLinks
+} = require('../utils/seoLocations');
 
 const TREASURE_TEMPLATE_PATH = path.join(__dirname, '..', 'public', 'treasure.html');
 let treasureTemplateCache = null;
@@ -20,19 +28,65 @@ function loadTreasureTemplate() {
   return treasureTemplateCache;
 }
 
-function xmlEscape(value) {
-  return String(value || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
+function sanitizeAliasForSitemap(alias) {
+  return String(alias || '')
+    .trim()
+    .replace(/[\u0000-\u001f\u007f]/g, '');
+}
+
+function encodePathSegment(value) {
+  return encodeURIComponent(sanitizeAliasForSitemap(value))
+    .replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
+function decodePathSegment(segment) {
+  try {
+    return decodeURIComponent(segment);
+  } catch (error) {
+    return segment;
+  }
+}
+
+function buildSitemapLoc(url) {
+  try {
+    const parsed = new URL(String(url));
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    const origin = `${parsed.protocol}//${parsed.host}`;
+    const pathname = parsed.pathname
+      .split('/')
+      .map((segment) => (segment ? encodePathSegment(decodePathSegment(segment)) : ''))
+      .join('/');
+    const search = parsed.search || '';
+    const loc = `${origin}${pathname}${search}`;
+    return loc.replace(/&/g, '&amp;');
+  } catch (error) {
+    return null;
+  }
 }
 
 function toIsoDate(value) {
   const date = value ? new Date(value) : new Date();
   if (Number.isNaN(date.getTime())) return new Date().toISOString().slice(0, 10);
   return date.toISOString().slice(0, 10);
+}
+
+function buildSitemapXml(urls) {
+  const body = urls.map((entry) => [
+    '  <url>',
+    `    <loc>${entry.loc}</loc>`,
+    `    <lastmod>${entry.lastmod}</lastmod>`,
+    `    <changefreq>${entry.changefreq}</changefreq>`,
+    `    <priority>${entry.priority}</priority>`,
+    '  </url>'
+  ].join('\n')).join('\n');
+
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    body,
+    '</urlset>',
+    ''
+  ].join('\n');
 }
 
 exports.robotsTxt = (req, res) => {
@@ -43,6 +97,7 @@ exports.robotsTxt = (req, res) => {
     'Allow: /categories.html',
     'Allow: /home.html',
     'Allow: /services.html',
+    'Allow: /acompanantes/',
     'Allow: /perfil/',
     'Disallow: /api/',
     'Disallow: /dashboard.html',
@@ -73,41 +128,89 @@ exports.sitemapXml = async (req, res, next) => {
       'professionalProfile.alias': { $exists: true, $nin: ['', null] }
     }).select('professionalProfile.alias professionalProfile.lastPhotoUpdate updatedAt createdAt');
 
-    const urls = STATIC_SITEMAP_PAGES.map((page) => ({
-      loc: absoluteUrl(page.path),
-      lastmod: toIsoDate(),
-      changefreq: page.changefreq,
-      priority: page.priority
-    }));
+    const urls = [];
+    const seenLocs = new Set();
+
+    const addUrl = (rawUrl, meta) => {
+      const loc = buildSitemapLoc(rawUrl);
+      if (!loc || seenLocs.has(loc)) return;
+      seenLocs.add(loc);
+      urls.push({
+        loc,
+        lastmod: meta.lastmod,
+        changefreq: meta.changefreq,
+        priority: meta.priority
+      });
+    };
+
+    STATIC_SITEMAP_PAGES.forEach((page) => {
+      addUrl(absoluteUrl(page.path), {
+        lastmod: toIsoDate(),
+        changefreq: page.changefreq,
+        priority: page.priority
+      });
+    });
 
     professionals.forEach((user) => {
-      const alias = user.professionalProfile?.alias;
-      if (!alias || RESERVED_PROFILE_ALIASES.has(String(alias).toLowerCase())) return;
-      urls.push({
-        loc: absoluteUrl(`/perfil/${encodeURIComponent(alias)}`),
+      const alias = sanitizeAliasForSitemap(user.professionalProfile?.alias);
+      if (!alias || RESERVED_PROFILE_ALIASES.has(alias.toLowerCase())) return;
+      addUrl(absoluteUrl(`/perfil/${encodePathSegment(alias)}`), {
         lastmod: toIsoDate(user.professionalProfile?.lastPhotoUpdate || user.updatedAt || user.createdAt),
         changefreq: 'weekly',
         priority: '0.8'
       });
     });
 
-    const xml = [
-      '<?xml version="1.0" encoding="UTF-8"?>',
-      '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-      ...urls.map((entry) => [
-        '  <url>',
-        `    <loc>${xmlEscape(entry.loc)}</loc>`,
-        `    <lastmod>${entry.lastmod}</lastmod>`,
-        `    <changefreq>${entry.changefreq}</changefreq>`,
-        `    <priority>${entry.priority}</priority>`,
-        '  </url>'
-      ].join('\n')),
-      '</urlset>'
-    ].join('\n');
+    const locationPages = await getLocationPages();
+    locationPages.forEach((page) => {
+      addUrl(absoluteUrl(page.path), {
+        lastmod: toIsoDate(page.lastUpdated),
+        changefreq: 'daily',
+        priority: page.areaSlug ? '0.75' : '0.7'
+      });
+    });
 
-    res.type('application/xml');
+    urls.sort((a, b) => a.loc.localeCompare(b.loc));
+
+    const xml = buildSitemapXml(urls);
+    if (!xml.includes('</urlset>') || !/<loc>https:\/\//.test(xml)) {
+      throw new Error('Invalid sitemap XML generated');
+    }
+
+    res.set('Content-Type', 'text/xml; charset=UTF-8');
     res.setHeader('Cache-Control', 'public, max-age=3600');
-    res.send(xml);
+    res.end(Buffer.from(xml, 'utf8'));
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.renderLocationPage = async (req, res, next) => {
+  try {
+    const provinceSlug = String(req.params.provinceSlug || '').trim();
+    const areaSlug = req.params.areaSlug ? String(req.params.areaSlug).trim() : null;
+    const page = await findLocationPage(provinceSlug, areaSlug);
+
+    if (!page) {
+      res.status(404);
+      res.type('html');
+      return res.send(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="robots" content="noindex, nofollow"><title>Ubicacion no encontrada | SexAppeal</title></head><body><h1>Ubicacion no encontrada</h1><p><a href="/categories.html">Volver al directorio</a></p></body></html>`);
+    }
+
+    const professionals = await fetchProfessionalsForPage(page);
+    if (!professionals.length) {
+      res.status(404);
+      res.type('html');
+      return res.send(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="robots" content="noindex, nofollow"><title>Sin perfiles en esta zona | SexAppeal</title></head><body><h1>Sin perfiles en esta zona</h1><p><a href="/categories.html">Volver al directorio</a></p></body></html>`);
+    }
+
+    const seo = buildLocationSeo(page, professionals);
+    const subAreas = page.areaSlug ? [] : await buildSubAreaLinks(page);
+    const html = buildLocationHtml(page, professionals, seo, subAreas);
+
+    res.type('html');
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.send(html);
   } catch (error) {
     next(error);
   }

@@ -25,6 +25,9 @@ docker-compose.override.yml
 # Puppeteer / Chrome cache to prevent GitHub large file errors
 .cache/
 
+# Auto-generated SEO location registry (scripts/generate-seo-locations.js)
+utils/seo-locations.generated.json
+
 # MongoDB dumps and large archives (never push to GitHub)
 *.archive
 *.tar.gz

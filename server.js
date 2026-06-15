@@ -18,6 +18,25 @@ const { resolveWhatsappNumber } = require('./utils/contactNumber');
 // Connect to database
 connectDB();
 
+const { refreshLocationRegistry } = require('./utils/seoLocations');
+
+function scheduleSeoLocationRefresh() {
+  const run = () => {
+    refreshLocationRegistry()
+      .then((registry) => {
+        console.log(`[SEO] Location registry refreshed: ${registry.totalPages} pages`);
+      })
+      .catch((error) => {
+        console.error('[SEO] Location registry refresh failed:', error.message);
+      });
+  };
+
+  setTimeout(run, 10 * 1000);
+  setInterval(run, 24 * 60 * 60 * 1000);
+}
+
+scheduleSeoLocationRefresh();
+
 const app = express();
 
 // Trust proxy for Nginx
@@ -74,6 +93,8 @@ app.use('/api', limiter);
 const seoController = require('./controllers/seoController');
 app.get('/robots.txt', seoController.robotsTxt);
 app.get('/sitemap.xml', seoController.sitemapXml);
+app.get('/acompanantes/:provinceSlug/:areaSlug', seoController.renderLocationPage);
+app.get('/acompanantes/:provinceSlug', seoController.renderLocationPage);
 app.get('/perfil/:alias', seoController.renderProfilePage);
 
 // Favicon (browsers request /favicon.ico by default)

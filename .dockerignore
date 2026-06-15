@@ -1,19 +1,40 @@
+# Dependencies (installed in image via npm install)
 node_modules/
 npm-debug.log
+*.log
 
+# Secrets and local config
 .env
+docker-compose.override.yml
+
+# User uploads (bind-mounted in production)
 public/uploads/
+
+# Local databases
 mongo-data/
 db/
 
+# Deploy artifacts
+upload_package.tar.gz
 *.archive
 *.tar.gz
 certbot/
-app_bak.js
 sexappeal_local_after_embed.archive
 
+# Heavy runtime caches (Puppeteer, WhatsApp Web.js)
+.cache/
+.wwebjs_auth/
+
+# Auto-generated at runtime
+utils/seo-locations.generated.json
+
+# Not needed in container
 .git
+.gitignore
 .DS_Store
+Thumbs.db
 .vscode/
 .history-memo/
 investor_materials/
+app_bak.js
+uiHelpers.js

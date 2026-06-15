@@ -12,7 +12,6 @@ const RESERVED_PROFILE_ALIASES = new Set([
 
 const STATIC_SITEMAP_PAGES = [
   { path: '/', priority: '1.0', changefreq: 'weekly' },
-  { path: '/index.html', priority: '1.0', changefreq: 'weekly' },
   { path: '/categories.html', priority: '0.9', changefreq: 'daily' },
   { path: '/home.html', priority: '0.8', changefreq: 'daily' },
   { path: '/services.html', priority: '0.7', changefreq: 'monthly' }
