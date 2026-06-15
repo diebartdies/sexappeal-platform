@@ -1637,7 +1637,7 @@ body.categories-page header.page-header {
 
 .categories-shell {
     display: grid;
-    grid-template-columns: minmax(88px, 11%) minmax(0, 1fr) minmax(88px, 11%);
+    grid-template-columns: minmax(176px, 22%) minmax(0, 1fr) minmax(88px, 11%);
     gap: 14px;
     align-items: stretch;
     min-height: calc(100vh - 100px);
@@ -1662,8 +1662,12 @@ body.categories-page header.page-header {
 .categories-frame-left {
     position: sticky;
     top: 72px;
-    align-self: start;
-    max-height: calc(100vh - 90px);
+    align-self: stretch;
+    min-height: calc(100vh - 100px);
+    height: calc(100vh - 100px);
+    max-height: calc(100vh - 100px);
+    padding: 28px 20px;
+    box-sizing: border-box;
 }
 
 .categories-brand-logo {
@@ -1674,12 +1678,22 @@ body.categories-page header.page-header {
     text-decoration: none;
 }
 
+.categories-frame-left .categories-brand-logo {
+    flex: 1;
+    min-height: 0;
+}
+
 .categories-brand-logo .page-logo {
     width: 100%;
     max-width: 120px;
     height: auto;
     max-height: min(42vh, 220px);
     object-fit: contain;
+}
+
+.categories-frame-left .categories-brand-logo .page-logo {
+    max-width: 100%;
+    max-height: 100%;
 }
 
 .categories-frame-right {

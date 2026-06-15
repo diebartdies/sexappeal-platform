@@ -150,11 +150,18 @@ export function initSkipLink() {
 }
 
 function ensureMainLandmark() {
-    if (document.getElementById('main-content')) return;
+    const skip = document.getElementById('skipToMain');
 
     const main = document.querySelector('main');
     if (main) {
-        main.id = 'main-content';
+        if (!main.id) main.id = 'main-content';
+        if (!main.hasAttribute('role')) main.setAttribute('role', 'main');
+        if (skip) skip.href = `#${main.id}`;
+        return;
+    }
+
+    if (document.getElementById('main-content')) {
+        if (skip) skip.href = '#main-content';
         return;
     }
 
@@ -162,8 +169,9 @@ function ensureMainLandmark() {
     for (const selector of selectors) {
         const el = document.querySelector(selector);
         if (el) {
-            el.id = 'main-content';
+            if (!el.id) el.id = 'main-content';
             if (!el.hasAttribute('role')) el.setAttribute('role', 'main');
+            if (skip) skip.href = `#${el.id}`;
             return;
         }
     }

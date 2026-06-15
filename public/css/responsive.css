@@ -457,12 +457,12 @@ body.has-global-topbar {
 /* Categories three-frame layout — tablet/mobile */
 @media (max-width: 1024px) {
     .categories-shell {
-        grid-template-columns: minmax(64px, 14%) minmax(0, 1fr) minmax(48px, 8%);
+        grid-template-columns: minmax(128px, 22%) minmax(0, 1fr) minmax(48px, 8%);
         gap: 10px;
     }
 
-    .categories-brand-logo .page-logo {
-        max-width: 88px;
+    .categories-frame-left {
+        padding: 20px 14px;
     }
 }
 
@@ -484,13 +484,18 @@ body.has-global-topbar {
         flex-direction: row;
         justify-content: center;
         min-height: auto;
+        height: auto;
         padding: 14px 16px;
         max-height: none;
     }
 
-    .categories-brand-logo .page-logo {
-        max-width: min(200px, 55vw);
-        max-height: 88px;
+    .categories-frame-left .categories-brand-logo {
+        flex: none;
+    }
+
+    .categories-frame-left .categories-brand-logo .page-logo {
+        max-width: min(240px, 60vw);
+        max-height: 100px;
     }
 
     .categories-frame-right {
