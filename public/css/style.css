@@ -9,6 +9,42 @@
     --light-text: #F5F5F5;
     --accent-red: #8B0000;
     --glass-bg: rgba(255, 255, 255, 0.1);
+    /* Sitio ya diseñado en oscuro: evita auto-inversión del navegador (Chrome/Safari dark mode) */
+    color-scheme: dark;
+}
+
+html {
+    color-scheme: dark;
+    background-color: var(--dark-bg);
+}
+
+/* Logos, banderas e íconos de marca: colores originales, sin inversión del browser */
+img.page-logo,
+img.landing-logo,
+img.preserve-brand-colors,
+.lang-switcher img,
+.how-to-pay-logo,
+img[src*="SexAppeal_logo"],
+img[src*="flagcdn.com"],
+img[src*="/images/mercadopago"],
+img[src*="/images/bbva"] {
+    color-scheme: only light;
+    forced-color-adjust: none;
+}
+
+@media (prefers-color-scheme: dark) {
+    img.page-logo,
+    img.landing-logo,
+    img.preserve-brand-colors,
+    .lang-switcher img,
+    .how-to-pay-logo,
+    img[src*="SexAppeal_logo"],
+    img[src*="flagcdn.com"],
+    img[src*="/images/mercadopago"],
+    img[src*="/images/bbva"] {
+        filter: none !important;
+        -webkit-filter: none !important;
+    }
 }
 
 * {
@@ -61,6 +97,11 @@ header {
     font-weight: 700;
     text-decoration: none;
     color: var(--primary-gold);
+    color-scheme: only light;
+}
+
+a.logo img {
+    color-scheme: only light;
 }
 
 /* Components */
@@ -440,6 +481,7 @@ input {
     max-width: min(92%, 420px);
     height: 100%;
     min-height: 280px;
+    color-scheme: only light;
 }
 
 .landing-brand-row {
@@ -1051,6 +1093,7 @@ body.small-grid-mode #treasureGrid .treasure-card {
     display: flex;
     align-items: center;
     gap: 6px;
+    color-scheme: only light;
 }
 
 .lang-switcher button {

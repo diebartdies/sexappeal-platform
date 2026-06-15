@@ -350,7 +350,7 @@ export async function loadTreasureDetails() {
 
                     <div style="text-align: center; margin-bottom: 15px;">
                         <span style="padding: 5px 10px; border-radius: 20px; font-size: 0.9rem; font-weight: bold; ${treasure.isActiveNow ? 'background: #008800; color: white;' : 'background: #880000; color: white;'}">
-                            ${treasure.isActiveNow ? '🟢 Available Right Now' : '🔴 Currently Inactive'}
+                            ${treasure.isActiveNow ? t('🟢 Available Right Now') : t('🔴 Currently Inactive')}
                         </span>
                     </div>
 

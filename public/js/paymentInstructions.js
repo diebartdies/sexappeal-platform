@@ -1,6 +1,8 @@
+import { t } from './i18n.js';
+
 export const DEFAULT_PAYMENT_INSTRUCTIONS = {
-    intro: 'Transferí tu pago mensual por Mercado Pago o por transferencia bancaria a las siguientes cuentas:',
-    billingNote: 'La facturación mensual se calcula según la categoría seleccionada en tu perfil. Si cambiás de categoría durante el mes, el importe se prorratea por los días en cada tarifa (registramos la fecha del cambio en tu perfil).',
+    intro: 'Transfer your monthly payment via Mercado Pago or bank transfer to the following accounts:',
+    billingNote: 'Monthly billing is calculated based on your selected category. If you change category mid-month, the amount is prorated by days in each rate (we record the change date on your profile).',
     mercadoPago: {
         alias: 'drcar.lo',
         cvu: '0000003100079017216982'
@@ -34,8 +36,8 @@ export function resolvePaymentInstructions(fromApi) {
 
     if (hasApiData) {
         return {
-            intro: source.intro || DEFAULT_PAYMENT_INSTRUCTIONS.intro,
-            billingNote: source.billingNote || DEFAULT_PAYMENT_INSTRUCTIONS.billingNote,
+            intro: t(source.intro || DEFAULT_PAYMENT_INSTRUCTIONS.intro),
+            billingNote: t(source.billingNote || DEFAULT_PAYMENT_INSTRUCTIONS.billingNote),
             currentQuality: source.currentQuality || 'Standard',
             currentCategoryPrice: source.currentCategoryPrice,
             mercadoPago: {
@@ -50,7 +52,14 @@ export function resolvePaymentInstructions(fromApi) {
         };
     }
 
-    return { ...DEFAULT_PAYMENT_INSTRUCTIONS };
+    return {
+        intro: t(DEFAULT_PAYMENT_INSTRUCTIONS.intro),
+        billingNote: t(DEFAULT_PAYMENT_INSTRUCTIONS.billingNote),
+        currentQuality: 'Standard',
+        currentCategoryPrice: null,
+        mercadoPago: { ...DEFAULT_PAYMENT_INSTRUCTIONS.mercadoPago },
+        bankTransfer: { ...DEFAULT_PAYMENT_INSTRUCTIONS.bankTransfer }
+    };
 }
 
 export function renderHowToPayHtml(paymentInstructions) {
@@ -60,8 +69,8 @@ export function renderHowToPayHtml(paymentInstructions) {
     const bankName = bank.bankName || 'BBVA';
     const categoryPrice = formatMoney(info.currentCategoryPrice);
     const categoryLine = categoryPrice
-        ? `<p class="how-to-pay-category-line"><strong>Categoría actual:</strong> ${escapePaymentHtml(info.currentQuality)} (${categoryPrice}/mes)</p>`
-        : `<p class="how-to-pay-category-line"><strong>Categoría actual:</strong> ${escapePaymentHtml(info.currentQuality)}</p>`;
+        ? `<p class="how-to-pay-category-line"><strong>${escapePaymentHtml(t('Current category:'))}</strong> ${escapePaymentHtml(info.currentQuality)} (${categoryPrice}/mes)</p>`
+        : `<p class="how-to-pay-category-line"><strong>${escapePaymentHtml(t('Current category:'))}</strong> ${escapePaymentHtml(info.currentQuality)}</p>`;
 
     return `
         <p class="how-to-pay-intro">${escapePaymentHtml(info.intro)}</p>
@@ -71,7 +80,7 @@ export function renderHowToPayHtml(paymentInstructions) {
             <section class="how-to-pay-card">
                 <div class="how-to-pay-heading">
                     <img src="/images/mercadopago.svg" alt="Mercado Pago" class="how-to-pay-logo how-to-pay-logo-mp" width="140" height="32">
-                    <strong>Mercado Pago:</strong>
+                    <strong>${escapePaymentHtml(t('Mercado Pago:'))}</strong>
                 </div>
                 <dl class="how-to-pay-details">
                     <div><dt>Alias</dt><dd>${escapePaymentHtml(mp.alias)}</dd></div>
@@ -80,7 +89,7 @@ export function renderHowToPayHtml(paymentInstructions) {
             </section>
             <section class="how-to-pay-card">
                 <div class="how-to-pay-heading">
-                    <span class="how-to-pay-bank-label">Banco:</span>
+                    <span class="how-to-pay-bank-label">${escapePaymentHtml(t('Bank:'))}</span>
                     <img src="/images/bbva.svg" alt="${escapePaymentHtml(bankName)}" class="how-to-pay-logo how-to-pay-logo-bbva" width="72" height="32">
                     <strong>${escapePaymentHtml(bankName)}</strong>
                 </div>

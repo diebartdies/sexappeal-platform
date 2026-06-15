@@ -3,24 +3,27 @@ const fs = require('fs');
 const puppeteer = require('puppeteer');
 
 const root = path.join(__dirname, '..');
-const htmlPath = path.join(root, 'investor_materials', 'platform_brochure.html');
 const outDir = path.join(root, 'public', 'docs');
-const outPdf = path.join(outDir, 'SexAppeal_brochure.pdf');
 
-async function main() {
+const BROCHURES = [
+  {
+    html: path.join(root, 'investor_materials', 'platform_brochure.html'),
+    pdf: path.join(outDir, 'SexAppeal_brochure.pdf')
+  },
+  {
+    html: path.join(root, 'investor_materials', 'drsrv_brochure.html'),
+    pdf: path.join(outDir, 'DRSRV_brochure.pdf')
+  }
+];
+
+async function generatePdf(browser, htmlPath, outPdf) {
   if (!fs.existsSync(htmlPath)) {
     console.error('Missing brochure HTML:', htmlPath);
-    process.exit(1);
+    return false;
   }
-  fs.mkdirSync(outDir, { recursive: true });
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
-
+  const page = await browser.newPage();
   try {
-    const page = await browser.newPage();
     await page.goto(`file:///${htmlPath.replace(/\\/g, '/')}`, {
       waitUntil: 'networkidle0',
       timeout: 120000
@@ -36,6 +39,35 @@ async function main() {
     });
 
     console.log('Brochure PDF written to', outPdf);
+    return true;
+  } finally {
+    await page.close();
+  }
+}
+
+async function main() {
+  fs.mkdirSync(outDir, { recursive: true });
+
+  const target = process.argv[2];
+  const list = target
+    ? BROCHURES.filter((b) => path.basename(b.pdf).includes(target))
+    : BROCHURES;
+
+  if (list.length === 0) {
+    console.error('Unknown brochure target:', target);
+    console.error('Usage: node generate-brochure-pdf.js [SexAppeal|DRSRV]');
+    process.exit(1);
+  }
+
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
+
+  try {
+    for (const { html, pdf } of list) {
+      await generatePdf(browser, html, pdf);
+    }
   } finally {
     await browser.close();
   }

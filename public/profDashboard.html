@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="alternate icon" href="/favicon.ico">
-    <title>Professional Dashboard - SexAppeal</title>
+    <title>SexAppeal - Professional Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/style.css?v=8.1">
-    <link rel="stylesheet" href="/css/responsive.css?v=8.1">
+    <link rel="stylesheet" href="/css/style.css?v=8.4">
+    <link rel="stylesheet" href="/css/responsive.css?v=8.4">
     <meta name="description" content="SexAppeal - The Architecture of Intimacy. Directorio exclusivo de acompañantes VIP y Living Treasures.">
     <meta property="og:title" content="SexAppeal Platform">
     <meta property="og:description" content="El santuario definitivo para conexiones de alto nivel y discreción absoluta.">
@@ -17,6 +17,7 @@
     <meta property="og:type" content="website">
     <meta name="robots" content="noindex, nofollow">
     <meta name="theme-color" content="#D4AF37">
+    <meta name="color-scheme" content="dark">
     <script>document.documentElement.classList.add('page-pending');</script>
 </head>
 <body>
@@ -26,11 +27,11 @@
         <div id="profDashboardLayout" class="prof-dashboard-layout hidden">
             <aside id="profPaymentSidebar" class="prof-payment-sidebar">
                 <div class="card prof-payment-panel hidden" id="paymentSection">
-                    <h3 class="gold-text" style="margin-bottom: 12px;">Pago mensual</h3>
-                    <p style="color: #ccc; font-size: 0.9rem; margin-bottom: 16px;">Cuando recibas tu factura, registrá el comprobante de transferencia o Mercado Pago.</p>
+                    <h3 class="gold-text" style="margin-bottom: 12px;">Monthly payment</h3>
+                    <p style="color: #ccc; font-size: 0.9rem; margin-bottom: 16px;">When you receive your invoice, upload your bank transfer or Mercado Pago receipt.</p>
                     <div class="prof-payment-actions">
-                        <button type="button" id="btnOpenPaymentModal">Pago mensual</button>
-                        <button type="button" id="btnHowToPay" class="prof-payment-secondary">Cómo pagar</button>
+                        <button type="button" id="btnOpenPaymentModal">Monthly payment</button>
+                        <button type="button" id="btnHowToPay" class="prof-payment-secondary">How to pay</button>
                     </div>
                 </div>
             </aside>
@@ -51,23 +52,23 @@
         <div id="dashboardOverlays" class="hidden">
             <div id="paymentModalOverlay" class="hidden payment-modal-overlay" aria-hidden="true">
                 <div class="card payment-modal-panel">
-                    <button type="button" id="closePaymentModal" class="payment-modal-close" aria-label="Cerrar">&times;</button>
-                    <h3 class="gold-text" style="margin-bottom: 20px;">Registrar comprobante de pago</h3>
+                    <button type="button" id="closePaymentModal" class="payment-modal-close" aria-label="Close">&times;</button>
+                    <h3 class="gold-text" style="margin-bottom: 20px;">Register payment receipt</h3>
                     <form id="receiptForm" style="display: flex; flex-direction: column; gap: 15px;">
                         <div id="receiptAlert" class="alert hidden" style="padding: 10px; border-radius: 4px; border: 1px solid transparent;"></div>
-                        <label>Subí foto o PDF del comprobante</label>
+                        <label>Upload photo or PDF of receipt</label>
                         <input type="file" id="receiptFile" accept="image/*,.pdf,application/pdf" style="padding: 10px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
-                        <button type="submit" id="btnUploadReceipt">Enviar comprobante</button>
+                        <button type="submit" id="btnUploadReceipt">Submit receipt</button>
                     </form>
                 </div>
             </div>
 
             <div id="howToPayOverlay" class="hidden payment-modal-overlay" aria-hidden="true">
                 <div class="card payment-modal-panel" style="max-width: 720px;">
-                    <button type="button" id="closeHowToPayModal" class="payment-modal-close" aria-label="Cerrar">&times;</button>
-                    <h3 class="gold-text" style="margin-bottom: 16px;">Cómo pagar</h3>
+                    <button type="button" id="closeHowToPayModal" class="payment-modal-close" aria-label="Close">&times;</button>
+                    <h3 class="gold-text" style="margin-bottom: 16px;">How to pay</h3>
                     <div id="howToPayContent" style="color: #ccc; line-height: 1.7; font-size: 0.95rem;"></div>
-                    <button type="button" id="btnCloseHowToPayFooter" style="margin-top: 20px; width: 100%; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold);">Cerrar</button>
+                    <button type="button" id="btnCloseHowToPayFooter" style="margin-top: 20px; width: 100%; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold);">Close</button>
                 </div>
             </div>
         </div>
@@ -93,6 +94,6 @@
             </div>
         </div>
     </div>
-    <script src="/js/app.js?v=8.1" type="module"></script>
+    <script src="/js/app.js?v=8.4" type="module"></script>
 </body>
 </html>

@@ -556,7 +556,107 @@ const translations = {
         // Privacy Shield
         '100% Privacy Guarantee': 'Garantía de Privacidad 100%',
         'Zero Trackers. Cookieless.': 'Cero Rastreadores. Sin Cookies.',
-        "Zero cookies. Zero third-party trackers. We don't harvest your data. Check your own browser's tracker-blocker to verify and compare us with other apps.": "Cero cookies. Cero rastreadores de terceros. No recopilamos sus datos. Revise el bloqueador de rastreadores de su propio navegador para verificar y compararnos con otras apps."
+        "Zero cookies. Zero third-party trackers. We don't harvest your data. Check your own browser's tracker-blocker to verify and compare us with other apps.": "Cero cookies. Cero rastreadores de terceros. No recopilamos sus datos. Revise el bloqueador de rastreadores de su propio navegador para verificar y compararnos con otras apps.",
+
+        // Payment & prof dashboard
+        'Monthly payment': 'Pago mensual',
+        'When you receive your invoice, upload your bank transfer or Mercado Pago receipt.': 'Cuando recibas tu factura, registrá el comprobante de transferencia o Mercado Pago.',
+        'How to pay': 'Cómo pagar',
+        'Register payment receipt': 'Registrar comprobante de pago',
+        'Upload photo or PDF of receipt': 'Subí foto o PDF del comprobante',
+        'Submit receipt': 'Enviar comprobante',
+        'Transfer your monthly payment via Mercado Pago or bank transfer to the following accounts:': 'Transferí tu pago mensual por Mercado Pago o por transferencia bancaria a las siguientes cuentas:',
+        'Monthly billing is calculated based on your selected category. If you change category mid-month, the amount is prorated by days in each rate (we record the change date on your profile).': 'La facturación mensual se calcula según la categoría seleccionada en tu perfil. Si cambiás de categoría durante el mes, el importe se prorratea por los días en cada tarifa (registramos la fecha del cambio en tu perfil).',
+        'Current category:': 'Categoría actual:',
+        'Bank:': 'Banco:',
+        'Mercado Pago:': 'Mercado Pago:',
+        'Receipt submitted. It will be verified by admin.': 'Comprobante enviado. Será verificado por el administrador.',
+        'Failed to upload receipt': 'Error al subir el comprobante',
+        'Please select a file or photo to upload.': 'Seleccione un archivo o foto para subir.',
+        'Loading dashboard...': 'Cargando panel...',
+        'Action Required: Rate Change': 'Acción requerida: cambio de tarifa',
+        'The platform price rates have been updated. You must acknowledge this change to continue with transactions.': 'Las tarifas de la plataforma fueron actualizadas. Debe confirmar el cambio para continuar.',
+        'Acknowledge Change': 'Confirmar cambio',
+        'Professional Dashboard': 'Panel Profesional',
+        'Statistics': 'Estadísticas',
+        'Dashboard Photo Clicks': 'Clics en fotos del panel',
+        'WhatsApp Button Pushes': 'Pulsaciones WhatsApp',
+        'Call Button Pushes': 'Pulsaciones llamada',
+        'Hourly Hits (Peak Time)': 'Visitas por hora (pico)',
+        'Personal Information': 'Información personal',
+        'Birth Date': 'Fecha de nacimiento',
+        'Measures': 'Medidas',
+        'Has fantasy wardrobe (sexy costumes, high heels)': 'Tiene vestuario de fantasía (disfraces, tacos altos)',
+        'Availability': 'Disponibilidad',
+        'Avail-start': 'Inicio disponibilidad',
+        'Avail-end': 'Fin disponibilidad',
+        'Vac-start': 'Inicio vacaciones',
+        'Vac-end': 'Fin vacaciones',
+        'Photos': 'Fotos',
+        'Upload': 'Subir',
+        'Admin upload, update, remove actions. Drag photos to reorder.': 'Carga, actualización y eliminación. Arrastre fotos para reordenar.',
+        'Appartment': 'Departamento',
+        'City / Neighborhood': 'Ciudad / Barrio',
+        'City / Neighborhood (select)': 'Ciudad / Barrio (lista)',
+        'Back to Main Dashboard': 'Volver al panel principal',
+        'Profile updated successfully!': '¡Perfil actualizado correctamente!',
+        'Update failed': 'Error al actualizar',
+        'Rate Update: Please acknowledge the new pricing rates in the alert above to maintain your visibility.': 'Actualización de tarifa: confirme las nuevas tarifas en el aviso superior para mantener su visibilidad.',
+        'First Month Free: Your trial ends on {date}.': 'Primer mes gratis: su prueba termina el {date}.',
+        'Since your trial ends mid-month, you will only be charged a prorated amount of {amount} ARS for the remainder of that month.': 'Como su prueba termina a mitad de mes, solo se cobrará un monto prorrateado de {amount} ARS por el resto del mes.',
+        'Account Suspended: Your profile is hidden due to unpaid balances.': 'Cuenta suspendida: su perfil está oculto por saldos impagos.',
+        'A 2% late fee has been applied. Your new balance is {amount} ARS.': 'Se aplicó un recargo del 2%. Su nuevo saldo es {amount} ARS.',
+        'Upload your receipt to restore access.': 'Suba su comprobante para restaurar el acceso.',
+        'Are you sure you want to remove this photo from your gallery?': '¿Está segura de que desea eliminar esta foto de su galería?',
+        'Please select valid image files only.': 'Seleccione solo archivos de imagen válidos.',
+        'Could not load image from URL.': 'No se pudo cargar la imagen desde la URL.',
+        'Payload Too Large. Nginx limit exceeded.': 'Archivo demasiado grande. Límite de Nginx superado.',
+        'Bad Gateway. The server is restarting.': 'Puerta de enlace incorrecta. El servidor se está reiniciando.',
+        'After approval, choose your category and specialties in your professional dashboard. After your first validated payment, you move to that category rate.': 'Tras la aprobación, elija categoría y especialidades en su panel. Tras el primer pago validado, pasará a esa tarifa.',
+        'Reminder:': 'Recordatorio:',
+        'This is your first time accessing your profile. Please click the "Edit Profile" button to load your photos!': 'Es su primera visita a su perfil. Haga clic en "Editar perfil" para cargar sus fotos.',
+        '🔴 Currently Inactive': '🔴 Actualmente inactivo',
+        'to': 'a',
+        'Toggle password visibility': 'Mostrar/ocultar contraseña',
+        'Close': 'Cerrar',
+        'Verify Your Email': 'Verifique su correo',
+        'Please enter the 6-digit code sent to your email.': 'Ingrese el código de 6 dígitos enviado a su correo.',
+        'Verify': 'Verificar',
+        'Professional Entrance': 'Entrada profesional',
+        'Exit Sanctuary': 'Salir del santuario',
+        'Living Treasures': 'Tesoros Vivos',
+        'Explore our veiled collection of high-end professionals.': 'Explore nuestra colección velada de profesionales de alto nivel.',
+        'Unveiling the collection...': 'Desvelando la colección...',
+        'My Dashboard': 'Mi panel',
+        'Select a Service': 'Seleccione un servicio',
+        'Step 2: Choose a service to continue.': 'Paso 2: elija un servicio para continuar.',
+        'Loading services...': 'Cargando servicios...',
+        'View Professionals': 'Ver profesionales',
+        'Revealed Treasures': 'Tesoros revelados',
+        'Preparing the collection...': 'Preparando la colección...',
+        'Loading treasures...': 'Cargando tesoros...',
+        'Unlocking your vault...': 'Abriendo su bóveda...',
+        'Sanctuary': 'Santuario',
+        'SexAppeal - Admin Dashboard': 'SexAppeal - Panel de administración',
+        'SexAppeal - Professional Dashboard': 'SexAppeal - Panel profesional',
+        'SexAppeal - Verification': 'SexAppeal - Verificación',
+        'Change prices': 'Cambiar precios',
+        'Please log in or register to access the dashboard.': 'Inicie sesión o regístrese para acceder al panel.',
+        'Category:': 'Categoría:',
+        'Sex': 'Sexo',
+        'Conventional massage': 'Masaje convencional',
+        'Virtual call': 'Llamada virtual',
+        'Share hot content pics or videos': 'Compartir fotos o videos hot',
+        'Live streaming kisses': 'Besos en streaming en vivo',
+        'View Receipt': 'Ver comprobante',
+        'Edit Profile (Address and Connection Info Only)': 'Editar perfil (solo domicilio y contacto)',
+        'Edit Service Description': 'Editar descripción del servicio',
+        'Edit Availability': 'Editar disponibilidad',
+        'Network Error': 'Error de red',
+        'Payment Verifications': 'Verificación de pagos',
+        'Processed': 'Procesado',
+        'No pending payments.': 'No hay pagos pendientes.',
+        'Failed to acknowledge payment': 'Error al confirmar el pago'
     }
 };
 
@@ -681,6 +781,35 @@ export function applyStaticTranslations(rootNode = document.body) {
             }
         }
     });
+
+    const translateAttr = (el, attr) => {
+        const val = el.getAttribute(attr);
+        if (!val || !String(val).trim()) return;
+        const norm = val.replace(/\s+/g, ' ').trim();
+        if (translations['es'][norm]) {
+            el.setAttribute(attr, translations['es'][norm]);
+            return;
+        }
+        if (translations['es'][val.trim()]) {
+            el.setAttribute(attr, translations['es'][val.trim()]);
+            return;
+        }
+        let text = val;
+        let changed = false;
+        for (const { key, regex } of esRegexList) {
+            const newText = text.replace(regex, translations['es'][key]);
+            if (newText !== text) {
+                text = newText;
+                changed = true;
+            }
+        }
+        if (changed) el.setAttribute(attr, text);
+    };
+
+    if (rootNode.querySelectorAll) {
+        rootNode.querySelectorAll('[title]').forEach((el) => translateAttr(el, 'title'));
+        rootNode.querySelectorAll('[aria-label]').forEach((el) => translateAttr(el, 'aria-label'));
+    }
 }
 
 // Expose globals for traditional script usage (if app.js were not loaded as type="module")

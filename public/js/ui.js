@@ -206,7 +206,7 @@ export function initGlobalTopBar() {
         btn.type = 'button';
         btn.title = label;
         btn.className = currentLang === lang ? 'lang-active' : 'lang-inactive';
-        btn.innerHTML = `<img src="${flagUrl}" width="28" height="21" alt="${label}">`;
+        btn.innerHTML = `<img class="preserve-brand-colors" src="${flagUrl}" width="28" height="21" alt="${label}">`;
         btn.addEventListener('click', () => {
             if (currentLang === lang) return;
             localStorage.setItem('platform_lang', lang);

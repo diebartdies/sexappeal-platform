@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRSRV — Brochure Técnico & Comercial</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --gold: #d4af37;
+      --gold-light: #f0d78c;
+      --obsidian: #0a0a0a;
+      --charcoal: #141414;
+      --slate: #1e1e1e;
+      --text: #e8e8e8;
+      --muted: #999;
+      --accent: #25d366;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--obsidian);
+      color: var(--text);
+      line-height: 1.65;
+    }
+    .page {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 48px 40px;
+      page-break-after: always;
+    }
+    .cover {
+      min-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      background: radial-gradient(ellipse at 50% 20%, rgba(212,175,55,0.12) 0%, transparent 60%), var(--obsidian);
+      border-bottom: 2px solid var(--gold);
+    }
+    .cover h1 {
+      font-size: 3rem;
+      letter-spacing: 0.18em;
+      color: var(--gold);
+      font-weight: 300;
+      margin-bottom: 12px;
+    }
+    .cover .tagline {
+      font-size: 1.25rem;
+      color: var(--gold-light);
+      font-style: italic;
+      margin-bottom: 32px;
+    }
+    .cover .subtitle {
+      font-size: 1rem;
+      color: var(--muted);
+      max-width: 560px;
+    }
+    .badge {
+      display: inline-block;
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-top: 40px;
+    }
+    h2 {
+      color: var(--gold);
+      font-size: 1.6rem;
+      font-weight: 400;
+      letter-spacing: 0.06em;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(212,175,55,0.35);
+    }
+    h3 {
+      color: var(--gold-light);
+      font-size: 1.05rem;
+      margin: 24px 0 10px;
+    }
+    p { margin-bottom: 14px; color: #ccc; }
+    .lead { font-size: 1.1rem; color: #ddd; }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 20px 0;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin: 20px 0;
+    }
+    @media (max-width: 720px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .cover h1 { font-size: 2rem; }
+      .page { padding: 32px 20px; }
+    }
+    .card {
+      background: var(--slate);
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 18px;
+    }
+    .card strong { color: var(--gold); display: block; margin-bottom: 6px; }
+    .card p { font-size: 0.9rem; margin: 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 0.88rem;
+    }
+    th, td {
+      border: 1px solid #333;
+      padding: 10px 12px;
+      text-align: left;
+    }
+    th { background: var(--slate); color: var(--gold); font-weight: 600; }
+    td { color: #bbb; }
+    .highlight-box {
+      background: linear-gradient(135deg, rgba(212,175,55,0.08), rgba(212,175,55,0.02));
+      border-left: 4px solid var(--gold);
+      padding: 18px 22px;
+      margin: 20px 0;
+      border-radius: 0 8px 8px 0;
+    }
+    .mermaid-wrap {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+      overflow-x: auto;
+    }
+    .lifecycle {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 16px 0;
+    }
+    .lifecycle span {
+      background: var(--charcoal);
+      border: 1px solid #444;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      color: #aaa;
+    }
+    .lifecycle span::before { content: '→ '; color: var(--gold); }
+    .lifecycle span:first-child::before { content: ''; }
+    ul { margin: 10px 0 16px 22px; color: #bbb; }
+    li { margin-bottom: 6px; }
+    .verticals .card { border-color: rgba(37,211,102,0.3); }
+    .footer {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      border-top: 1px solid #333;
+    }
+    .footer a { color: var(--gold); text-decoration: none; }
+    @media print {
+      body { background: #fff; color: #111; }
+      .page { page-break-after: always; }
+      .cover { background: #fff; min-height: auto; padding: 80px 40px; }
+      .cover h1, h2, h3, .card strong, th { color: #8a6d1a; }
+      p, td, li { color: #333; }
+      .card { background: #f5f5f5; }
+      .mermaid-wrap { border: 1px solid #ccc; }
+    }
+  </style>
+</head>
+<body>
+
+<section class="page cover">
+  <div class="badge">Platform Engine · VPS Dedicado · Production Ready</div>
+  <h1>DRSRV</h1>
+  <p class="tagline">Soluciones inmediatas para el bolsillo de hoy</p>
+  <p class="subtitle">
+    Implementamos marketplaces white-label en servidor virtual exclusivo para su marca.
+    Precio accesible, entrega en 72 horas e infraestructura gestionada — cloud regional u offshore según su mercado objetivo.
+  </p>
+  <p class="badge" style="margin-top: 48px;">admin@drsrv.net.ar</p>
+</section>
+
+<section class="page">
+  <h2>Visión & Propuesta de Valor</h2>
+  <p class="lead">
+    DRSRV no vende “una web más”. Entrega un <strong style="color:var(--gold)">sistema operativo completo</strong>
+    para administrar el ciclo de vida de profesionales independientes: captación, verificación, descubrimiento,
+    contacto protegido, facturación prorrateada, vacaciones, suspensiones y trazabilidad — todo en un solo stack Dockerizado.
+  </p>
+  <div class="grid-2">
+    <div class="card">
+      <strong>Para el profesional</strong>
+      <p>Perfil verificado, categorías configurables, período de prueba, panel propio, facturación justa por días y tier — sin comisiones por contacto.</p>
+    </div>
+    <div class="card">
+      <strong>Para el visitante</strong>
+      <p>Descubrimiento por categoría y ubicación, navegación anónima cookieless, acuerdo de respeto, contacto vía API anti-scraping (WhatsApp/teléfono no expuestos en HTML).</p>
+    </div>
+    <div class="card">
+      <strong>Para el administrador</strong>
+      <p>Verificación documental, pagos pendientes, outreach WhatsApp masivo, logs de actividad, SEO dinámico por ubicación, pricing global configurable.</p>
+    </div>
+    <div class="card">
+      <strong>Para el cliente DRSRV</strong>
+      <p>VPS dedicado (su IP, su dominio), implementación en ~72 h, setup accesible, fee mensual predecible. Sin compartir servidor con otros proyectos.</p>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <h2>Arquitectura del Sistema</h2>
+  <p>Stack containerizado de tres capas con servicios externos y motores en background. Diseño stateless en la API para escalar horizontalmente en el VPS del cliente.</p>
+  <div class="mermaid-wrap">
+    <pre class="mermaid">
+flowchart TB
+    subgraph Clients["Capa Cliente"]
+        U[Visitantes / Guests]
+        P[Profesionales / Proveedores]
+        A[Administradores]
+        FE[Frontend SPA<br/>HTML · CSS · Vanilla JS ES Modules]
+    end
+
+    subgraph Gateway["Capa Gateway"]
+        NG[Nginx Alpine<br/>SSL Let's Encrypt · Rate Limit · Security Headers]
+    end
+
+    subgraph App["Capa Aplicación — Node.js · Express 5"]
+        R[server.js Router]
+        MW[Middleware<br/>Helmet · CORS · JWT · Rate Limit]
+        subgraph CTRL["Controllers"]
+            AUTH[Auth & Guest Login]
+            PROF[Profiles & Contact Shield]
+            ADM[Admin & Verifications]
+            PAY[Payments & Receipts]
+            OUT[WhatsApp Outreach]
+            SEO[SEO SSR Meta & Sitemap]
+            FB[Feedback Moderation]
+        end
+        subgraph ENGINES["Motores Background 24h"]
+            BILL[Billing Engine<br/>Invoices · Suspensions]
+            TRIAL[Trial Reminders]
+            CAT[Category Billing<br/>Prorrateo por fecha de cambio]
+            SEOLOC[SEO Location Registry]
+        end
+        LOG[ActivityLog<br/>Trazabilidad cookieless]
+    end
+
+    subgraph Data["Capa Datos"]
+        MONGO[(MongoDB 4.4<br/>Users · Logs · Leads · Invoices)]
+        UPLOADS[/public/uploads/]
+    end
+
+    subgraph External["Servicios Externos"]
+        SMTP[SMTP Email]
+        WA[WhatsApp Web.js<br/>Outreach & Alerts]
+        PUP[Puppeteer Scraper<br/>Lead Generation]
+    end
+
+    U & P & A --> FE
+    FE -->|HTTPS REST| NG
+    NG --> R
+    R --> MW --> CTRL
+    CTRL --> MONGO
+    ENGINES --> MONGO
+    LOG --> MONGO
+    PROF --> LOG
+    PAY --> BILL
+    BILL --> CAT
+    OUT --> WA
+    PUP --> MONGO
+    CTRL --> SMTP
+    BILL --> SMTP
+    PROF -->|Redirect API| WA
+    </pre>
+  </div>
+</section>
+
+<section class="page">
+  <h2>Stack Tecnológico</h2>
+  <table>
+    <thead>
+      <tr><th>Capa</th><th>Tecnología</th><th>Rol</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Frontend</td><td>HTML5, CSS3, Vanilla JS (ES Modules), i18n ES/EN</td><td>SPA multi-página sin framework pesado; carga modular</td></tr>
+      <tr><td>API</td><td>Node.js, Express 5, Mongoose 9</td><td>REST API, auth JWT, multer uploads, cron jobs integrados</td></tr>
+      <tr><td>Seguridad</td><td>Helmet, express-rate-limit, bcryptjs, JWT httpOnly cookies</td><td>Headers seguros, límite por IP, passwords hasheadas</td></tr>
+      <tr><td>Gateway</td><td>Nginx Alpine, Certbot/Let's Encrypt</td><td>TLS termination, proxy reverso, rate limit 10 req/s</td></tr>
+      <tr><td>Base de datos</td><td>MongoDB 4.4 (Docker volume)</td><td>Document store flexible para perfiles, logs, facturas</td></tr>
+      <tr><td>Contenedores</td><td>Docker Compose (app, mongo, nginx)</td><td>Despliegue reproducible; bind mounts para hotfix</td></tr>
+      <tr><td>DevOps</td><td>Ansible, scripts de deploy automatizado, server-watch</td><td>Provisionamiento VPS, alertas WhatsApp, backups</td></tr>
+      <tr><td>Comunicaciones</td><td>Nodemailer, whatsapp-web.js, Puppeteer</td><td>Email transaccional, outreach masivo, captación leads</td></tr>
+      <tr><td>Media</td><td>Sharp, Base64 en MongoDB</td><td>Fotos de perfil y documentos de verificación</td></tr>
+      <tr><td>SEO</td><td>SSR meta tags, sitemap.xml dinámico, URLs por ubicación</td><td>Indexación Google; páginas geo auto-generadas</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="page">
+  <h2>Seguridad & Trazabilidad Cookieless</h2>
+  <div class="highlight-box">
+    <p><strong style="color:var(--gold)">Sin cookies de tracking de terceros.</strong> La plataforma no vende datos de navegación. El registro de actividad es server-side, con fines operativos y de seguridad — no publicidad.</p>
+  </div>
+  <div class="grid-2">
+    <div>
+      <h3>Protección de identidad</h3>
+      <ul>
+        <li>Alias público; identidad real visible solo para administración</li>
+        <li>Documentos de verificación protegidos en base de datos</li>
+        <li>Selfie con gesto aleatorio (verificación humana)</li>
+        <li>Re-verificación automática al cambiar teléfono o dirección</li>
+        <li>Contacto WhatsApp/teléfono vía redirect API — no scrapeable</li>
+      </ul>
+    </div>
+    <div>
+      <h3>ActivityLog trazable</h3>
+      <ul>
+        <li><strong>guest_browsing</strong> — cada visita anónima (IP + User-Agent + path)</li>
+        <li><strong>guest_login</strong> — sesiones anónimas temporales</li>
+        <li><strong>whatsapp_click / phone_click</strong> — intentos de contacto</li>
+        <li><strong>update_profile / admin_edit</strong> — cambios auditados</li>
+        <li>Filtros admin: tráfico guest vs usuarios registrados</li>
+      </ul>
+    </div>
+  </div>
+  <h3>Moderación de feedback</h3>
+  <p>Feedback filtrado por términos inapropiados configurables. Violaciones escalan automáticamente al administrador por email.</p>
+</section>
+
+<section class="page">
+  <h2>Complejidad del Ciclo de Vida del Profesional</h2>
+  <p class="lead">Cada detalle administrativo está automatizado o semi-automatizado. Esto no es un CRUD de perfiles — es un ERP vertical listo para operar.</p>
+  <div class="lifecycle">
+    <span>Captación de leads</span>
+    <span>Invitación WhatsApp</span>
+    <span>Registro + email verify</span>
+    <span>Período evaluación 30d</span>
+    <span>Categoría trial</span>
+    <span>Verificación admin</span>
+    <span>Rechazo / resubmit</span>
+    <span>Activación post-pago</span>
+    <span>Categoría definitiva</span>
+    <span>Cambio categoría mid-month</span>
+    <span>Prorrateo automático</span>
+    <span>Vacaciones (descuento días)</span>
+    <span>Factura fin de mes</span>
+    <span>Upload comprobante</span>
+    <span>Validación admin</span>
+    <span>Suspensión / mora</span>
+    <span>SEO por ubicación</span>
+    <span>Broadcast email</span>
+  </div>
+  <div class="grid-3">
+    <div class="card"><strong>Facturación prorrateada</strong><p>Si el profesional cambia de categoría a mitad de mes, el motor calcula días en cada tarifa y registra la fecha del cambio en el perfil.</p></div>
+    <div class="card"><strong>Vacaciones inteligentes</strong><p>Perfil inactivo durante ausencia. Descuento de días en facturación mensual. Notificación automática al retorno.</p></div>
+    <div class="card"><strong>Trial → Active</strong><p>Período de prueba configurable. Conversión al validar primer pago. Categoría elegida aplicada tras activación.</p></div>
+    <div class="card"><strong>Anti-scraping</strong><p>Endpoints de contacto registran click y redirigen — números nunca en el DOM público.</p></div>
+    <div class="card"><strong>Outreach integrado</strong><p>WhatsApp masivo desde admin con sesión QR, delay anti-ban, tracking de leads.</p></div>
+    <div class="card"><strong>Cambio de tarifas</strong><p>Admin notifica nuevos precios; el profesional confirma recepción antes de continuar operando.</p></div>
+  </div>
+</section>
+
+<section class="page">
+  <h2>Funcionalidades Clave</h2>
+  <div class="grid-2">
+    <ul>
+      <li>Descubrimiento por categorías configurables (tiers)</li>
+      <li>Perfil público SSR con meta SEO por alias</li>
+      <li>Páginas SEO dinámicas por provincia / barrio</li>
+      <li>Sistema de reviews y feedback moderado</li>
+      <li>Dashboard profesional con guías contextuales</li>
+      <li>Upload comprobante de pago (MP / transferencia)</li>
+      <li>Instrucciones de pago bajo demanda (no expuestas siempre)</li>
+      <li>Config WhatsApp platform desde admin panel</li>
+    </ul>
+    <ul>
+      <li>Panel admin: verificaciones, pagos, logs, pricing</li>
+      <li>Pipeline de leads potenciales + scraper</li>
+      <li>Guest login anónimo para browsing privado</li>
+      <li>Perfiles vinculados / duos (configurable)</li>
+      <li>Horarios y días laborables configurables</li>
+      <li>Estadísticas: clicks, WhatsApp, llamadas</li>
+      <li>Monitoreo servidor con alertas WhatsApp</li>
+      <li>i18n español / inglés en UI admin</li>
+    </ul>
+  </div>
+</section>
+
+<section class="page">
+  <h2>White-Label: Un Motor, Infinitos Verticales</h2>
+  <p>La arquitectura es <strong style="color:var(--gold)">agnóstica al rubro</strong>: cambiando copy, categorías, campos de perfil y reglas de verificación, el mismo motor sirve para:</p>
+  <div class="grid-3 verticals">
+    <div class="card"><strong>Medicina privada</strong><p>Médicos, psicólogos, odontólogos. Categorías por especialidad. Verificación matrícula. Contacto protegido para turnos.</p></div>
+    <div class="card"><strong>Educación & tutoring</strong><p>Profesores, tutores, coaches académicos. Categorías por nivel/materia. Disponibilidad horaria. Reviews de alumnos.</p></div>
+    <div class="card"><strong>Consultoría legal / financiera</strong><p>Abogados, contadores, asesores. Tier por experiencia. Documentación verificada. Facturación por plan mensual.</p></div>
+    <div class="card"><strong>Bienestar & fitness</strong><p>Personal trainers, nutricionistas, masajistas. Categorías por certificación. Vacaciones = ausencia de agenda.</p></div>
+    <div class="card"><strong>Belleza & estética</strong><p>Estilistas, maquilladoras, nail artists. Portfolio fotográfico. Ubicación por barrio. Reservas vía WhatsApp.</p></div>
+    <div class="card"><strong>Servicios técnicos premium</strong><p>Técnicos IT, electricistas, plomeros de confianza. Verificación identidad. Categorías por urgencia.</p></div>
+    <div class="card"><strong>Arte & entretenimiento</strong><p>Músicos, DJs, fotógrafos. Categorías por demanda. Período trial para nuevos talentos.</p></div>
+    <div class="card"><strong>Real estate boutique</strong><p>Agentes independientes. Categorías por cartera. SEO por zona geográfica incluido.</p></div>
+    <div class="card"><strong>Cuidado personal</strong><p>Cuidadores, niñeras, pet sitters. Verificación reforzada. Logs para confianza familiar.</p></div>
+  </div>
+  <div class="highlight-box">
+    <p><strong>Referencia en producción:</strong> caso real desplegado y operativo — demostración bajo NDA o visita a demo acordada.</p>
+  </div>
+</section>
+
+<section class="page">
+  <h2>Modelo Comercial DRSRV</h2>
+  <p class="lead">Soluciones inmediatas para el bolsillo de hoy: fracción del costo de un desarrollo a medida, entrega en días — no meses.</p>
+  <div class="grid-3">
+    <div class="card">
+      <strong>Pilot</strong>
+      <p>Setup USD 499 + USD 99/mes<br>VPS 2 GB dedicado · 1 dominio · SSL · panel admin · 72 h</p>
+    </div>
+    <div class="card">
+      <strong>Pro ⭐</strong>
+      <p>Setup USD 1.200 + USD 199/mes<br>VPS 4 GB · facturación · WhatsApp · SEO · backups diarios</p>
+    </div>
+    <div class="card">
+      <strong>Enterprise</strong>
+      <p>Setup desde USD 2.500 + USD 349/mes<br>8 GB+ · offshore opcional · SLA · staging · vertical custom</p>
+    </div>
+  </div>
+  <div class="grid-2" style="margin-top: 20px;">
+    <div class="card">
+      <strong>VPS dedicado siempre</strong>
+      <p>Su proyecto nunca comparte CPU, RAM ni base de datos con otros clientes. HTTPS en su servidor — no en su PC.</p>
+    </div>
+    <div class="card">
+      <strong>Vs. desarrollo a medida</strong>
+      <p>Proyecto similar a medida: 3–6 meses y USD 15.000–40.000. DRSRV: días, setup accesible, fee mensual predecible.</p>
+    </div>
+  </div>
+  <h3 style="margin-top:32px;">Contacto</h3>
+  <p>Email: <a href="mailto:admin@drsrv.net.ar" style="color:var(--gold)">admin@drsrv.net.ar</a><br>
+  Landing comercial: <a href="https://sexappeal.drsrv.net.ar/plataforma.html" style="color:var(--gold)">sexappeal.drsrv.net.ar/plataforma.html</a><br>
+  Infraestructura: Docker · MongoDB · Nginx · VPS cloud u offshore · Argentina</p>
+</section>
+
+<footer class="footer">
+  DRSRV · Soluciones inmediatas para el bolsillo de hoy · Brochure v1.0 · Junio 2026
+</footer>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
+</script>
+</body>
+</html>
