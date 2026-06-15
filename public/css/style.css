@@ -841,6 +841,92 @@ body.small-grid-mode #treasureGrid .treasure-card {
     z-index: 1;
 }
 
+.how-to-pay-intro {
+    margin: 0 0 16px;
+    color: #ccc;
+    line-height: 1.6;
+}
+
+.how-to-pay-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.how-to-pay-card {
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    border-radius: 8px;
+    padding: 14px;
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.how-to-pay-heading {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+    color: #eee;
+}
+
+.how-to-pay-bank-label {
+    color: #ccc;
+    font-size: 0.95rem;
+}
+
+.how-to-pay-logo {
+    display: block;
+    height: 28px;
+    width: auto;
+    object-fit: contain;
+}
+
+.how-to-pay-logo-mp {
+    max-width: 130px;
+}
+
+.how-to-pay-logo-bbva {
+    max-width: 72px;
+}
+
+.how-to-pay-details {
+    margin: 0;
+}
+
+.how-to-pay-details div {
+    margin-bottom: 10px;
+}
+
+.how-to-pay-details div:last-child {
+    margin-bottom: 0;
+}
+
+.how-to-pay-details dt {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #999;
+    margin-bottom: 2px;
+}
+
+.how-to-pay-details dd {
+    margin: 0;
+    color: var(--primary-gold);
+    font-family: Consolas, Monaco, monospace;
+    font-size: 0.92rem;
+    word-break: break-all;
+}
+
+@media (max-width: 640px) {
+    .how-to-pay-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .payment-modal-panel {
+        max-width: 100%;
+    }
+}
+
 .payment-modal-close {
     position: absolute;
     top: 12px;

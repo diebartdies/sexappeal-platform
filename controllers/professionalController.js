@@ -417,9 +417,13 @@ exports.getMe = async (req, res, next) => {
       stats: { photoCount, whatsappcCount, callCount },
       globalPricing,
       paymentInstructions: user.role === 'professional' ? {
-        intro: 'El método de pago es transferencia bancaria o Mercado Pago a los siguientes Alias o CVU/CBU:',
+        intro: 'Transferí tu pago mensual por Mercado Pago o por transferencia bancaria a las siguientes cuentas:',
         mercadoPago: { alias: config.payment.mercadoPago.alias, cvu: config.payment.mercadoPago.cvu },
-        bankTransfer: { alias: config.payment.bankTransfer.alias, cbu: config.payment.bankTransfer.cbu }
+        bankTransfer: {
+          bankName: config.payment.bankTransfer.bankName || 'BBVA',
+          alias: config.payment.bankTransfer.alias,
+          cbu: config.payment.bankTransfer.cbu
+        }
       } : undefined,
       data: user
     });

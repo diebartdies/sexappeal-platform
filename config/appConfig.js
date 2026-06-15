@@ -53,6 +53,7 @@ const config = {
     adminEmail: 'admin@drsrv.net.ar',
     dueDayOfMonth: 5, // Account suspension happens on the 6th if unpaid
     bankTransfer: {
+      bankName: 'BBVA',
       cbu: '0170316840000040617332',
       alias: 'drcarlo'
     },

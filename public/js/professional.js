@@ -246,6 +246,14 @@ function hidePaymentOverlay(overlayId) {
     if (wasVisible) endModalSession();
 }
 
+function escapePaymentHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
 function fillHowToPayContent(paymentInstructions) {
     const howToPayContent = document.getElementById('howToPayContent');
     if (!howToPayContent) return;
@@ -255,14 +263,35 @@ function fillHowToPayContent(paymentInstructions) {
         return;
     }
 
+    const mp = paymentInstructions.mercadoPago || {};
+    const bank = paymentInstructions.bankTransfer || {};
+    const bankName = bank.bankName || 'BBVA';
+
     howToPayContent.innerHTML = `
-        <p>${paymentInstructions.intro}</p>
-        <p style="margin-top: 12px;"><strong>Mercado Pago</strong><br>
-        Alias: <span style="color: var(--primary-gold);">${paymentInstructions.mercadoPago.alias}</span><br>
-        CVU: <span style="color: var(--primary-gold);">${paymentInstructions.mercadoPago.cvu}</span></p>
-        <p style="margin-top: 12px;"><strong>Transferencia bancaria</strong><br>
-        Alias: <span style="color: var(--primary-gold);">${paymentInstructions.bankTransfer.alias}</span><br>
-        CBU: <span style="color: var(--primary-gold);">${paymentInstructions.bankTransfer.cbu}</span></p>
+        <p class="how-to-pay-intro">${escapePaymentHtml(paymentInstructions.intro)}</p>
+        <div class="how-to-pay-grid">
+            <section class="how-to-pay-card">
+                <div class="how-to-pay-heading">
+                    <img src="/images/mercadopago.svg" alt="Mercado Pago" class="how-to-pay-logo how-to-pay-logo-mp" width="140" height="32">
+                    <strong>Mercado Pago:</strong>
+                </div>
+                <dl class="how-to-pay-details">
+                    <div><dt>Alias</dt><dd>${escapePaymentHtml(mp.alias)}</dd></div>
+                    <div><dt>CVU</dt><dd>${escapePaymentHtml(mp.cvu)}</dd></div>
+                </dl>
+            </section>
+            <section class="how-to-pay-card">
+                <div class="how-to-pay-heading">
+                    <span class="how-to-pay-bank-label">Banco:</span>
+                    <img src="/images/bbva.svg" alt="${escapePaymentHtml(bankName)}" class="how-to-pay-logo how-to-pay-logo-bbva" width="72" height="32">
+                    <strong>${escapePaymentHtml(bankName)}</strong>
+                </div>
+                <dl class="how-to-pay-details">
+                    <div><dt>Alias</dt><dd>${escapePaymentHtml(bank.alias)}</dd></div>
+                    <div><dt>CBU</dt><dd>${escapePaymentHtml(bank.cbu)}</dd></div>
+                </dl>
+            </section>
+        </div>
     `;
 }
 
