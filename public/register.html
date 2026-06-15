@@ -15,7 +15,27 @@
         .reg-block h4 { margin: 0 0 16px; color: var(--primary-gold); }
         .reg-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .reg-grid-3 { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; }
-        @media (max-width: 640px) { .reg-grid-2, .reg-grid-3 { grid-template-columns: 1fr; } }
+        .reg-grid-3-equal { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .reg-address-row {
+            display: grid;
+            grid-template-columns: minmax(100px, 2fr) 72px 56px 64px 96px;
+            gap: 12px;
+            align-items: end;
+            margin-bottom: 16px;
+        }
+        .reg-address-row .form-group { margin-bottom: 0; }
+        .reg-field-short input { padding-left: 8px; padding-right: 8px; text-align: center; }
+        .reg-field-dept input { max-width: 100%; }
+        .reg-field-post input { max-width: 100%; }
+        @media (max-width: 720px) {
+            .reg-address-row {
+                grid-template-columns: 1fr 1fr;
+            }
+            .reg-address-row .reg-field-street { grid-column: 1 / -1; }
+        }
+        @media (max-width: 640px) {
+            .reg-grid-2, .reg-grid-3, .reg-grid-3-equal { grid-template-columns: 1fr; }
+        }
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; margin-bottom: 6px; font-size: 0.9rem; color: #ccc; }
         .required-star { color: var(--accent-red); }
@@ -35,11 +55,22 @@
         .file-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
         .file-row input[type="file"] { max-width: 100%; }
         .file-name { color: #888; font-size: 0.85rem; }
-        #regCategoryTable { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 12px 0 16px; }
-        #regCategoryTable th, #regCategoryTable td { border: 1px solid rgba(212,175,55,0.25); padding: 8px; text-align: left; }
-        #regCategoryTable th { background: rgba(212,175,55,0.1); color: var(--primary-gold); }
         #regInstructions { background: rgba(212,175,55,0.08); border: 1px solid rgba(212,175,55,0.35); border-radius: 8px; padding: 18px; margin-bottom: 24px; }
         body.register-page .reg-page { padding-top: 8px; }
+        .reg-back-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            margin-bottom: 18px; padding: 8px 14px;
+            background: transparent; border: 1px solid rgba(212,175,55,0.55);
+            color: var(--primary-gold); border-radius: 4px; cursor: pointer;
+            font-size: 0.9rem; font-weight: bold;
+        }
+        .reg-back-btn:hover { background: rgba(212,175,55,0.12); }
+        .reg-inline-link {
+            background: none; border: none; padding: 0; cursor: pointer;
+            font: inherit; color: var(--primary-gold);
+        }
+        .reg-inline-link.muted { color: #888; }
+        .reg-inline-link:hover { text-decoration: underline; }
     </style>
     <!-- SEO & Open Graph Tags -->
     <meta name="description" content="SexAppeal - The Architecture of Intimacy. Directorio exclusivo de acompañantes VIP y Living Treasures.">
@@ -64,8 +95,12 @@
                     <p style="font-size:0.95rem;line-height:1.5;">To ensure the safety and authenticity of our community, please complete every mandatory field and upload the three verification photos.</p>
                 </div>
 
+                <div style="text-align: center; margin-bottom: 25px;">
+        <img src="/SexAppeal_logo_black.png" alt="SexAppeal Logo" style="height: 70px; width: auto; background-color: #000; border-radius: 8px; padding: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.5);">
+    </div>
                 <form id="registerForm" novalidate>
                     <input type="hidden" id="regRole" value="professional">
+                    <button type="button" id="regBackToEntrance" class="reg-back-btn">&#8592; Back</button>
                     <div id="registerAlert" class="alert hidden"></div>
 
                     <div class="reg-block">
@@ -108,28 +143,26 @@
 
                     <div class="reg-block">
                         <h4>Address</h4>
-                        <div class="reg-grid-3">
-                            <div class="form-group">
+                        <div class="reg-address-row">
+                            <div class="form-group reg-field-street">
                                 <label for="regStreet">Street <span class="required-star">*</span></label>
                                 <input type="text" id="regStreet" class="reg-input" required>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group reg-field-short">
                                 <label for="regStreetNumber">Number <span class="required-star">*</span></label>
                                 <input type="text" id="regStreetNumber" class="reg-input" required inputmode="numeric">
                             </div>
-                            <div class="form-group">
+                            <div class="form-group reg-field-short">
                                 <label for="regFloor">Floor</label>
-                                <input type="text" id="regFloor" class="reg-input" inputmode="numeric">
+                                <input type="text" id="regFloor" class="reg-input" inputmode="numeric" maxlength="4">
                             </div>
-                        </div>
-                        <div class="reg-grid-2">
-                            <div class="form-group">
+                            <div class="form-group reg-field-short reg-field-dept">
                                 <label for="regApartment">Apartment</label>
-                                <input type="text" id="regApartment" class="reg-input">
+                                <input type="text" id="regApartment" class="reg-input" maxlength="4">
                             </div>
-                            <div class="form-group">
+                            <div class="form-group reg-field-short reg-field-post">
                                 <label for="regPostCode">Post Code</label>
-                                <input type="text" id="regPostCode" class="reg-input">
+                                <input type="text" id="regPostCode" class="reg-input" maxlength="8" inputmode="numeric">
                             </div>
                         </div>
                         <div class="reg-grid-2">
@@ -142,9 +175,6 @@
                                 <select id="regCity" class="reg-select" required><option value="">Loading...</option></select>
                             </div>
                         </div>
-                        <select id="regNeighborhood" name="neighborhood">
-        <option value="">Loading...</option>
-    </select>
                         <div class="form-group">
                             <label for="regOriginCountry">Country <span class="required-star">*</span></label>
                             <select id="regOriginCountry" class="reg-select" required>
@@ -165,7 +195,7 @@
                                 <input type="password" id="regPassword" class="reg-input" required minlength="6" autocomplete="new-password">
                             </div>
                         </div>
-                        <div class="reg-grid-2">
+                        <div class="reg-grid-3-equal">
                             <div class="form-group">
                                 <label for="regMobilePhone">Mobile phone <span class="required-star">*</span></label>
                                 <input type="tel" id="regMobilePhone" class="reg-input" required autocomplete="tel">
@@ -174,28 +204,10 @@
                                 <label for="regInstagram">Instagram</label>
                                 <input type="text" id="regInstagram" class="reg-input">
                             </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="regFacebook">Facebook</label>
-                            <input type="text" id="regFacebook" class="reg-input">
-                        </div>
-                    </div>
-
-                    <div class="reg-block">
-                        <h4>App Configuration</h4>
-                        <table id="regCategoryTable">
-                            <thead>
-                                <tr><th>Category</th><th>Alias</th><th>Monthly Price</th><th>Unit</th></tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                        <div class="form-group">
-                            <label for="regQuality">Category <span class="required-star">*</span></label>
-                            <select id="regQuality" class="reg-select" required></select>
-                        </div>
-                        <div class="form-group">
-                            <label>Specialties</label>
-                            <div id="regSpecialties"></div>
+                            <div class="form-group">
+                                <label for="regFacebook">Facebook</label>
+                                <input type="text" id="regFacebook" class="reg-input">
+                            </div>
                         </div>
                     </div>
 
@@ -221,10 +233,10 @@
                     <button type="submit" style="width:100%;margin-top:24px;padding:14px;font-weight:bold;">Submit Registration</button>
                 </form>
 
-                <p style="margin-top:20px;text-align:center;">
-                    Already registered? <a href="/login.html" style="color:var(--primary-gold);">Login here</a>
+                <p style="margin-top:20px;text-align:center;" data-skip-nav-return="1">
+                    Already registered? <button type="button" id="regLoginLink" class="reg-inline-link">Login here</button>
                     &nbsp;|&nbsp;
-                    <a href="/index.html" style="color:#888;">Back to entrance</a>
+                    <button type="button" id="regBackOrigin" class="reg-inline-link muted">Back</button>
                 </p>
             </div>
         </section>

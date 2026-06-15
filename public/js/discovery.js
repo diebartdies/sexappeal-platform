@@ -3,7 +3,6 @@ import { t, applyStaticTranslations, formatWorkingDays } from './i18n.js';
 import { getPendingApprovalBannerHtml } from './uiHelpers.js';
 import { navigateBack } from './ui.js';
 import { navigateWithReturn } from './navReturn.js';
-import { appPath } from './globals.js';
 import { renderSpecialtyDropdown } from './helpers.js';
 import { beginPageLoad, finishPageLoad, failPageLoad } from './dashboardShell.js';
 import {

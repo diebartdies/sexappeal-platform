@@ -216,6 +216,7 @@ body.has-global-topbar {
 
 .landing-page {
     padding-top: env(safe-area-inset-top);
+    overflow-x: auto;
 }
 
 #treasureContent h2.gold-text {

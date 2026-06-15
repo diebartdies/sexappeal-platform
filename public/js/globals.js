@@ -1,7 +1,6 @@
 // --- Global Constants ---
 export const BASE_ORIGIN = window.location.protocol === 'file:' ? 'http://localhost:5000' : window.location.origin;
 export const API_URL = `${BASE_ORIGIN}/api/v1`;
-export const GOOGLE_CLIENT_ID = 'YOUR_ACTUAL_GOOGLE_CLIENT_ID.apps.googleusercontent.com'; // <<< REPLACE THIS
 
 /** Known static pages — must not be treated as profile aliases under /perfil/ */
 export const APP_PAGES = new Set([

@@ -4,7 +4,6 @@ const sendEmail = require('../sendEmail');
 const crypto = require('crypto');
 const fs = require('fs');
 const ActivityLog = require('../models/ActivityLog');
-const { OAuth2Client } = require('google-auth-library');
 const Specialty = require('../models/Specialty');
 const { getProfessionalIdNumberError, normalizeProfessionalIdNumber } = require('../utils/idNumber');
 
@@ -39,7 +38,7 @@ exports.register = async (req, res, next) => {
       const required = [
         ['firstName', firstName], ['surname', surname], ['alias', alias], ['idNumber', idNumber],
         ['street', street], ['number', number], ['province', province], ['city', city],
-        ['originCountry', originCountry], ['mobilePhone', mobilePhone], ['quality', quality]
+        ['originCountry', originCountry], ['mobilePhone', mobilePhone]
       ];
       for (const [label, val] of required) {
         if (!val || !String(val).trim()) {
@@ -47,7 +46,7 @@ exports.register = async (req, res, next) => {
         }
       }
       const allowedQualities = ['Standard', 'Silver', 'Gold', 'Premium', 'Elite'];
-      if (!allowedQualities.includes(String(quality).trim())) {
+      if (quality && !allowedQualities.includes(String(quality).trim())) {
         return res.status(400).json({ success: false, error: 'Please select a valid category.' });
       }
       if (!req.files || req.files.length < 3) {
@@ -62,7 +61,7 @@ exports.register = async (req, res, next) => {
 
     const allowedQualities = ['Standard', 'Silver', 'Gold', 'Premium', 'Elite'];
     const selectedQuality = role === 'professional'
-      ? String(quality).trim()
+      ? (allowedQualities.includes(String(quality || '').trim()) ? String(quality).trim() : undefined)
       : (allowedQualities.includes(String(quality || '').trim()) ? String(quality).trim() : 'Standard');
     const evaluationQuality = role === 'professional'
       ? allowedQualities[Math.floor(Math.random() * allowedQualities.length)]
@@ -79,7 +78,7 @@ exports.register = async (req, res, next) => {
       measurements, height,
       whatsappNumber: mobilePhone ? String(mobilePhone).trim() : '',
       services: services ? services.split(',').map(s => s.trim()).filter(Boolean) : [],
-      desiredQuality: selectedQuality,
+      ...(selectedQuality ? { desiredQuality: selectedQuality } : {}),
       quality: evaluationQuality,
       isEvaluationPeriod: true
     } : undefined;
@@ -453,52 +452,6 @@ exports.resetPassword = async (req, res, next) => {
     sendTokenResponse(user, 200, res);
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
-  }
-};
-
-// @desc    Google Sign-in / Registration
-// @route   POST /api/v1/auth/google
-// @access  Public
-exports.googleAuth = async (req, res, next) => {
-  try {
-    const { token } = req.body;
-
-    if (!token) {
-      return res.status(400).json({ success: false, error: 'No Google token provided' });
-    }
-
-    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-    const ticket = await client.verifyIdToken({
-      idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-
-    let { email, name, email_verified } = ticket.getPayload();
-    if (email) email = email.toLowerCase().trim();
-
-    if (!email_verified) {
-      return res.status(400).json({ success: false, error: 'Google email is not verified' });
-    }
-
-    let user = await User.findOne({ email });
-
-    if (!user) {
-      // Automatically create a regular user (Client/Guest). 
-      // Professionals MUST use the standard form to submit verification IDs.
-      user = await User.create({
-        name,
-        email,
-        password: crypto.randomBytes(16).toString('hex'), // Secure random password
-        role: 'user',
-        isVerified: true, 
-        isEmailVerified: true,
-        verificationStatus: 'approved'
-      });
-    }
-
-    sendTokenResponse(user, 200, res);
-  } catch (error) {
-    res.status(400).json({ success: false, error: 'Google authentication failed: ' + error.message });
   }
 };
 

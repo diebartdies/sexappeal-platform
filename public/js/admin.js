@@ -5,7 +5,7 @@ import { beginDashboardLoad, finishDashboardLoad, failDashboardLoad } from './da
 import { renderSpecialtyDropdown, setupLocationDropdowns } from './helpers.js';
 import { addPhotoToGrid, openPendingConnectionsModal, bindProfessionalProfileForm, hideProfessionalPaymentOverlays, renderProfessionalMainDashboardShell, injectProfessionalDashboardGuides } from './professional.js';
 import { buildCategoryQueue, resetLazyCategoryLoader, startLazyCategoryLoader } from './lazyCategoryLoader.js';
-import { beginModalSession, endModalSession } from './navReturn.js';
+import { beginModalSession, endModalSession, navigateWithReturn } from './navReturn.js';
 
 const ADMIN_CATEGORY_ORDER = ['Elite', 'Premium', 'Gold', 'Silver', 'Standard', 'Uncategorized'];
 
@@ -1073,11 +1073,17 @@ export async function loadDashboard() {
                     <h2 class="gold-text">${t('Access Denied')}</h2>
                     <p style="margin-bottom: 25px;">${t('Please log in or register to access the dashboard.')}</p>
                     <div style="display: flex; gap: 15px; justify-content: center;">
-                        <button onclick="window.location.href='${appPath('login.html')}'">${t('Login')}</button>
-                        <button onclick="window.location.href='${appPath('register.html')}'" style="background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold);">${t('Register')}</button>
+                        <button type="button" id="dashGuestLogin">${t('Login')}</button>
+                        <button type="button" id="dashGuestRegister" style="background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold);">${t('Register')}</button>
                     </div>
                 </div>
             `;
+            content.querySelector('#dashGuestLogin')?.addEventListener('click', () => {
+                navigateWithReturn(appPath('login.html'));
+            });
+            content.querySelector('#dashGuestRegister')?.addEventListener('click', () => {
+                navigateWithReturn(appPath('register.html'));
+            });
             finishDashboardLoad('dashboardContent', 'loader');
             applyStaticTranslations(content);
         }

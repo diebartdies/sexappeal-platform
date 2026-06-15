@@ -2,7 +2,8 @@ import { BASE_ORIGIN, API_URL, appPath } from './globals.js';
 import { t } from './i18n.js';
 import {
     navigateBack as returnNavigateBack,
-    clearReturnStack
+    clearReturnStack,
+    logoutToEntrance
 } from './navReturn.js';
 
 export function navigateBack(fallback) {
@@ -186,8 +187,7 @@ export function initGlobalTopBar() {
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
                 localStorage.removeItem('is18Plus');
-                clearReturnStack();
-                window.location.href = appPath('index.html');
+                logoutToEntrance();
             }
         });
         userInfo.appendChild(topLogoutBtn);
@@ -219,7 +219,6 @@ export function initGlobalTopBar() {
     langSwitcher.appendChild(makeLangBtn('en', 'https://flagcdn.com/w40/us.png', 'English'));
 
     if (!isLoggedIn) {
-        const isLandingPage = !!document.getElementById('landing');
         const authLinks = document.createElement('div');
         authLinks.style.display = 'flex';
         authLinks.style.gap = '8px';
@@ -238,13 +237,11 @@ export function initGlobalTopBar() {
         registerLink.style.color = '#ccc';
         registerLink.style.textDecoration = 'none';
 
-        if (!isLandingPage) {
-            authLinks.appendChild(loginLink);
-            const sep = document.createElement('span');
-            sep.textContent = '/';
-            sep.style.color = '#666';
-            authLinks.appendChild(sep);
-        }
+        authLinks.appendChild(loginLink);
+        const sep = document.createElement('span');
+        sep.textContent = '/';
+        sep.style.color = '#666';
+        authLinks.appendChild(sep);
         authLinks.appendChild(registerLink);
 
         rightGroup.appendChild(authLinks);

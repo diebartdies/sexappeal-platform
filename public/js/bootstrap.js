@@ -19,6 +19,7 @@ function initRelativeLinkFixer() {
     document.addEventListener('click', (e) => {
         const link = e.target.closest('a[href]');
         if (!link) return;
+        if (link.closest('[data-skip-nav-return]')) return;
         const href = link.getAttribute('href');
         if (!href || href.startsWith('#') || /^(mailto:|javascript:)/i.test(href)) return;
         if (/^https?:\/\//i.test(href) && !href.includes(window.location.hostname)) return;
@@ -188,7 +189,7 @@ export function initBootstrap() {
             initProfessionalRegistration();
         }
 
-        if (document.getElementById('landing')) {
+        if (document.getElementById('landing') || document.getElementById('loginPage')) {
             const landingStyles = document.createElement('style');
             landingStyles.textContent = `
             .landing-page header { display: none !important; }
@@ -196,7 +197,7 @@ export function initBootstrap() {
         `;
             document.head.appendChild(landingStyles);
 
-            if (hasToken) {
+            if (document.getElementById('landing') && hasToken) {
                 const intended = sessionStorage.getItem('intended_destination');
                 if (intended) {
                     sessionStorage.removeItem('intended_destination');

@@ -1,10 +1,25 @@
-import { API_URL, BASE_ORIGIN, GOOGLE_CLIENT_ID, appPath } from './globals.js';
+import { API_URL, BASE_ORIGIN, appPath } from './globals.js';
 import { showAlert } from './uiHelpers.js';
 import { t, applyStaticTranslations } from './i18n.js';
 import { openInlinePasswordRecovery, initRecoverPage, bindForgotPasswordTriggers } from './passwordRecovery.js';
-import { pushReturnPoint, clearReturnStack } from './navReturn.js';
+import { pushReturnPoint, logoutToEntrance } from './navReturn.js';
+import { needsProfessionalCategorySetup } from './professionalSetup.js';
 
-function redirectAfterLogin(user) {
+function whenDomReady(fn) {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', fn);
+    } else {
+        fn();
+    }
+}
+
+function revealLoginAlert(alert) {
+    if (!alert) return;
+    alert.classList.remove('hidden');
+    alert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function redirectAfterLogin(user = {}) {
     let intended = sessionStorage.getItem('intended_destination');
     sessionStorage.removeItem('intended_destination');
 
@@ -15,7 +30,7 @@ function redirectAfterLogin(user) {
     if (intended) {
         window.location.replace(intended);
     } else if (user.role === 'professional') {
-        if (user.allowResubmission) {
+        if (user.allowResubmission || needsProfessionalCategorySetup(user)) {
             window.location.replace(appPath('profDashboard.html'));
         } else if (user.professionalProfile?.alias) {
             window.location.replace('/perfil/' + encodeURIComponent(user.professionalProfile.alias));
@@ -82,16 +97,33 @@ function showLoginFailure(alert, data, email) {
     }
 
     showAlert(alert, t(data.error || 'Access Denied'));
+    revealLoginAlert(alert);
 }
 
 async function submitLoginForm(e) {
     e.preventDefault();
+    const form = e.currentTarget;
     const email = document.getElementById('email')?.value.trim();
     const password = document.getElementById('password')?.value;
     const alert = document.getElementById('loginAlert');
+    const submitBtn = form?.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn?.textContent;
+
+    if (!email || !password) {
+        showAlert(alert, t('Please provide an email and password'));
+        revealLoginAlert(alert);
+        return;
+    }
+
     if (alert) {
         alert.textContent = '';
         alert.innerHTML = '';
+        alert.classList.add('hidden');
+    }
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = t('Submitting...');
     }
 
     try {
@@ -100,95 +132,53 @@ async function submitLoginForm(e) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
         });
-        const data = await res.json();
-        if (data.success) {
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('is18Plus', 'true');
-            sessionStorage.setItem('valid_entry', 'true');
-            if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
-            redirectAfterLogin(data.user);
-        } else if (data.error && data.error.includes('verify your email')) {
-            window.location.href = `${appPath('verify.html')}?email=${encodeURIComponent(email)}`;
-        } else {
-            showLoginFailure(alert, data, email);
-        }
-    } catch (err) {
-        showAlert(alert, t('Server connection error'));
-    }
-}
 
-export function injectGoogleLogin(container) {
-    if (!container) return;
-    
-    if (!document.getElementById('google-jssdk')) {
-        const script = document.createElement('script');
-        script.id = 'google-jssdk';
-        script.src = 'https://accounts.google.com/gsi/client';
-        script.async = true;
-        script.defer = true;
-        document.head.appendChild(script);
-    }
-
-    const wrapper = document.createElement('div');
-    wrapper.id = 'googleSignInWrapper';
-    wrapper.style.marginBottom = '20px';
-    wrapper.style.display = 'flex';
-    wrapper.style.justifyContent = 'center';
-    
-    container.parentNode.insertBefore(wrapper, container);
-
-    window.handleGoogleCallback = async (response) => {
+        let data;
         try {
-            const res = await fetch(`${API_URL}/auth/google`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token: response.credential })
-            });
-            const data = await res.json();
-            if (data.success) {
+            data = await res.json();
+        } catch {
+            showAlert(alert, t('Server connection error'));
+            revealLoginAlert(alert);
+            return;
+        }
+
+        if (data.success && data.token) {
+            try {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('is18Plus', 'true');
                 sessionStorage.setItem('valid_entry', 'true');
                 if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
-                
-                let intended = sessionStorage.getItem('intended_destination');
-                sessionStorage.removeItem('intended_destination');
-
-                // Prevent regular users from being forced into the dashboard by a stale intended_destination
-                if (intended && intended.includes('dashboard.html') && data.user.role === 'user') {
-                    intended = null;
-                }
-
-                if (intended) {
-                    window.location.replace(intended);
-                } else if (data.user.role === 'professional') {
-                    window.location.replace('/perfil/' + encodeURIComponent(data.user.professionalProfile?.alias || ''));
-                } else if (data.user.role === 'admin') {
-                    window.location.replace('/dashboard.html');
-                } else {
-                    window.location.replace('/categories.html');
-                }
-            } else {
-                showAlert(document.getElementById('loginAlert'), t(data.error || 'Google login failed'));
+            } catch (storageErr) {
+                console.warn('[Login] Storage unavailable:', storageErr);
             }
-        } catch (err) {
-            showAlert(document.getElementById('loginAlert'), t('Server connection error'));
+            redirectAfterLogin(data.user || {});
+            return;
         }
-    };
 
-    const checkGoogle = setInterval(() => {
-        if (window.google) {
-            clearInterval(checkGoogle);
-            window.google.accounts.id.initialize({
-                client_id: GOOGLE_CLIENT_ID,
-                callback: window.handleGoogleCallback
-            });
-            window.google.accounts.id.renderButton(
-                document.getElementById('googleSignInWrapper'),
-                { theme: 'outline', size: 'large', width: container.offsetWidth || 300 }
-            );
+        if (data.error && String(data.error).toLowerCase().includes('verify your email')) {
+            window.location.href = `${appPath('verify.html')}?email=${encodeURIComponent(email)}`;
+            return;
         }
-    }, 100);
+
+        showLoginFailure(alert, data, email);
+        revealLoginAlert(alert);
+    } catch (err) {
+        console.error('[Login]', err);
+        showAlert(alert, t('Server connection error'));
+        revealLoginAlert(alert);
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalBtnText || t('Enter Sanctuary');
+        }
+    }
+}
+
+function bindLoginFormOnce() {
+    const loginForm = document.getElementById('loginForm');
+    if (!loginForm || loginForm.dataset.authBound === '1') return;
+    loginForm.dataset.authBound = '1';
+    loginForm.addEventListener('submit', submitLoginForm);
 }
 
 const LANDING_ENTER_LABEL = 'I AM +18 - ENTER';
@@ -202,98 +192,83 @@ export function resetLandingEnterButton() {
     btn.disabled = false;
 }
 
-export function setupLandingPageAgeGate() {
-window.addEventListener('pageshow', () => {
-    if (!document.getElementById('landing')) return;
-    document.documentElement.classList.remove('page-pending');
-    resetLandingEnterButton();
-    applyStaticTranslations(document.getElementById('landing') || document.body);
-});
-
-// Runs in the "Capture" phase to override ANY inline onclick attributes (e.g. onclick="window.location...")
-// that might be redirecting the page before the JS age-gate token is safely saved.
-document.addEventListener('click', (e) => {
-    const path = window.location.pathname;
-    if (path.endsWith('/') || path.endsWith('index.html')) {
-        let btn = e.target.closest('button, a, [class*="btn"], [id*="btn"], [onclick]');
-        
-        // Fallback: Catch clicks on custom text wrappers like <div>I AM +18 - ENTER</div>
-        if (!btn && e.target.textContent) {
-            const t = e.target.textContent.toLowerCase();
-            if (t.includes('18') || t.includes('enter') || t.includes('entrar')) {
-                btn = e.target;
-            }
-        }
-
-        if (!btn) return;
-
-        const text = (btn.textContent || '').toLowerCase();
-        const href = (btn.getAttribute('href') || '').toLowerCase();
-        const onclickAttr = (btn.getAttribute('onclick') || '').toLowerCase();
-        
-        // Explicitly ignore Login and Register links so they continue to work natively
-        if (href.includes('login') || href.includes('register') || href.includes('recover') ||
-            text.includes('login') || text.includes('register') || text.includes('iniciar') ||
-            text.includes('registrarse') || text.includes('forgot') || text.includes('olvid') ||
-            btn.closest('#loginForm') || btn.closest('.landing-login-card')) {
-            return;
-        }
-
-        const isEnterBtn = btn.id === 'btn-enter' || btn.id === 'btn-18-plus' || btn.id === 'btn-18' ||
-                           text.includes('18') || text.includes('enter') || text.includes('entrar') || text.includes('i am +18') ||
-                           href.includes('categories.html') || onclickAttr.includes('categories.html') || onclickAttr.includes('location.href');
-                           
-        if (isEnterBtn) {
-            e.preventDefault();
-            e.stopImmediatePropagation(); // Crucial: Stops any inline HTML onclick from firing
-
-            if (window.location.protocol === 'file:') {
-                alert(`ERROR: You must open the site via a local server (e.g., ${BASE_ORIGIN}). The buttons will not work if you double-click the HTML file!`);
-                return;
-            }
-
-            // Only alter text if the button isn't exclusively an image/SVG
-            if (!btn.innerHTML.includes('<img') && !btn.innerHTML.includes('<svg')) {
-                btn.textContent = t('Entering...');
-            }
-            btn.style.pointerEvents = 'none';
-            btn.style.opacity = '0.7';
-
-            localStorage.setItem('is18Plus', 'true');
-            sessionStorage.setItem('ancestor_code', 'index.html');
-            sessionStorage.setItem('valid_entry', 'true');
-
-            const intended = sessionStorage.getItem('intended_destination');
-            if (intended) {
-                sessionStorage.removeItem('intended_destination');
-                pushReturnPoint();
-                window.location.href = intended;
-            } else {
-                const targetUrl = (btn.getAttribute('href') && btn.getAttribute('href') !== '#' && !href.startsWith('javascript'))
-                    ? appPath(btn.getAttribute('href'))
-                    : appPath('categories.html');
-                pushReturnPoint();
-                window.location.href = targetUrl;
-            }
-        }
-        
-        const isExitBtn = btn.id === 'btn-exit' || text.includes('exit') || text.includes('salir') || href.includes('google.com');
-        if (isExitBtn) {
-            e.preventDefault();
-            e.stopImmediatePropagation();
-            window.location.href = 'https://www.google.com';
-        }
+function handleAgeGateEnter(btn) {
+    if (window.location.protocol === 'file:') {
+        alert(`ERROR: You must open the site via a local server (e.g., ${BASE_ORIGIN}). The buttons will not work if you double-click the HTML file!`);
+        return;
     }
-}, true); // <-- The "true"
+
+    btn.disabled = true;
+    btn.textContent = t('Entering...');
+    btn.style.opacity = '0.7';
+
+    try {
+        localStorage.setItem('is18Plus', 'true');
+        sessionStorage.setItem('ancestor_code', 'index.html');
+        sessionStorage.setItem('valid_entry', 'true');
+    } catch (err) {
+        console.warn('[Age gate] Storage unavailable:', err);
+    }
+
+    const intended = sessionStorage.getItem('intended_destination');
+    let targetUrl = appPath('categories.html');
+    if (intended) {
+        sessionStorage.removeItem('intended_destination');
+        targetUrl = intended;
+    }
+
+    try {
+        pushReturnPoint();
+    } catch (err) {
+        console.warn('[Age gate] Could not save return point:', err);
+    }
+
+    window.location.assign(targetUrl);
+}
+
+function bindAgeGateButtons() {
+    const enterBtn = document.getElementById('btn-enter');
+    const exitBtn = document.getElementById('btn-exit');
+
+    if (enterBtn && enterBtn.dataset.bound !== '1') {
+        enterBtn.dataset.bound = '1';
+        enterBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            handleAgeGateEnter(enterBtn);
+        });
+    }
+
+    if (exitBtn && exitBtn.dataset.bound !== '1') {
+        exitBtn.dataset.bound = '1';
+        exitBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = 'https://www.google.com';
+        });
+    }
+}
+
+export function setupLandingPageAgeGate() {
+    window.addEventListener('pageshow', () => {
+        if (!document.getElementById('landing')) return;
+        document.documentElement.classList.remove('page-pending');
+        resetLandingEnterButton();
+        applyStaticTranslations(document.getElementById('landing') || document.body);
+    });
+
+    whenDomReady(() => {
+        if (!document.getElementById('landing')) return;
+        bindAgeGateButtons();
+    });
 }
 
 export function initAuthForms() {
-document.addEventListener('DOMContentLoaded', () => {
-    const loginForm = document.getElementById('loginForm');
-    if (loginForm) {
+    whenDomReady(() => {
+        bindLoginFormOnce();
+
+        const loginForm = document.getElementById('loginForm');
         const isDedicatedLoginPage = window.location.pathname.endsWith('login.html');
 
-        if (isDedicatedLoginPage) {
+        if (loginForm && isDedicatedLoginPage) {
             const blogReminder = document.createElement('div');
             blogReminder.innerHTML = `
                 <p style="text-align: center; color: var(--primary-gold); background-color: rgba(212, 175, 55, 0.1); padding: 10px; border-radius: 4px; border: 1px solid var(--primary-gold); margin-bottom: 20px;">
@@ -301,19 +276,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 </p>
             `;
             loginForm.parentNode.insertBefore(blogReminder, loginForm);
-            injectGoogleLogin(loginForm);
         }
 
-        loginForm.addEventListener('submit', submitLoginForm);
-    }
+        document.getElementById('landingFocusLogin')?.addEventListener('click', () => {
+            document.getElementById('email')?.focus();
+        });
 
-    document.getElementById('landingFocusLogin')?.addEventListener('click', () => {
-        document.getElementById('email')?.focus();
+        bindForgotPasswordTriggers();
+        initRecoverPage();
     });
-
-    bindForgotPasswordTriggers();
-    initRecoverPage();
-});
 }
 
 // Register — handled in registerProfessional.js
@@ -362,7 +333,13 @@ if (verifyForm) {
                 if (intended) {
                     window.location.replace(intended);
                 } else if (data.user.role === 'professional') {
-                    window.location.replace('/profDashboard.html');
+                    if (needsProfessionalCategorySetup(data.user)) {
+                        window.location.replace(appPath('profDashboard.html'));
+                    } else if (data.user.professionalProfile?.alias) {
+                        window.location.replace('/perfil/' + encodeURIComponent(data.user.professionalProfile.alias));
+                    } else {
+                        window.location.replace(appPath('profDashboard.html'));
+                    }
                 } else if (data.user.role === 'admin') {
                     window.location.replace('/dashboard.html');
                 } else {
@@ -400,8 +377,7 @@ if (logoutBtn) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             localStorage.removeItem('is18Plus');
-            clearReturnStack();
-            window.location.href = appPath('index.html');
+            logoutToEntrance();
         }
     });
 }

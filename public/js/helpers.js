@@ -115,7 +115,7 @@ export async function renderSpecialtyDropdown(containerId, preselectedServices =
 export async function setupLocationDropdowns(provinceId, cityId, neighborhoodId, isFilter = false, prefillData = {}) {
     const provinceEl = document.getElementById(provinceId);
     let cityEl = document.getElementById(cityId);
-    let neighborhoodEl = document.getElementById(neighborhoodId);
+    let neighborhoodEl = neighborhoodId ? document.getElementById(neighborhoodId) : null;
 
     if (!provinceEl || provinceEl.tagName !== 'SELECT') return;
 
@@ -210,7 +210,7 @@ export async function setupLocationDropdowns(provinceId, cityId, neighborhoodId,
     const loadSublocations = async () => {
         // Re-fetch elements in case they were morphed by previous selections
         cityEl = document.getElementById(cityId);
-        neighborhoodEl = document.getElementById(neighborhoodId);
+        neighborhoodEl = neighborhoodId ? document.getElementById(neighborhoodId) : null;
 
         const provinceName = (provinceEl.value || '').trim();
         const isCaba = provinceName.toLowerCase() === 'caba';

@@ -1,14 +1,13 @@
-import { API_URL, appPath, CATEGORY_META, VERIFICATION_GESTURES } from './globals.js';
+import { API_URL, appPath, VERIFICATION_GESTURES } from './globals.js';
 import { showAlert } from './uiHelpers.js';
 import { t, applyStaticTranslations } from './i18n.js';
 import { setupLocationDropdowns } from './helpers.js';
+import { navigateWithReturn, returnToOrigin } from './navReturn.js';
 import {
     getProfessionalIdNumberError,
     normalizeProfessionalIdNumber,
     setupProfessionalIdNumberInput
 } from './idNumber.js';
-
-const REG_SPECIALTIES = ['Love Alchemy', 'Massage', 'Virtual Connection', 'Media Content', 'Streaming Kisses'];
 
 const COUNTRIES = [
     'Afghanistan', 'Albania', 'Algeria', 'Argentina', 'Australia', 'Austria', 'Belgium', 'Bolivia', 'Brazil',
@@ -29,10 +28,6 @@ function calcAge(birthDateStr) {
     const m = today.getMonth() - dob.getMonth();
     if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
     return age;
-}
-
-function formatPrice(amount) {
-    return `$${Number(amount).toLocaleString('es-AR')}.-`;
 }
 
 function highlightField(el, on = true) {
@@ -69,6 +64,63 @@ function setRegLabel(forId, key, required = false) {
         star.className = 'required-star';
         star.textContent = '*';
         label.appendChild(star);
+    }
+}
+
+function registrationFormHasChanges(form) {
+    if (!form) return false;
+    const fields = form.querySelectorAll('input:not([type="file"]):not([type="hidden"]), select, textarea');
+    for (const el of fields) {
+        if (String(el.value || '').trim()) return true;
+    }
+    for (const el of form.querySelectorAll('input[type="file"]')) {
+        if (el.files?.length) return true;
+    }
+    return false;
+}
+
+function confirmLeaveRegistration(form) {
+    if (!registrationFormHasChanges(form)) return true;
+    return confirm(t('Registration is not finished. If you leave now, your changes will be lost. Continue?'));
+}
+
+function leaveRegistration(onLeave) {
+    const form = document.getElementById('registerForm');
+    if (!confirmLeaveRegistration(form)) return;
+    if (typeof onLeave === 'function') {
+        onLeave();
+        return;
+    }
+    returnToOrigin(() => { window.location.href = appPath('index.html'); });
+}
+
+function setupRegistrationLeaveGuard(form) {
+    const backBtn = document.getElementById('regBackToEntrance');
+    if (backBtn) {
+        backBtn.textContent = `\u2190 ${t('Back')}`;
+        backBtn.onclick = () => leaveRegistration();
+    }
+
+    document.getElementById('regLoginLink')?.addEventListener('click', () => {
+        leaveRegistration(() => {
+            navigateWithReturn(appPath('login.html'));
+        });
+    });
+
+    document.getElementById('regBackOrigin')?.addEventListener('click', () => {
+        leaveRegistration();
+    });
+
+    const topBack = document.querySelector('.left-group-back');
+    if (topBack && !topBack.dataset.regLeaveBound) {
+        topBack.dataset.regLeaveBound = '1';
+        topBack.onclick = () => leaveRegistration();
+    }
+
+    const brandLogo = document.querySelector('.brand-logo');
+    if (brandLogo && !brandLogo.dataset.regLeaveBound) {
+        brandLogo.dataset.regLeaveBound = '1';
+        brandLogo.onclick = () => leaveRegistration();
     }
 }
 
@@ -109,24 +161,20 @@ function applyRegistrationPageLabels() {
     setRegLabel('regMobilePhone', 'Mobile phone', true);
     setRegLabel('regInstagram', 'Instagram');
     setRegLabel('regFacebook', 'Facebook');
-    setRegLabel('regQuality', 'Category', true);
     setRegLabel('regIdPhotoFront', 'Photo of your ID (Front)', true);
     setRegLabel('regIdPhotoBack', 'Photo of your ID (Back)', true);
     setRegLabel('regSelfiePhoto', 'Selfie holding your ID', true);
 
-    const specialtiesLabel = document.querySelector('#regSpecialties')?.closest('.form-group')?.querySelector('label:not([for])');
-    if (specialtiesLabel) specialtiesLabel.textContent = t('Specialties');
-
-    document.querySelectorAll('#regCategoryTable th').forEach((th) => {
-        th.textContent = t(th.textContent.trim());
-    });
+    const backBtn = document.getElementById('regBackToEntrance');
+    if (backBtn) backBtn.textContent = `\u2190 ${t('Back')}`;
 
     const submitBtn = document.querySelector('#registerForm button[type="submit"]');
     if (submitBtn) submitBtn.textContent = t('Submit Registration');
 
     const footer = main.querySelector('.card > p:last-of-type');
     if (footer) {
-        footer.innerHTML = `${t('Already registered?')} <a href="/login.html" style="color:var(--primary-gold);">${t('Login here')}</a> &nbsp;|&nbsp; <a href="/index.html" style="color:#888;">${t('Back to entrance')}</a>`;
+        footer.setAttribute('data-skip-nav-return', '1');
+        footer.innerHTML = `${t('Already registered?')} <button type="button" id="regLoginLink" class="reg-inline-link">${t('Login here')}</button> &nbsp;|&nbsp; <button type="button" id="regBackOrigin" class="reg-inline-link muted">${t('Back')}</button>`;
     }
 }
 
@@ -170,7 +218,7 @@ function setupBirthDateField() {
         if (age !== null && age < 18) {
             highlightField(input, true);
             showUnderageModal(
-                () => { window.location.href = appPath('index.html'); },
+                () => returnToOrigin(() => { window.location.href = appPath('index.html'); }),
                 () => { input.value = ''; input.focus(); }
             );
         }
@@ -182,51 +230,6 @@ function setupCountrySelect() {
     if (!sel) return;
     const placeholder = `<option value="">${t('Select country...')}</option>`;
     sel.innerHTML = placeholder + COUNTRIES.map((c) => `<option value="${c}">${c}</option>`).join('');
-}
-
-function setupCategoryBlock() {
-    const sel = document.getElementById('regQuality');
-    const tbody = document.querySelector('#regCategoryTable tbody');
-    if (!sel || !tbody) return;
-
-    const order = ['Elite', 'Premium', 'Gold', 'Silver', 'Standard'];
-    sel.innerHTML = `<option value="">${t('Select a category...')}</option>` + order.map((key) => {
-        const meta = CATEGORY_META[key];
-        return `<option value="${key}">${t(meta.name)} (${meta.alias})</option>`;
-    }).join('');
-
-    const renderTable = (pricing = {}) => {
-        tbody.innerHTML = order.map((key) => {
-            const meta = CATEGORY_META[key];
-            const price = pricing[key] ?? meta.monthlyPrice;
-            return `<tr>
-                <td>${t(meta.name)}</td>
-                <td>${meta.alias}</td>
-                <td>${formatPrice(price)}</td>
-                <td>${meta.priceUnit || 'ARS'}</td>
-            </tr>`;
-        }).join('');
-    };
-
-    renderTable();
-    fetch(`${API_URL}/public/category-pricing`)
-        .then((r) => r.json())
-        .then((data) => { if (data.success && data.data) renderTable(data.data); })
-        .catch(() => {});
-}
-
-function setupSpecialtyCheckboxes() {
-    const host = document.getElementById('regSpecialties');
-    if (!host) return;
-    host.innerHTML = REG_SPECIALTIES.map((name) => `
-        <label class="reg-check-label">
-            <input type="checkbox" class="reg-specialty-cb" value="${name}"> ${t(name)}
-        </label>
-    `).join('');
-}
-
-function getSelectedSpecialties() {
-    return Array.from(document.querySelectorAll('.reg-specialty-cb:checked')).map((cb) => cb.value);
 }
 
 function validateRegistrationForm(form) {
@@ -245,7 +248,6 @@ function validateRegistrationForm(form) {
         { id: 'regEmail', label: t('Email') },
         { id: 'regPassword', label: t('Password') },
         { id: 'regMobilePhone', label: t('Mobile phone') },
-        { id: 'regQuality', label: t('Category') },
         { id: 'regIdPhotoFront', label: t('ID Front photo'), type: 'file' },
         { id: 'regIdPhotoBack', label: t('ID Back photo'), type: 'file' },
         { id: 'regSelfiePhoto', label: t('Selfie photo'), type: 'file' }
@@ -266,7 +268,7 @@ function validateRegistrationForm(form) {
     if (age !== null && age < 18) {
         highlightField(document.getElementById('regBirthDate'), true);
         showUnderageModal(
-            () => { window.location.href = appPath('index.html'); },
+            () => returnToOrigin(() => { window.location.href = appPath('index.html'); }),
             () => { document.getElementById('regBirthDate').focus(); }
         );
         return false;
@@ -299,7 +301,7 @@ function setupInstructions() {
             <li>${t('Fill in your identity and contact details exactly as shown on your ID.')}</li>
             <li>${t('Upload clear photos of your ID (front and back).')}</li>
             <li>${t('Upload a selfie holding your ID next to your face while performing this hand position:')} <strong>${assignedGesture.emoji} ${t(assignedGesture.labelKey)}</strong></li>
-            <li>${t('Choose your category and specialties. Monthly pricing applies from next month onward.')}</li>
+            <li>${t('After admin approval, sign in and choose your category, specialties, bio, and photos from your professional dashboard.')}</li>
         </ol>
         <div id="regEmailSpamWarning" style="margin-top:14px;padding:12px;background:rgba(255,193,7,0.12);border:1px solid #ffc107;border-radius:6px;">
             <strong style="color:#ffc107;">⚠️ ${t('Important — check your email')}</strong>
@@ -321,14 +323,7 @@ export function initProfessionalRegistration() {
         idHint.textContent = t('ID Number format hint');
     }
     setupCountrySelect();
-    setupCategoryBlock();
-    setupSpecialtyCheckboxes();
-    setupLocationDropdowns('regProvince', 'regCity', 'regNeighborhood', false, {});
-    const cityEl = document.getElementById('regCity');
-    const neighEl = document.getElementById('regNeighborhood');
-    if (cityEl && neighEl) {
-        cityEl.addEventListener('change', () => { neighEl.value = cityEl.value; });
-    }
+    setupLocationDropdowns('regProvince', 'regCity', '', false, {});
 
     bindFileInput('regIdPhotoFront', 'regIdPhotoFrontLabel');
     bindFileInput('regIdPhotoBack', 'regIdPhotoBackLabel');
@@ -356,10 +351,9 @@ export function initProfessionalRegistration() {
         formData.append('alias', document.getElementById('regAlias').value.trim());
         formData.append('idNumber', normalizeProfessionalIdNumber(document.getElementById('regIdNumber').value));
         formData.append('birthDate', document.getElementById('regBirthDate').value);
-        formData.append('quality', document.getElementById('regQuality').value);
         formData.append('province', document.getElementById('regProvince').value);
         formData.append('city', document.getElementById('regCity').value);
-        formData.append('neighborhood', document.getElementById('regNeighborhood')?.value || document.getElementById('regCity').value);
+        formData.append('neighborhood', document.getElementById('regCity').value);
         formData.append('street', document.getElementById('regStreet').value.trim());
         formData.append('number', document.getElementById('regStreetNumber').value.trim());
         formData.append('floor', document.getElementById('regFloor').value.trim());
@@ -369,7 +363,6 @@ export function initProfessionalRegistration() {
         formData.append('mobilePhone', document.getElementById('regMobilePhone').value.trim());
         formData.append('instagram', document.getElementById('regInstagram').value.trim());
         formData.append('facebook', document.getElementById('regFacebook').value.trim());
-        formData.append('services', getSelectedSpecialties().join(','));
         formData.append('verificationDocuments', document.getElementById('regIdPhotoFront').files[0]);
         formData.append('verificationDocuments', document.getElementById('regIdPhotoBack').files[0]);
         formData.append('verificationDocuments', document.getElementById('regSelfiePhoto').files[0]);
@@ -393,4 +386,5 @@ export function initProfessionalRegistration() {
 
     applyStaticTranslations(form);
     applyRegistrationPageLabels();
+    setupRegistrationLeaveGuard(form);
 }

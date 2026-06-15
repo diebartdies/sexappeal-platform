@@ -4,7 +4,13 @@ import { t, applyStaticTranslations } from './i18n.js';
 import { renderSpecialtyDropdown, setupLocationDropdowns } from './helpers.js';
 import { beginDashboardLoad, finishDashboardLoad, failDashboardLoad } from './dashboardShell.js';
 import { navigateBack } from './ui.js';
+import { logoutToEntrance } from './navReturn.js';
 import { beginModalSession, endModalSession } from './navReturn.js';
+import {
+    buildQualitySelectOptions,
+    loadCategoryPricingTable,
+    needsProfessionalCategorySetup
+} from './professionalSetup.js';
 
 export function hideProfessionalPaymentOverlays() {
     const overlays = document.getElementById('dashboardOverlays');
@@ -113,7 +119,7 @@ export function injectProfessionalDashboardGuides(content, data, insertRef) {
             <h3 class="gold-text" style="margin-bottom: 15px;">📖 ${t('Welcome Guide & How It Works')}</h3>
             <ul style="line-height: 1.6; color: #ccc; margin-left: 20px; font-size: 0.95rem;">
                 <li style="margin-bottom: 10px;"><strong>${t('Free evaluation month:')}</strong> ${t('Your first 30 days are free. During this period your profile appears in a random category so you can experience how visibility works.')}</li>
-                <li style="margin-bottom: 10px;"><strong>${t('Your chosen category:')}</strong> ${t('After your first paid month is validated by Admin, you move to the category you selected at registration and pay that rate.')}</li>
+                <li style="margin-bottom: 10px;"><strong>${t('Your chosen category:')}</strong> ${t('After approval, choose your category and specialties in your professional dashboard. After your first validated payment, you move to that category rate.')}</li>
                 <li style="margin-bottom: 10px;"><strong>${t('Vacations:')}</strong> ${t('While on vacation your profile shows as inactive. Up to 15 vacation days per month are discounted from your monthly balance.')}</li>
                 <li style="margin-bottom: 10px;"><strong>${t('Monthly payment:')}</strong> ${t('Use Pago mensual to upload your receipt. Tap Cómo pagar for transfer details.')}</li>
                 <li style="margin-bottom: 10px;"><strong>${t('Privacy Guarantee:')}</strong> ${t('Our platform uses zero cookies and zero third-party trackers. Your identity and client interactions remain completely confidential.')}</li>
@@ -447,9 +453,24 @@ export function bindProfessionalProfileForm() {
             if (data.success && photosDirty) {
                 photosDirty = false;
             }
+            let justFinishedCategorySetup = false;
+            if (data.success && data.data) {
+                localStorage.setItem('user', JSON.stringify(data.data));
+                if (window.profNeedsCategorySetup && !needsProfessionalCategorySetup(data.data)) {
+                    justFinishedCategorySetup = true;
+                    window.profNeedsCategorySetup = false;
+                    document.getElementById('profSetupBanner')?.remove();
+                    const personalSection = document.getElementById('profPersonalInfoSection');
+                    if (personalSection) personalSection.style.boxShadow = '';
+                }
+            }
             if (!silent) {
                 if (data.success) {
-                    showAlert(alertEl, 'Profile updated successfully!', false);
+                    if (justFinishedCategorySetup) {
+                        showAlert(alertEl, t('Category and specialties saved. Continue completing your profile below.'), false);
+                    } else {
+                        showAlert(alertEl, 'Profile updated successfully!', false);
+                    }
                 } else {
                     showAlert(alertEl, data.error || 'Update failed');
                 }
@@ -983,7 +1004,7 @@ function setupDeleteProfileUI() {
                     localStorage.removeItem('token');
                     localStorage.removeItem('user');
                     localStorage.removeItem('is18Plus');
-                    window.location.href = appPath('index.html');
+                    logoutToEntrance();
                 }
                 return;
             }
@@ -1026,6 +1047,8 @@ export async function loadProfDashboard() {
             const stats = data.stats || { photoCount: 0, whatsappcCount: 0, callCount: 0 };
             const isApproved = user.verificationStatus === 'approved';
             const allowResubmission = user.allowResubmission === true;
+            const needsCategorySetup = needsProfessionalCategorySetup(user);
+            window.profNeedsCategorySetup = needsCategorySetup;
 
             let statusBannerHtml = '';
             if (allowResubmission) {
@@ -1053,6 +1076,13 @@ export async function loadProfDashboard() {
             formObj.style.margin = '0 auto';
 
             const safeBio = String(prof.bio || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+            const qualitySelectOptions = buildQualitySelectOptions(prof);
+            const setupBannerHtml = needsCategorySetup ? `
+                <div id="profSetupBanner" class="card fileteado-section" style="margin-bottom: 20px; border: 2px solid var(--primary-gold); background: rgba(212,175,55,0.08);">
+                    <h3 class="gold-text" style="margin-top: 0;">${t('Complete your profile setup')}</h3>
+                    <p style="color: #ddd; line-height: 1.55; margin-bottom: 0;">${t('Choose your category and at least one specialty below. You can also complete your bio, address, availability, and photos on this page before saving.')}</p>
+                </div>
+            ` : '';
 
             formObj.innerHTML = `
                 <div class="prof-dash-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -1063,6 +1093,7 @@ export async function loadProfDashboard() {
                 </div>
 
                 ${statusBannerHtml}
+                ${setupBannerHtml}
                 ${resubmitSectionHtml}
                 
                 <!-- 1. Statistics Top Frame -->
@@ -1086,7 +1117,7 @@ export async function loadProfDashboard() {
                 <input type="hidden" id="upFacebook" value="${prof.facebook || ''}">
 
                 <!-- 2. Personal Information -->
-                <div class="card fileteado-section" style="margin-bottom: 20px; border: 1px solid var(--primary-gold);">
+                <div id="profPersonalInfoSection" class="card fileteado-section" style="margin-bottom: 20px; border: 1px solid var(--primary-gold);${needsCategorySetup ? ' box-shadow: 0 0 0 2px rgba(212,175,55,0.35);' : ''}">
                     <h3 class="gold-text" style="margin-bottom: 15px;">Personal Information</h3>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
                         <div style="flex: 1; min-width: 150px;"><label>Name</label><input type="text" id="upFirstName" value="${prof.firstName || ''}" style="width: 100%; padding: 8px; background: #333; color: #888; border: 1px solid #444; border-radius: 4px;" disabled></div>
@@ -1100,18 +1131,28 @@ export async function loadProfDashboard() {
                         <div style="flex: 1; min-width: 150px;"><label>Measures</label><input type="text" id="upMeasurements" value="${prof.measurements || ''}" style="width: 100%; padding: 8px; background: #333; color: #888; border: 1px solid #444; border-radius: 4px;" disabled></div>
                     </div>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 100%;">
+                            <label>${t('Category pricing')}</label>
+                            <table id="profCategoryTable" style="width:100%;border-collapse:collapse;font-size:0.85rem;margin:10px 0 16px;">
+                                <thead>
+                                    <tr>
+                                        <th style="border:1px solid rgba(212,175,55,0.25);padding:8px;background:rgba(212,175,55,0.1);color:var(--primary-gold);text-align:left;">${t('Category')}</th>
+                                        <th style="border:1px solid rgba(212,175,55,0.25);padding:8px;background:rgba(212,175,55,0.1);color:var(--primary-gold);text-align:left;">${t('Alias')}</th>
+                                        <th style="border:1px solid rgba(212,175,55,0.25);padding:8px;background:rgba(212,175,55,0.1);color:var(--primary-gold);text-align:left;">${t('Monthly Price')}</th>
+                                        <th style="border:1px solid rgba(212,175,55,0.25);padding:8px;background:rgba(212,175,55,0.1);color:var(--primary-gold);text-align:left;">${t('Unit')}</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
                         <div style="flex: 1; min-width: 150px;">
-                            <label>Category</label>
+                            <label>${t('Category')}${needsCategorySetup ? ' <span style="color:var(--accent-red);">*</span>' : ''}</label>
                             <select id="upQuality" style="width: 100%; padding: 8px; background: #222; color: white; border: 1px solid var(--primary-gold); border-radius: 4px;">
-                                <option value="Elite" ${prof.quality === 'Elite' ? 'selected' : ''}>Elite</option>
-                                <option value="Premium" ${prof.quality === 'Premium' ? 'selected' : ''}>Premium</option>
-                                <option value="Gold" ${prof.quality === 'Gold' ? 'selected' : ''}>Gold</option>
-                                <option value="Silver" ${prof.quality === 'Silver' ? 'selected' : ''}>Silver</option>
-                                <option value="Standard" ${prof.quality === 'Standard' ? 'selected' : ''}>Standard</option>
+                                ${qualitySelectOptions}
                             </select>
                         </div>
                         <div style="flex: 2; min-width: 250px;">
-                            <label>Specialties</label>
+                            <label>${t('Specialties')}${needsCategorySetup ? ' <span style="color:var(--accent-red);">*</span>' : ''}</label>
                             <div id="specsContainer" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px;"></div>
                         </div>
                     </div>
@@ -1208,6 +1249,15 @@ export async function loadProfDashboard() {
                 lbl.appendChild(cb); lbl.appendChild(document.createTextNode(t(spec.name)));
                 specsContainer.appendChild(lbl);
             });
+
+            loadCategoryPricingTable(document.querySelector('#profCategoryTable tbody'));
+
+            if (needsCategorySetup) {
+                setTimeout(() => {
+                    document.getElementById('profPersonalInfoSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    document.getElementById('upQuality')?.focus();
+                }, 450);
+            }
 
             const daysContainer = document.getElementById('daysContainer');
             const fullDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];

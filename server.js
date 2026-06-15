@@ -33,8 +33,24 @@ app.use(cookieParser());
 app.use(helmet({
   // Disable CSP for the prototype so external Unsplash images 
   // and inline frontend scripts/styles are allowed to load
-  contentSecurityPolicy: false 
+  contentSecurityPolicy: false,
+  // Avoid console noise on HTTP / non-localhost dev origins
+  crossOriginOpenerPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: false,
+  originAgentCluster: false
 }));
+
+// Strip COOP on plain HTTP (non-localhost) — browser ignores it and logs a warning
+app.use((req, res, next) => {
+  if (req.secure || req.hostname === 'localhost') return next();
+  const setHeader = res.setHeader.bind(res);
+  res.setHeader = (name, value) => {
+    if (String(name).toLowerCase() === 'cross-origin-opener-policy') return;
+    return setHeader(name, value);
+  };
+  next();
+});
 
 // Enable CORS
 app.use(cors({
@@ -135,7 +151,6 @@ app.post('/api/v1/auth/login', authController.login);
 app.post('/api/v1/auth/guest-login', authController.guestLogin);
 app.post('/api/v1/auth/forgotpassword', authController.forgotPassword);
 app.put('/api/v1/auth/resetpassword', authController.resetPassword);
-app.post('/api/v1/auth/google', authController.googleAuth);
 
 // Feedback Route (Enforcing Respect Agreement)
 app.post('/api/v1/feedback', protect, feedbackController.submitFeedback);

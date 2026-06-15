@@ -48,6 +48,13 @@ export function clearReturnStack() {
     sessionStorage.removeItem(STACK_KEY);
 }
 
+/** Logout / close session — always return to index, never use return stack. */
+export function logoutToEntrance() {
+    clearReturnStack();
+    sessionStorage.removeItem('intended_destination');
+    window.location.replace(appPath('index.html'));
+}
+
 function currentHref() {
     return window.location.pathname + window.location.search + window.location.hash;
 }

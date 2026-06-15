@@ -5,6 +5,20 @@ import { t } from './i18n.js';
 let inlinePanel = null;
 let activeEmail = '';
 
+function whenDomReady(fn) {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', fn);
+    } else {
+        fn();
+    }
+}
+
+function revealRecoveryAlert(alertEl) {
+    if (!alertEl) return;
+    alertEl.classList.remove('hidden');
+    alertEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
 function recoveryMarkup() {
     return `
         <div id="passwordRecoveryPanel" class="password-recovery-panel hidden">
@@ -68,9 +82,66 @@ function ensureInlinePanel(shell) {
     return inlinePanel;
 }
 
+function setStepVisible(el, visible) {
+    if (!el) return;
+    el.classList.toggle('hidden', !visible);
+    el.style.display = visible ? 'block' : 'none';
+    el.setAttribute('aria-hidden', visible ? 'false' : 'true');
+}
+
 function showRecoveryStep(step) {
-    document.getElementById('recoveryStepEmail')?.classList.toggle('hidden', step !== 'email');
-    document.getElementById('recoveryStepReset')?.classList.toggle('hidden', step !== 'reset');
+    const emailStep = document.getElementById('recoveryStepEmail');
+    const resetStep = document.getElementById('recoveryStepReset');
+    setStepVisible(emailStep, step === 'email');
+    setStepVisible(resetStep, step === 'reset');
+}
+
+function showRecoverPageStep(step) {
+    const forgotForm = document.getElementById('forgotPasswordForm');
+    const resetForm = document.getElementById('resetPasswordForm');
+    setStepVisible(forgotForm, step === 'email');
+    setStepVisible(resetForm, step === 'reset');
+}
+
+function updateRecoveryHeading(step) {
+    const inlineHeading = document.querySelector('.landing-login-heading');
+    const pageHeading = document.querySelector('.password-recovery-page > h2');
+    const title = step === 'reset'
+        ? t('Enter recovery code')
+        : t('Recover Access');
+    if (inlineHeading && !inlineHeading.classList.contains('hidden')) {
+        inlineHeading.textContent = title;
+    }
+    if (pageHeading) pageHeading.textContent = title;
+}
+
+function advanceToCodeEntryStep(email, alertEl) {
+    activeEmail = email;
+
+    const hiddenEmail = document.getElementById('recoveryHiddenEmail');
+    const displayEmail = document.getElementById('recoveryDisplayEmail');
+    const resetEmail = document.getElementById('resetEmail');
+    const pageDisplayEmail = document.getElementById('displayEmail');
+
+    if (hiddenEmail) hiddenEmail.value = email;
+    if (displayEmail) displayEmail.textContent = email;
+    if (resetEmail) resetEmail.value = email;
+    if (pageDisplayEmail) pageDisplayEmail.textContent = email;
+
+    showRecoveryStep('reset');
+    showRecoverPageStep('reset');
+    updateRecoveryHeading('reset');
+
+    const resetScope = document.getElementById('recoveryStepReset') || document.getElementById('resetPasswordForm');
+    attachPasswordToggles(resetScope || document);
+
+    const panel = document.getElementById('passwordRecoveryPanel');
+    (panel || resetScope)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    window.setTimeout(() => {
+        document.getElementById('recoveryCode')?.focus();
+        document.getElementById('resetCode')?.focus();
+    }, 50);
 }
 
 async function sendRecoveryCode(email, alertEl) {
@@ -79,12 +150,23 @@ async function sendRecoveryCode(email, alertEl) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
     });
-    const data = await res.json();
-    if (!data.success) {
-        showAlert(alertEl, t(data.error || 'Error sending code'));
+
+    let data = {};
+    try {
+        data = await res.json();
+    } catch {
+        showAlert(alertEl, t('Server connection error'));
+        revealRecoveryAlert(alertEl);
         return false;
     }
-    return true;
+
+    if (data.success === true || (res.ok && data.message)) {
+        return true;
+    }
+
+    showAlert(alertEl, t(data.error || 'Error sending code'));
+    revealRecoveryAlert(alertEl);
+    return false;
 }
 
 async function submitPasswordReset(email, code, password, confirmPassword, alertEl) {
@@ -129,16 +211,10 @@ function bindInlineRecoveryEvents(shell) {
         if (btn) btn.disabled = true;
         try {
             const ok = await sendRecoveryCode(email, alertEl);
-            if (ok) {
-                activeEmail = email;
-                document.getElementById('recoveryHiddenEmail').value = email;
-                document.getElementById('recoveryDisplayEmail').textContent = email;
-                showRecoveryStep('reset');
-                attachPasswordToggles(document.getElementById('recoveryStepReset'));
-                document.getElementById('recoveryCode')?.focus();
-            }
+            if (ok) advanceToCodeEntryStep(email, alertEl);
         } catch (err) {
             showAlert(alertEl, t('Server connection error'));
+            revealRecoveryAlert(alertEl);
         } finally {
             if (btn) btn.disabled = false;
         }
@@ -187,7 +263,10 @@ export function openInlinePasswordRecovery(prefillEmail = '') {
     shell.loginHeading?.classList.remove('hidden');
 
     inlinePanel.classList.remove('hidden');
+    inlinePanel.style.display = 'block';
     showRecoveryStep('email');
+    showRecoverPageStep('email');
+    updateRecoveryHeading('email');
 
     const emailInput = document.getElementById('recoveryEmail');
     const alertEl = document.getElementById('recoveryAlert');
@@ -228,25 +307,30 @@ export function initRecoverPage() {
     const forgotEmail = document.getElementById('forgotEmail');
     if (forgotEmail && emailFromUrl) forgotEmail.value = emailFromUrl;
 
-    forgotForm?.addEventListener('submit', async (e) => {
+    const handleForgotSubmit = async (e) => {
         e.preventDefault();
         const email = document.getElementById('forgotEmail')?.value.trim();
         const alert = document.getElementById('forgotAlert');
+        if (!email) {
+            showAlert(alert, t('Please provide an email address'));
+            revealRecoveryAlert(alert);
+            return;
+        }
+        alert?.classList.add('hidden');
+        const submitBtn = forgotForm?.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.disabled = true;
         try {
             const ok = await sendRecoveryCode(email, alert);
-            if (ok) {
-                activeEmail = email;
-                forgotForm.classList.add('hidden');
-                resetForm?.classList.remove('hidden');
-                document.getElementById('resetEmail').value = email;
-                document.getElementById('displayEmail').textContent = email;
-                attachPasswordToggles(resetForm);
-                document.getElementById('resetCode')?.focus();
-            }
+            if (ok) advanceToCodeEntryStep(email, alert);
         } catch (err) {
             showAlert(alert, t('Server connection error'));
+            revealRecoveryAlert(alert);
+        } finally {
+            if (submitBtn) submitBtn.disabled = false;
         }
-    });
+    };
+
+    forgotForm?.addEventListener('submit', handleForgotSubmit);
 
     resetForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -272,10 +356,20 @@ export function initRecoverPage() {
 
 export function bindForgotPasswordTriggers() {
     document.querySelectorAll('[data-open-password-recovery]').forEach((el) => {
+        if (el.dataset.recoveryTriggerBound === '1') return;
+        el.dataset.recoveryTriggerBound = '1';
         el.addEventListener('click', (e) => {
             e.preventDefault();
-            const email = document.getElementById('email')?.value.trim() || '';
+            const email = document.getElementById('email')?.value.trim()
+                || document.getElementById('forgotEmail')?.value.trim()
+                || '';
             openInlinePasswordRecovery(email);
         });
     });
 }
+
+whenDomReady(() => {
+    if (document.getElementById('forgotPasswordForm') || document.getElementById('resetPasswordForm')) {
+        initRecoverPage();
+    }
+});
