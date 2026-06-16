@@ -29,6 +29,10 @@ services:
       - ./utils:/app/utils
       - ./config:/app/config
       - ./server.js:/app/server.js
+      # Persist the WhatsApp Web auth/session across container rebuilds &
+      # recreates so the QR login is not lost. Code writes to
+      # <cwd>/.wwebjs_auth/session-platform, and cwd is /app (WORKDIR).
+      - wwebjs_auth:/app/.wwebjs_auth
     depends_on:
       mongo:
         condition: service_healthy
@@ -49,3 +53,5 @@ services:
 volumes:
   mongo_data:
     name: sexappeal_mongo_data
+  wwebjs_auth:
+    name: sexappeal_wwebjs_auth

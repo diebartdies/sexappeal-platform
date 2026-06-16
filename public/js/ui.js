@@ -147,17 +147,13 @@ export function initGlobalTopBar() {
                 editLink.style.cssText = 'color: var(--dark-bg); background-color: var(--primary-gold); margin-left: 10px; text-decoration: none; font-size: 0.8rem; font-weight: bold; padding: 3px 8px; border-radius: 4px;';
                 editLink.textContent = `✏️ ${t('Edit Profile')}`;
                 userInfo.appendChild(editLink);
-            } else if (user.role === 'admin') {
-                const adminLink = document.createElement('a');
-                adminLink.href = appPath('dashboard.html');
-                adminLink.style.cssText = 'color: #ccc; margin-left: 10px; text-decoration: none; font-size: 0.8rem;';
-                adminLink.textContent = t('Admin Menu');
-                userInfo.appendChild(adminLink);
             }
+            // Admin return-home link is handled globally by adminHome.js (a
+            // universal fixed button present on every page), so we no longer add
+            // a separate top-bar admin link here to avoid showing two links.
             isLoggedIn = true;
         } catch (e) { console.error('Failed to parse user', e); }
     }
-    userInfo.innerHTML = userDisplay;
 
     if (isLoggedIn) {
         const topLogoutBtn = document.createElement('a');

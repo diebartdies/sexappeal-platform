@@ -4,6 +4,25 @@ FROM node:22-alpine
 # Set the working directory inside the container
 WORKDIR /app
 
+# Chromium + runtime libs for whatsapp-web.js / puppeteer on Alpine (musl).
+# Puppeteer's bundled Chromium download does not run on Alpine, so we install
+# the system chromium package and point puppeteer at it.
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
+
+# Skip puppeteer's own Chromium download (set before npm install so the
+# postinstall step honors it) and use the system chromium at runtime. The path
+# matches the candidate list in utils/browserExecutable.js (PUPPETEER_EXECUTABLE_PATH).
+ENV PUPPETEER_SKIP_DOWNLOAD=true \
+    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
 # Copy package.json and install dependencies
 COPY package*.json ./
 RUN npm install --omit=dev --loglevel=error --fund=false \
