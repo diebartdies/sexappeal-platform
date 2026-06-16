@@ -6,6 +6,9 @@ const { REGISTER_URL } = require('./utils/professionalInviteMessage');
 async function main() {
   console.log('--- Starting WhatsApp Lead Outreach (CLI) ---');
   console.log(`Platform register link: ${REGISTER_URL}`);
+  console.log(outreachService.describeSchedule());
+  console.log('This is a long-lived host process: keep it running overnight so it can');
+  console.log('pause outside the night window and resume when the window reopens.');
 
   await connectDB();
 
@@ -14,6 +17,12 @@ async function main() {
     if (status.phase === 'qr' && status.qr) {
       console.log('\n📱 Scan this QR code with WhatsApp:');
       qrcode.generate(status.qr, { small: true });
+    }
+    if (status.phase === 'waiting_window') {
+      const reason = status.waitingReason === 'nightly_cap_reached'
+        ? 'nightly cap reached — waiting for next night'
+        : 'outside night window — waiting to resume';
+      console.log(`Paused (${reason}). Progress ${status.sent + status.failed + status.skipped}/${status.total}.`);
     }
     if (status.phase === 'sending') {
       console.log(`Sending ${status.sent + status.failed + status.skipped}/${status.total} — ${status.currentLead || ''}`);

@@ -687,7 +687,29 @@ const translations = {
         'Confirm action': 'Confirmar acción',
         'Confirm': 'Confirmar',
         'Are you sure you want to send this email to the selected audience? This action cannot be undone.': '¿Está seguro de que desea enviar este correo a la audiencia seleccionada? Esta acción no se puede deshacer.',
-        'View receipt': 'Ver comprobante'
+        'View receipt': 'Ver comprobante',
+
+        'Need help?': '¿Necesita ayuda?',
+        'Have a question or a problem? Send a message to the platform admin and we will get back to you.': '¿Tiene una pregunta o un problema? Envíe un mensaje al administrador de la plataforma y le responderemos.',
+        'Request help / Solicitar ayuda al admin': 'Solicitar ayuda al admin',
+        'Describe your problem or question below. The admin will get back to you.': 'Describa su problema o pregunta abajo. El administrador le responderá.',
+        'Your problem or question': 'Su problema o pregunta',
+        'Send request': 'Enviar solicitud',
+        'Please describe your problem or question.': 'Describa su problema o pregunta.',
+        'Your request was sent. The admin will get back to you.': 'Su solicitud fue enviada. El administrador le responderá.',
+        'Could not send your request. Please try again later.': 'No se pudo enviar su solicitud. Inténtelo de nuevo más tarde.',
+
+        'Support messages': 'Mensajes de soporte',
+        'No support messages.': 'No hay mensajes de soporte.',
+        'Resolve': 'Resolver',
+        'Resolved': 'Resuelto',
+        'Open': 'Abierto',
+        'Call': 'Llamar',
+        'WhatsApp': 'WhatsApp',
+        'No phone on file': 'Sin teléfono registrado',
+        'Reply': 'Responder',
+        'Save reply': 'Guardar respuesta',
+        'Last reply': 'Última respuesta'
     }
 };
 

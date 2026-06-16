@@ -32,3 +32,6 @@ utils/seo-locations.generated.json
 *.archive
 *.tar.gz
 certbot/
+
+# Local backups produced by scripts/clean-users.js (contain user PII)
+backups/

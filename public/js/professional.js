@@ -235,8 +235,130 @@ export function injectProfessionalDashboardGuides(content, data, insertRef) {
         content.insertBefore(notifSection, insertRef);
     }
 
+    injectProfessionalSupportSection(content, insertRef);
+
     mountProfessionalPaymentOverlays();
     setupProfessionalPaymentUI(data.paymentInstructions);
+}
+
+/** "Request help" section + modal that posts an internal support message to the admin. */
+export function injectProfessionalSupportSection(content, insertRef) {
+    if (document.getElementById('supportHelpSection')) return;
+
+    const supportSection = document.createElement('div');
+    supportSection.id = 'supportHelpSection';
+    supportSection.className = 'card';
+    supportSection.style.marginBottom = '20px';
+    supportSection.style.border = '1px solid rgba(37, 211, 102, 0.5)';
+
+    supportSection.innerHTML = `
+        <h3 class="gold-text" style="margin-bottom: 10px;">🆘 ${t('Need help?')}</h3>
+        <p style="color: #ccc; line-height: 1.6; margin-bottom: 15px;">${t('Have a question or a problem? Send a message to the platform admin and we will get back to you.')}</p>
+        <button type="button" id="btnRequestAdminHelp" style="display:inline-flex;align-items:center;gap:8px;background:#25D366;color:#fff;border:none;padding:10px 18px;border-radius:4px;font-weight:bold;cursor:pointer;">
+            💬 ${t('Request help / Solicitar ayuda al admin')}
+        </button>
+    `;
+    content.insertBefore(supportSection, insertRef);
+
+    document.getElementById('btnRequestAdminHelp')?.addEventListener('click', () => {
+        openSupportModal();
+    });
+}
+
+let supportModalOverlay = null;
+
+function openSupportModal() {
+    if (!supportModalOverlay) {
+        supportModalOverlay = document.createElement('div');
+        supportModalOverlay.id = 'supportRequestOverlay';
+        supportModalOverlay.className = 'payment-modal-overlay';
+        Object.assign(supportModalOverlay.style, {
+            position: 'fixed',
+            inset: '0',
+            background: 'rgba(0,0,0,0.85)',
+            zIndex: '100001',
+            display: 'none',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+        });
+        document.body.appendChild(supportModalOverlay);
+    }
+
+    supportModalOverlay.innerHTML = `
+        <div class="card payment-modal-panel" data-modal-panel style="max-width:480px;width:100%;">
+            <h3 id="supportModalTitle" class="gold-text" style="margin-top:0;">🆘 ${t('Request help / Solicitar ayuda al admin')}</h3>
+            <p style="color:#ccc;line-height:1.6;margin-bottom:12px;">${t('Describe your problem or question below. The admin will get back to you.')}</p>
+            <label for="supportProblemText" style="display:block;margin-bottom:6px;color:#ddd;">${t('Your problem or question')}</label>
+            <textarea id="supportProblemText" rows="5" style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:4px;padding:10px;box-sizing:border-box;"></textarea>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;">
+                <button type="button" id="supportCancelBtn" style="flex:1;min-width:120px;background:transparent;border:1px solid var(--primary-gold);color:var(--primary-gold);padding:10px;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Cancel')}</button>
+                <button type="button" id="supportSendBtn" style="flex:1;min-width:120px;padding:10px;border-radius:4px;cursor:pointer;font-weight:bold;border:none;background:#25D366;color:#fff;">${t('Send request')}</button>
+            </div>
+        </div>`;
+
+    const close = () => {
+        deactivateAccessibleModal(supportModalOverlay);
+        supportModalOverlay.style.display = 'none';
+        document.body.style.overflow = '';
+    };
+
+    document.getElementById('supportCancelBtn').onclick = close;
+    supportModalOverlay.onclick = (e) => {
+        if (e.target === supportModalOverlay) close();
+    };
+
+    document.getElementById('supportSendBtn').onclick = async () => {
+        const sendBtn = document.getElementById('supportSendBtn');
+        const problem = (document.getElementById('supportProblemText')?.value || '').trim();
+        if (!problem) {
+            announceMessage('Please describe your problem or question.', { isError: true });
+            document.getElementById('supportProblemText')?.focus();
+            return;
+        }
+        sendBtn.disabled = true;
+        const ok = await submitSupportRequest(problem);
+        sendBtn.disabled = false;
+        if (ok) {
+            close();
+            showAlert(null, 'Your request was sent. The admin will get back to you.', false);
+        }
+    };
+
+    supportModalOverlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    activateAccessibleModal(supportModalOverlay, {
+        labelId: 'supportModalTitle',
+        onClose: close,
+        initialFocusSelector: '#supportProblemText'
+    });
+}
+
+function supportAuthHeaders(extra = {}) {
+    const token = localStorage.getItem('token');
+    const headers = { ...extra };
+    if (token && token !== 'null' && token !== 'undefined') {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+}
+
+async function submitSupportRequest(problem) {
+    try {
+        const res = await fetch(`${API_URL}/support`, {
+            method: 'POST',
+            headers: supportAuthHeaders({ 'Content-Type': 'application/json' }),
+            credentials: 'include',
+            body: JSON.stringify({ message: problem })
+        });
+        const json = await res.json();
+        if (res.ok && json.success) return true;
+        showAlert(null, json.error || 'Could not send your request. Please try again later.', true);
+        return false;
+    } catch (_) {
+        showAlert(null, 'Could not send your request. Please try again later.', true);
+        return false;
+    }
 }
 
 function showPaymentOverlay(overlayId) {

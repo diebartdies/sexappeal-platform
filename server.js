@@ -286,8 +286,14 @@ app.post('/api/v1/admin/notifications/mail/targeted', protect, authorize('admin'
 
 const whatsappController = require('./controllers/whatsappController');
 const launchCurtainController = require('./controllers/launchCurtainController');
+const supportController = require('./controllers/supportController');
 
 app.get('/api/v1/public/launch-curtain', launchCurtainController.getPublicLaunchCurtainStatus);
+
+// Support message queue
+app.post('/api/v1/support', protect, authorize('professional'), supportController.createSupportMessage);
+app.get('/api/v1/admin/support', protect, authorize('admin'), supportController.getSupportMessages);
+app.put('/api/v1/admin/support/:id', protect, authorize('admin'), supportController.updateSupportMessage);
 app.get('/api/v1/admin/whatsapp/config', protect, authorize('admin'), whatsappController.getWhatsAppConfig);
 app.put('/api/v1/admin/whatsapp/config', protect, authorize('admin'), whatsappController.updateWhatsAppPhone);
 app.post('/api/v1/admin/whatsapp/register', protect, authorize('admin'), whatsappController.startWhatsAppRegistration);

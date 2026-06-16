@@ -345,6 +345,7 @@ export async function loadDashboard() {
                                 <button id="btnProfProfileAdmin" class="admin-nav-btn">👥 Professional Profiles</button>
                                 <button id="btnPendingApprovals" class="admin-nav-btn active-nav">✅ Pending Approvals</button>
                                 <button id="btnPaymentVerifications" class="admin-nav-btn">💳 Payment Verifications</button>
+                                <button id="btnSupportMessages" class="admin-nav-btn">📩 ${t('Support messages')}</button>
                                 <button id="btnDashboardConfig" class="admin-nav-btn">⚙️ Dashboard Config</button>
                             </div>
                         </div>
@@ -402,6 +403,7 @@ export async function loadDashboard() {
                 document.getElementById('btnApplyInvitations').addEventListener('click', openViewLeadsModal);
                 document.getElementById('btnPendingApprovals').addEventListener('click', openPendingVerificationsModal);
                 document.getElementById('btnPaymentVerifications').addEventListener('click', openPaymentVerificationsModal);
+                document.getElementById('btnSupportMessages').addEventListener('click', openSupportMessagesModal);
                 
                 document.getElementById('btnProfProfileAdmin').addEventListener('click', () => {
                     document.getElementById('adminGridContainer').scrollIntoView({ behavior: 'smooth' });
@@ -1738,6 +1740,258 @@ export async function acknowledgePayment(id) {
             announceMessage(data.error || 'Failed to acknowledge payment');
         }
     } catch (err) {
+        announceMessage('Server connection error');
+    }
+}
+
+// --- Admin Support Messages Inbox ---
+export async function openSupportMessagesModal() {
+    let modal = document.getElementById('supportMessagesModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'supportMessagesModal';
+        Object.assign(modal.style, {
+            position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.9)', zIndex: '3000', display: 'flex',
+            flexDirection: 'column', padding: '20px', overflowY: 'auto'
+        });
+
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = t('Close');
+        closeBtn.style.alignSelf = 'flex-end';
+        closeBtn.style.marginBottom = '10px';
+        closeBtn.onclick = () => closeAdminOverlay(modal);
+
+        const container = document.createElement('div');
+        Object.assign(container.style, {
+            backgroundColor: 'var(--dark-bg, #1a1a1a)', padding: '20px',
+            borderRadius: '8px', color: 'white', maxWidth: '1000px', margin: '0 auto', width: '100%'
+        });
+
+        container.innerHTML = `
+            <h2 class="gold-text" style="margin-bottom: 20px;">${t('Support messages')}</h2>
+            <div id="supportMessagesList" style="display: flex; flex-direction: column; gap: 14px;">
+                <div style="text-align: center; padding: 10px;">${t('Loading...')}</div>
+            </div>
+        `;
+
+        modal.appendChild(closeBtn);
+        modal.appendChild(container);
+        document.body.appendChild(modal);
+        applyStaticTranslations(modal);
+    }
+
+    openAdminOverlay(modal);
+    loadSupportMessages();
+}
+
+export async function loadSupportMessages() {
+    const list = document.getElementById('supportMessagesList');
+    if (!list) return;
+    list.innerHTML = `<div style="text-align: center; padding: 10px;">${t('Loading...')}</div>`;
+
+    try {
+        const res = await fetch(`${API_URL}/admin/support`, {
+            headers: authHeaders(),
+            credentials: 'include'
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+            list.innerHTML = `<div style="padding: 10px; color: var(--accent-red);">Error: ${data.error}</div>`;
+            return;
+        }
+
+        const messages = data.data || [];
+        if (messages.length === 0) {
+            list.innerHTML = `<div style="padding: 10px; text-align: center;">${t('No support messages.')}</div>`;
+            updateSupportBadge(data.openCount || 0);
+            return;
+        }
+
+        list.innerHTML = '';
+        messages.forEach(msg => list.appendChild(buildSupportMessageCard(msg)));
+        updateSupportBadge(data.openCount || 0);
+    } catch (err) {
+        list.innerHTML = `<div style="padding: 10px; color: var(--accent-red);">${t('Network Error')}</div>`;
+    }
+}
+
+function buildSupportMessageCard(msg) {
+    const isResolved = msg.status === 'resolved';
+
+    const card = document.createElement('div');
+    Object.assign(card.style, {
+        border: `1px solid ${isResolved ? '#333' : 'var(--primary-gold)'}`,
+        background: isResolved ? 'transparent' : 'rgba(212,175,55,0.06)',
+        borderRadius: '8px', padding: '14px'
+    });
+
+    // Header: name (alias) + email + status + date
+    const header = document.createElement('div');
+    Object.assign(header.style, { display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' });
+
+    const idBlock = document.createElement('div');
+    const nameLine = document.createElement('div');
+    nameLine.style.fontWeight = 'bold';
+    const aliasPart = msg.alias ? ` (${msg.alias})` : '';
+    nameLine.textContent = (msg.name || msg.alias || t('Unknown')) + (msg.name ? aliasPart : '');
+    const emailLine = document.createElement('div');
+    emailLine.style.fontSize = '0.8rem';
+    emailLine.style.color = '#aaa';
+    emailLine.textContent = msg.email || '';
+    idBlock.appendChild(nameLine);
+    idBlock.appendChild(emailLine);
+
+    const metaBlock = document.createElement('div');
+    metaBlock.style.textAlign = 'right';
+    const statusLine = document.createElement('div');
+    statusLine.textContent = isResolved ? t('Resolved') : t('Open');
+    statusLine.style.color = isResolved ? '#00ff50' : 'var(--primary-gold)';
+    statusLine.style.fontWeight = 'bold';
+    const dateLine = document.createElement('div');
+    dateLine.style.fontSize = '0.8rem';
+    dateLine.style.color = '#aaa';
+    dateLine.textContent = msg.createdAt ? new Date(msg.createdAt).toLocaleString() : '';
+    metaBlock.appendChild(statusLine);
+    metaBlock.appendChild(dateLine);
+
+    header.appendChild(idBlock);
+    header.appendChild(metaBlock);
+    card.appendChild(header);
+
+    // Contact links (tel / WhatsApp) or "no phone on file"
+    const contactRow = document.createElement('div');
+    Object.assign(contactRow.style, { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginBottom: '10px', fontSize: '0.9rem' });
+    const phoneDigits = (msg.phone || '').replace(/\D/g, '');
+    if (phoneDigits) {
+        const phoneLabel = document.createElement('span');
+        phoneLabel.style.color = '#ccc';
+        phoneLabel.textContent = msg.phone;
+        contactRow.appendChild(phoneLabel);
+
+        const callLink = document.createElement('a');
+        callLink.href = `tel:${phoneDigits}`;
+        callLink.textContent = `📞 ${t('Call')}`;
+        Object.assign(callLink.style, { color: 'var(--primary-gold)', textDecoration: 'none', border: '1px solid var(--primary-gold)', padding: '4px 10px', borderRadius: '4px' });
+        contactRow.appendChild(callLink);
+
+        const waLink = document.createElement('a');
+        waLink.href = `https://wa.me/${phoneDigits}`;
+        waLink.target = '_blank';
+        waLink.rel = 'noopener noreferrer';
+        waLink.textContent = `💬 ${t('WhatsApp')}`;
+        Object.assign(waLink.style, { color: '#fff', background: '#25D366', textDecoration: 'none', padding: '4px 10px', borderRadius: '4px', fontWeight: 'bold' });
+        contactRow.appendChild(waLink);
+    } else {
+        const noPhone = document.createElement('span');
+        noPhone.style.color = '#888';
+        noPhone.style.fontStyle = 'italic';
+        noPhone.textContent = t('No phone on file');
+        contactRow.appendChild(noPhone);
+    }
+    card.appendChild(contactRow);
+
+    // Message body (user-supplied → textContent)
+    const body = document.createElement('div');
+    Object.assign(body.style, { whiteSpace: 'pre-wrap', wordBreak: 'break-word', background: '#222', borderRadius: '4px', padding: '10px', marginBottom: '10px' });
+    body.textContent = msg.message || '';
+    card.appendChild(body);
+
+    // Reply area
+    const replyLabel = document.createElement('label');
+    replyLabel.textContent = t('Reply');
+    replyLabel.style.display = 'block';
+    replyLabel.style.fontSize = '0.85rem';
+    replyLabel.style.color = '#ddd';
+    replyLabel.style.marginBottom = '4px';
+    card.appendChild(replyLabel);
+
+    const replyArea = document.createElement('textarea');
+    replyArea.rows = 2;
+    replyArea.value = msg.adminReply || '';
+    Object.assign(replyArea.style, { width: '100%', boxSizing: 'border-box', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '4px', padding: '8px' });
+    card.appendChild(replyArea);
+
+    if (msg.repliedAt) {
+        const repliedAt = document.createElement('div');
+        repliedAt.style.fontSize = '0.75rem';
+        repliedAt.style.color = '#888';
+        repliedAt.style.margin = '4px 0';
+        repliedAt.textContent = `${t('Last reply')}: ${new Date(msg.repliedAt).toLocaleString()}`;
+        card.appendChild(repliedAt);
+    }
+
+    // Action buttons
+    const actions = document.createElement('div');
+    Object.assign(actions.style, { display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' });
+
+    const saveReplyBtn = document.createElement('button');
+    saveReplyBtn.textContent = t('Save reply');
+    Object.assign(saveReplyBtn.style, { background: 'transparent', color: 'var(--primary-gold)', border: '1px solid var(--primary-gold)', padding: '6px 14px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' });
+    saveReplyBtn.onclick = () => saveSupportReply(msg._id, replyArea.value, saveReplyBtn);
+    actions.appendChild(saveReplyBtn);
+
+    if (!isResolved) {
+        const resolveBtn = document.createElement('button');
+        resolveBtn.textContent = t('Resolve');
+        Object.assign(resolveBtn.style, { background: 'var(--primary-gold)', color: 'var(--dark-bg, #1a1a1a)', border: 'none', padding: '6px 14px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' });
+        resolveBtn.onclick = () => resolveSupportMessage(msg._id, resolveBtn);
+        actions.appendChild(resolveBtn);
+    }
+
+    card.appendChild(actions);
+    return card;
+}
+
+function updateSupportBadge(openCount) {
+    const btn = document.getElementById('btnSupportMessages');
+    if (!btn) return;
+    const base = `📩 ${t('Support messages')}`;
+    btn.textContent = openCount > 0 ? `${base} (${openCount})` : base;
+}
+
+export async function resolveSupportMessage(id, btn) {
+    if (btn) btn.disabled = true;
+    try {
+        const res = await fetch(`${API_URL}/admin/support/${id}`, {
+            method: 'PUT',
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
+            credentials: 'include',
+            body: JSON.stringify({ status: 'resolved' })
+        });
+        const data = await res.json();
+        if (data.success) {
+            loadSupportMessages();
+        } else {
+            if (btn) btn.disabled = false;
+            announceMessage(data.error || 'Failed to resolve support message');
+        }
+    } catch (err) {
+        if (btn) btn.disabled = false;
+        announceMessage('Server connection error');
+    }
+}
+
+export async function saveSupportReply(id, reply, btn) {
+    if (btn) btn.disabled = true;
+    try {
+        const res = await fetch(`${API_URL}/admin/support/${id}`, {
+            method: 'PUT',
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
+            credentials: 'include',
+            body: JSON.stringify({ adminReply: reply })
+        });
+        const data = await res.json();
+        if (data.success) {
+            announceMessage('Reply saved');
+            loadSupportMessages();
+        } else {
+            if (btn) btn.disabled = false;
+            announceMessage(data.error || 'Failed to save reply');
+        }
+    } catch (err) {
+        if (btn) btn.disabled = false;
         announceMessage('Server connection error');
     }
 }
