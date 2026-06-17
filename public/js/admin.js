@@ -1299,6 +1299,15 @@ export async function openViewLeadsModal() {
             <h2 class="gold-text" style="margin-bottom: 10px;">${t('Apply Invitations to Potential Professionals')}</h2>
             <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 12px;">${t('Send the welcome WhatsApp invitation with platform and registration links from the potential professionals table.')}</p>
             <p style="color: #bbb; font-size: 0.85rem; margin: 0 0 16px; padding: 10px 12px; border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 8px; background: rgba(212, 175, 55, 0.08);">${t('Prefer a small selected batch first, then Apply to all pending if all looks good.')}</p>
+            <div style="display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; padding: 10px 12px; border: 1px solid rgba(212, 175, 55, 0.25); border-radius: 8px;">
+                <span style="color: var(--primary-gold); font-weight: bold;">${t('Channel')}:</span>
+                <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: #ddd;">
+                    <input type="radio" name="inviteChannel" value="whatsapp" checked style="width:auto;"> ${t('WhatsApp')}
+                </label>
+                <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: #ddd;">
+                    <input type="radio" name="inviteChannel" value="sms" style="width:auto;"> ${t('SMS')}
+                </label>
+            </div>
             <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
                 <button id="refreshLeadsBtn">${t('Refresh List')}</button>
                 <button id="previewInviteBtn" type="button" style="background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold);">${t('Preview invite message')}</button>
@@ -1354,6 +1363,9 @@ export async function openViewLeadsModal() {
         };
         document.getElementById('applySelectedInviteBtn').onclick = applyInvitationToSelectedLeads;
         document.getElementById('bulkWhatsappBtn').onclick = startBulkWhatsappOutreach;
+        modal.querySelectorAll('input[name="inviteChannel"]').forEach((radio) => {
+            radio.addEventListener('change', onInviteChannelChange);
+        });
     }
 
     openAdminOverlay(modal);
@@ -1386,6 +1398,9 @@ export async function loadLeads() {
                 try { sourceHost = new URL(lead.sourceUrl).hostname; } catch(e) {}
 
                 const statusColor = lead.status === 'contacted' ? 'green' : (lead.status === 'rejected' ? 'red' : 'orange');
+                const smsState = lead.smsStatus || 'pending';
+                const smsColor = smsState === 'sent' ? 'green' : (smsState === 'failed' ? 'red' : 'orange');
+                const smsBadge = `<div style="margin-top: 4px;"><span style="padding: 2px 7px; border-radius: 12px; background: ${smsColor}; color: white; font-size: 0.72rem;">${t('SMS')}: ${t(smsState)}</span></div>`;
                 const waLink = lead.whatsappLink || '#';
                 const waDisabled = !lead.whatsappLink;
                 const isPending = (lead.status || 'pending') === 'pending';
@@ -1404,6 +1419,7 @@ export async function loadLeads() {
                         <span style="padding: 3px 8px; border-radius: 12px; background: ${statusColor}; color: white; font-size: 0.8rem; text-transform: capitalize;">
                             ${lead.status || 'pending'}
                         </span>
+                        ${smsBadge}
                     </td>
                     <td style="padding: 10px;">
                         <a href="${waLink}" target="_blank" rel="noopener noreferrer" data-lead-id="${lead._id}" class="lead-whatsapp-btn" style="display:inline-block;padding:6px 12px;background:#25D366;color:#fff;text-decoration:none;border-radius:4px;font-weight:bold;${waDisabled ? 'opacity:0.4;pointer-events:none;' : ''}">${t('Send invite')}</a>
@@ -1437,7 +1453,7 @@ async function applyInvitationToSelectedLeads() {
 
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`${API_URL}/admin/outreach/whatsapp/targeted`, {
+        const res = await fetch(outreachEndpoints().targeted, {
             method: 'POST',
             headers: {
                 ...authHeaders(),
@@ -1499,6 +1515,43 @@ async function previewInviteMessage() {
 
 let bulkWhatsappPollTimer = null;
 
+// Selected outreach channel for the invitations panel. Defaults to WhatsApp so
+// the existing behavior is preserved unless the admin explicitly picks SMS.
+let inviteChannel = 'whatsapp';
+
+// Per-channel endpoint map so the shared list / buttons / polling can drive
+// either the WhatsApp or the SMS outreach engine without duplicating logic.
+function outreachEndpoints() {
+    return inviteChannel === 'sms'
+        ? {
+            bulk: `${API_URL}/admin/outreach/bulk-sms`,
+            targeted: `${API_URL}/admin/outreach/sms/targeted`,
+            status: `${API_URL}/admin/outreach/bulk-sms/status`
+        }
+        : {
+            bulk: `${API_URL}/admin/outreach/bulk-whatsapp`,
+            targeted: `${API_URL}/admin/outreach/whatsapp/targeted`,
+            status: `${API_URL}/admin/outreach/bulk-whatsapp/status`
+        };
+}
+
+function onInviteChannelChange(e) {
+    inviteChannel = e.target.value === 'sms' ? 'sms' : 'whatsapp';
+    if (bulkWhatsappPollTimer) {
+        clearInterval(bulkWhatsappPollTimer);
+        bulkWhatsappPollTimer = null;
+    }
+    const panel = document.getElementById('bulkWhatsappPanel');
+    const qrWrap = document.getElementById('bulkWhatsappQrWrap');
+    if (qrWrap) qrWrap.classList.add('hidden');
+    if (panel) panel.classList.add('hidden');
+    const bulkBtn = document.getElementById('bulkWhatsappBtn');
+    const selectedBtn = document.getElementById('applySelectedInviteBtn');
+    if (bulkBtn) bulkBtn.disabled = false;
+    if (selectedBtn) selectedBtn.disabled = false;
+    pollBulkWhatsappStatus();
+}
+
 function renderBulkWhatsappStatus(status) {
     const panel = document.getElementById('bulkWhatsappPanel');
     const textEl = document.getElementById('bulkWhatsappStatusText');
@@ -1530,6 +1583,7 @@ function renderBulkWhatsappStatus(status) {
         initializing: t('Connecting to WhatsApp...'),
         qr: t('Waiting for WhatsApp login — scan the QR code.'),
         sending: `${t('Sending messages...')} ${status.currentLead ? `(${status.currentLead})` : ''}`,
+        waiting_window: t('Paused — waiting for the sending window.'),
         complete: t('Bulk outreach complete.'),
         error: status.lastError || t('Bulk outreach failed.')
     };
@@ -1548,7 +1602,7 @@ function renderBulkWhatsappStatus(status) {
         if (bulkBtn) bulkBtn.disabled = false;
         if (selectedBtn) selectedBtn.disabled = false;
         loadLeads();
-    } else if (status.phase === 'sending' || status.phase === 'qr' || status.phase === 'initializing') {
+    } else if (status.phase === 'sending' || status.phase === 'qr' || status.phase === 'initializing' || status.phase === 'waiting_window') {
         const bulkBtn = document.getElementById('bulkWhatsappBtn');
         const selectedBtn = document.getElementById('applySelectedInviteBtn');
         if (bulkBtn) bulkBtn.disabled = true;
@@ -1562,14 +1616,14 @@ function renderBulkWhatsappStatus(status) {
 async function pollBulkWhatsappStatus() {
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`${API_URL}/admin/outreach/bulk-whatsapp/status`, {
+        const res = await fetch(outreachEndpoints().status, {
             headers: authHeaders(),
             credentials: 'include'
         });
         const data = await res.json();
         if (data.success) renderBulkWhatsappStatus(data.data);
     } catch (err) {
-        console.error('Bulk WhatsApp status poll failed', err);
+        console.error('Bulk outreach status poll failed', err);
     }
 }
 
@@ -1581,7 +1635,7 @@ async function startBulkWhatsappOutreach() {
 
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`${API_URL}/admin/outreach/bulk-whatsapp`, {
+        const res = await fetch(outreachEndpoints().bulk, {
             method: 'POST',
             headers: {
                 ...authHeaders(),

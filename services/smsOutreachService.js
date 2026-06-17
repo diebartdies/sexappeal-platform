@@ -5,6 +5,19 @@ const { inviteSms } = require('../utils/smsTemplates');
 
 const BUSY_PHASES = new Set(['sending', 'waiting_window']);
 
+// Legacy leads were stored before the `smsStatus` field existed, so they carry
+// no value at all (Mongoose schema defaults are NOT back-filled onto documents
+// already in the DB). Treat missing/null exactly like an explicit 'pending' so
+// "all pending" actually targets those existing leads. Mirrors the WhatsApp
+// engine's `status`-based selection but on the independent `smsStatus` field.
+const PENDING_SMS_QUERY = {
+  $or: [
+    { smsStatus: 'pending' },
+    { smsStatus: { $exists: false } },
+    { smsStatus: null }
+  ]
+};
+
 const state = {
   phase: 'idle',
   total: 0,
@@ -190,7 +203,7 @@ async function startBulkOutreach() {
   }
 
   const pendingLeads = await PotentialProfessional
-    .find({ smsStatus: 'pending' })
+    .find(PENDING_SMS_QUERY)
     .sort({ createdAt: 1 });
 
   if (pendingLeads.length === 0) {
@@ -229,6 +242,55 @@ function startBulkOutreachBackground() {
   return getStatus();
 }
 
+// SMS outreach to an explicit set of lead ids (mirrors the WhatsApp engine's
+// targeted path). Selection is by _id only — smsStatus does not gate it, so the
+// admin can (re)send to any chosen lead regardless of its prior SMS state.
+async function startTargetedOutreach({ leadIds = [] } = {}) {
+  if (BUSY_PHASES.has(state.phase)) {
+    return getStatus();
+  }
+
+  const ids = Array.isArray(leadIds) ? leadIds : [];
+  const leads = ids.length
+    ? await PotentialProfessional.find({ _id: { $in: ids } }).sort({ createdAt: 1 })
+    : [];
+
+  if (leads.length === 0) {
+    state.phase = 'complete';
+    state.lastError = 'No matching SMS leads found';
+    state.total = 0;
+    state.finishedAt = new Date();
+    return getStatus();
+  }
+
+  resetRunCounters(leads.length);
+  state.phase = 'sending';
+
+  try {
+    await processLeads(leads);
+  } catch (err) {
+    state.phase = 'error';
+    state.lastError = err.message;
+    state.finishedAt = new Date();
+  }
+
+  return getStatus();
+}
+
+function startTargetedOutreachBackground(options) {
+  if (BUSY_PHASES.has(state.phase)) {
+    return getStatus();
+  }
+
+  startTargetedOutreach(options).catch((err) => {
+    state.phase = 'error';
+    state.lastError = err.message;
+    state.finishedAt = new Date();
+  });
+
+  return getStatus();
+}
+
 // Human-readable summary of the effective SMS schedule (for startup logs).
 function describeSchedule() {
   const cfg = config.sms;
@@ -256,5 +318,7 @@ module.exports = {
   getStatus,
   startBulkOutreach,
   startBulkOutreachBackground,
+  startTargetedOutreach,
+  startTargetedOutreachBackground,
   describeSchedule
 };

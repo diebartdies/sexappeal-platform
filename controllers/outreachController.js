@@ -1,4 +1,5 @@
 const outreachService = require('../services/whatsappOutreachService');
+const smsOutreachService = require('../services/smsOutreachService');
 
 // @desc    Start bulk WhatsApp outreach to pending leads
 // @route   POST /api/v1/admin/outreach/bulk-whatsapp
@@ -52,6 +53,60 @@ exports.startTargetedWhatsApp = async (req, res, next) => {
     res.status(202).json({
       success: true,
       message: 'Targeted WhatsApp outreach started',
+      data: status
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Start bulk SMS outreach to pending leads
+// @route   POST /api/v1/admin/outreach/bulk-sms
+// @access  Private/Admin
+exports.startBulkSms = async (req, res, next) => {
+  try {
+    const status = smsOutreachService.startBulkOutreachBackground();
+    res.status(202).json({
+      success: true,
+      message: 'Bulk SMS outreach started',
+      data: status
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Bulk SMS outreach progress
+// @route   GET /api/v1/admin/outreach/bulk-sms/status
+// @access  Private/Admin
+exports.getBulkSmsStatus = async (req, res, next) => {
+  try {
+    res.status(200).json({
+      success: true,
+      data: smsOutreachService.getStatus()
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Send SMS invitation to selected leads
+// @route   POST /api/v1/admin/outreach/sms/targeted
+// @access  Private/Admin
+exports.startTargetedSms = async (req, res, next) => {
+  try {
+    const { leadIds = [] } = req.body;
+    const hasLeads = Array.isArray(leadIds) && leadIds.length > 0;
+
+    if (!hasLeads) {
+      return res.status(400).json({ success: false, error: 'Select at least one recipient' });
+    }
+
+    const status = smsOutreachService.startTargetedOutreachBackground({ leadIds });
+
+    res.status(202).json({
+      success: true,
+      message: 'Targeted SMS outreach started',
       data: status
     });
   } catch (error) {
