@@ -687,6 +687,7 @@ const translations = {
         '4 columns': '4 columnas',
         '6 columns': '6 columnas',
         'Remove photo': 'Eliminar foto',
+        'Cover photo': 'Portada',
         'Request accepted successfully.': 'Solicitud aceptada correctamente.',
         'Request declined successfully.': 'Solicitud rechazada correctamente.',
         'Could not load invite message preview.': 'No se pudo cargar la vista previa del mensaje de invitación.',

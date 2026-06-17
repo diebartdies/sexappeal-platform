@@ -887,6 +887,55 @@ function markPhotosDirty() {
     photosDirty = true;
 }
 
+// Highlights the photo currently in the FIRST position as the cover/thumbnail
+// shown in the public grid. Always re-evaluates so exactly one photo (the new
+// first) is highlighted after uploads, removals, or drag-and-drop reordering.
+function refreshCoverHighlight() {
+    const grid = document.getElementById('photoGrid');
+    if (!grid) return;
+    const items = grid.querySelectorAll('.photo-item');
+    const coverLabel = t('Cover photo');
+    items.forEach((item, idx) => {
+        const existingBadge = item.querySelector('.cover-badge');
+        if (idx === 0) {
+            item.classList.add('is-cover-photo');
+            item.style.outline = '3px solid var(--primary-gold)';
+            item.style.outlineOffset = '-3px';
+            item.style.boxShadow = '0 0 12px rgba(212, 175, 55, 0.7)';
+            item.setAttribute('aria-label', coverLabel);
+            item.title = coverLabel;
+            if (!existingBadge) {
+                const badge = document.createElement('span');
+                badge.className = 'cover-badge';
+                badge.textContent = `⭐ ${coverLabel}`;
+                Object.assign(badge.style, {
+                    position: 'absolute',
+                    top: '5px',
+                    left: '5px',
+                    background: 'var(--primary-gold)',
+                    color: '#111',
+                    fontSize: '0.7rem',
+                    fontWeight: 'bold',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    zIndex: '2',
+                    pointerEvents: 'none',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.6)'
+                });
+                item.appendChild(badge);
+            }
+        } else {
+            item.classList.remove('is-cover-photo');
+            item.style.outline = '';
+            item.style.outlineOffset = '';
+            item.style.boxShadow = '0 2px 5px rgba(0,0,0,0.5)';
+            item.removeAttribute('aria-label');
+            if (item.title === coverLabel) item.removeAttribute('title');
+            if (existingBadge) existingBadge.remove();
+        }
+    });
+}
+
 export function addPhotoToGrid(fileOrUrl) {
     const grid = document.getElementById('photoGrid');
     if (!grid) return;
@@ -1013,6 +1062,7 @@ export function addPhotoToGrid(fileOrUrl) {
             let targetIndex = allItems.indexOf(this);
             if (draggedIndex < targetIndex) this.after(draggedItem);
             else this.before(draggedItem);
+            refreshCoverHighlight();
             markPhotosDirty();
             const explicitSaveBtn = document.getElementById('explicitSaveBtn');
             if (explicitSaveBtn) {
@@ -1032,6 +1082,7 @@ export function addPhotoToGrid(fileOrUrl) {
             newFilesMap.delete(img.src);
         }
         item.remove();
+        refreshCoverHighlight();
         markPhotosDirty();
         const explicitSaveBtn = document.getElementById('explicitSaveBtn');
         if (explicitSaveBtn) {
@@ -1045,6 +1096,8 @@ export function addPhotoToGrid(fileOrUrl) {
     const frame = grid.querySelector('.add-photo-frame');
     if (frame) grid.insertBefore(item, frame);
     else grid.appendChild(item);
+
+    refreshCoverHighlight();
 }
 
 const newPhotoInput = document.getElementById('newPhotoInput');
