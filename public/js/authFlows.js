@@ -24,6 +24,12 @@ function redirectAfterLogin(user = {}) {
     let intended = sessionStorage.getItem('intended_destination');
     sessionStorage.removeItem('intended_destination');
 
+    // Admins always land on their dashboard, regardless of any intended destination.
+    if (user.role === 'admin') {
+        window.location.replace(appPath('dashboard.html'));
+        return;
+    }
+
     if (intended && intended.includes('dashboard.html') && user.role === 'user') {
         intended = null;
     }
@@ -213,7 +219,13 @@ function handleAgeGateEnter(btn) {
 
     const intended = sessionStorage.getItem('intended_destination');
     let targetUrl = appPath('categories.html');
-    if (intended) {
+    let cachedUser = null;
+    try { cachedUser = JSON.parse(localStorage.getItem('user') || 'null'); } catch (e) { /* ignore */ }
+    if (cachedUser && cachedUser.role === 'admin') {
+        // A logged-in admin entering through the age gate goes straight to their home.
+        sessionStorage.removeItem('intended_destination');
+        targetUrl = appPath('dashboard.html');
+    } else if (intended) {
         sessionStorage.removeItem('intended_destination');
         targetUrl = intended;
     }
@@ -326,6 +338,12 @@ if (verifyForm) {
                 
                 let intended = sessionStorage.getItem('intended_destination');
                 sessionStorage.removeItem('intended_destination');
+
+                // Admins always land on their dashboard, regardless of intended destination.
+                if (data.user.role === 'admin') {
+                    window.location.replace(appPath('dashboard.html'));
+                    return;
+                }
 
                 // Prevent regular users from being forced into the dashboard by a stale intended_destination
                 if (intended && intended.includes('dashboard.html') && data.user.role === 'user') {
