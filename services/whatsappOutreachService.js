@@ -8,6 +8,18 @@ const {
 
 const BUSY_PHASES = new Set(['initializing', 'qr', 'sending', 'waiting_window']);
 
+// Hard ceilings so a single lead can never stall the whole run. whatsapp-web.js
+// calls can hang indefinitely for numbers that are not on WhatsApp, so every
+// network-bound call is raced against a timeout.
+const REGISTER_CHECK_TIMEOUT_MS = 30000;
+const SEND_TIMEOUT_MS = 60000;
+// Total attempts per lead for TRANSIENT failures only (never for permanent
+// ones like an unregistered number). Guarantees the loop always advances.
+const MAX_SEND_ATTEMPTS = 2;
+// Short jittered backoff between transient retries (NOT the slow-drip pacing,
+// and never counted toward the nightly cap).
+const RETRY_BACKOFF_MS = [4000, 9000];
+
 const state = {
   phase: 'idle',
   qr: null,
@@ -31,6 +43,36 @@ function randomDelay(minMs, maxMs) {
   const lo = Math.min(minMs, maxMs);
   const hi = Math.max(minMs, maxMs);
   return Math.floor(Math.random() * (hi - lo + 1) + lo);
+}
+
+// Race a promise against a timeout so a hung WhatsApp call cannot block the run
+// forever. Rejects with a labelled timeout error if `promise` does not settle.
+function withTimeout(promise, ms, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+  });
+  return Promise.race([Promise.resolve(promise), timeout]).finally(() => clearTimeout(timer));
+}
+
+// Persist a lead's status (best-effort: a DB hiccup must not abort the run or
+// re-block the queue). Only acts when the target carries a DB document.
+async function markLeadStatus(target, status) {
+  if (!target.leadDoc) return;
+  try {
+    target.leadDoc.status = status;
+    await target.leadDoc.save();
+  } catch (err) {
+    state.lastError = `Failed to mark lead ${status}: ${err.message}`;
+  }
+}
+
+// Heuristic: does this send error look permanent (bad/unregistered number) vs.
+// transient (network/session). Permanent => reject & move on; transient =>
+// bounded retry. We err toward "transient" so we never discard a real lead.
+function isPermanentSendError(err) {
+  const msg = String((err && err.message) || err || '').toLowerCase();
+  return /not.*regist|invalid.*(wid|jid|phone|number|recipient)|number.*not|no.*account|wid error|phone number is not/.test(msg);
 }
 
 // "HH:MM" -> minutes since local midnight (0..1439). Falls back to 0 if malformed.
@@ -195,30 +237,83 @@ async function processTargets(targets, options = {}) {
     state.phase = 'sending';
     state.currentLead = target.alias || target.phone;
 
+    // --- 1. Normalize. A malformed number can never be sent: reject & advance.
+    const cleanPhone = normalizeWhatsAppPhone(target.phone);
+    if (!cleanPhone) {
+      await markLeadStatus(target, 'rejected');
+      state.skipped += 1;
+      continue;
+    }
+
+    const chatId = `${cleanPhone}@c.us`;
+    const alias = (target.alias && String(target.alias).trim()) || 'hermosa';
+    const messageToSend = customMessage
+      ? String(customMessage).replace(/\{alias\}/gi, alias)
+      : buildProfessionalInviteMessage(alias);
+
+    // --- 2. Pre-validate the number is actually on WhatsApp. Sending to a
+    // non-existent number is what hangs/loops, so we never reach sendMessage
+    // for those. Unregistered => reject (permanent, no retry, no real send).
+    let registered;
     try {
-      const cleanPhone = normalizeWhatsAppPhone(target.phone);
-      if (!cleanPhone) {
-        state.skipped += 1;
-        continue;
+      registered = await withTimeout(
+        client.isRegisteredUser(chatId),
+        REGISTER_CHECK_TIMEOUT_MS,
+        'isRegisteredUser'
+      );
+    } catch (err) {
+      // Could not determine registration (timeout/session glitch). Treat as
+      // transient: count as failed, leave the lead 'pending' for a later run,
+      // and advance so one bad number cannot stall the queue.
+      state.failed += 1;
+      state.lastError = `Registration check failed for ${target.phone}: ${err.message}`;
+      continue;
+    }
+
+    if (!registered) {
+      await markLeadStatus(target, 'rejected');
+      state.skipped += 1;
+      // Light throttle so we don't fire hundreds of checks back-to-back.
+      if (useDrip && i < targets.length - 1) {
+        await sleep(randomDelay(2000, 5000));
       }
+      continue;
+    }
 
-      const chatId = `${cleanPhone}@c.us`;
-      const alias = (target.alias && String(target.alias).trim()) || 'hermosa';
-      const messageToSend = customMessage
-        ? String(customMessage).replace(/\{alias\}/gi, alias)
-        : buildProfessionalInviteMessage(alias);
-      await client.sendMessage(chatId, messageToSend);
-
-      if (target.leadDoc) {
-        target.leadDoc.status = 'contacted';
-        await target.leadDoc.save();
+    // --- 3. Send, with a hard timeout and a small bounded retry for transient
+    // errors only. Never infinite-retry; the loop always advances.
+    let delivered = false;
+    let permanentlyRejected = false;
+    for (let attempt = 1; attempt <= MAX_SEND_ATTEMPTS; attempt += 1) {
+      try {
+        await withTimeout(
+          client.sendMessage(chatId, messageToSend),
+          SEND_TIMEOUT_MS,
+          'sendMessage'
+        );
+        delivered = true;
+        break;
+      } catch (err) {
+        state.lastError = err.message;
+        if (isPermanentSendError(err)) {
+          permanentlyRejected = true;
+          break;
+        }
+        // Transient: back off briefly, then retry until the cap is reached.
+        if (attempt < MAX_SEND_ATTEMPTS) {
+          await sleep(randomDelay(RETRY_BACKOFF_MS[0], RETRY_BACKOFF_MS[1]));
+        }
       }
+    }
 
+    if (delivered) {
+      await markLeadStatus(target, 'contacted');
       state.sent += 1;
       if (useDrip) {
         state.nightlySent += 1;
       }
 
+      // Slow-drip pacing applies ONLY after a real successful send.
       // Don't waste a long delay after the final message.
       if (i < targets.length - 1) {
         const delay = useDrip
@@ -226,9 +321,13 @@ async function processTargets(targets, options = {}) {
           : randomDelay(15000, 30000);
         await sleep(delay);
       }
-    } catch (err) {
+    } else if (permanentlyRejected) {
+      await markLeadStatus(target, 'rejected');
       state.failed += 1;
-      state.lastError = err.message;
+    } else {
+      // Transient failure exhausted retries. Leave as 'pending' so a future
+      // run can try again, but advance now so the queue is never blocked.
+      state.failed += 1;
     }
   }
 

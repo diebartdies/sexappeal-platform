@@ -23,6 +23,12 @@ function buildProfessionalInviteMessage(alias) {
 
 Bienvenida a SexAppeal, el santuario donde tu presencia se convierte en una Living Treasure.
 
+💎 TU VIDRIERA PERSONAL
+SexAppeal es tu escaparate exclusivo para mostrar tu belleza y tus servicios a los clientes que te buscan. Es tu perfil, tu presencia, tus fotos: un espacio pensado para que brilles y te luzcas. Nosotros te damos la vitrina y te conectamos de forma directa y discreta con clientes potenciales — sin intermediarios.
+
+🤝 MÁS QUE UNA VITRINA, UN ALIADO
+SexAppeal es mucho más que un escaparate: somos tu socio en una profesión exigente. Llegamos para hacerte las cosas más fáciles, cuidar tu privacidad y acompañarte en cada paso, para que vos te ocupes solo de lo que mejor sabés hacer.
+
 ✨ TU PRIMER MES, SIN COSTO
 Durante los próximos 30 días disfrutás de un período de evaluación completamente gratuito. Es tu oportunidad de conocer la plataforma, recibir contactos reales y descubrir el valor de estar visible en un espacio exclusivo, discreto y sin comisiones por conexión.
 
@@ -32,7 +38,7 @@ En este primer mes, tu perfil aparecerá en una categoría asignada al azar entr
 Cuando finalice tu mes gratuito y tu primer pago sea validado por nuestro equipo, pasarás automáticamente a la categoría que elijas al registrarte — y pagarás únicamente la tarifa correspondiente a esa categoría.
 
 🏖️ VACACIONES
-Si necesitás ausentarte, podés registrar vacaciones desde tu panel. Durante ese período tu perfil figurará como inactivo y, en tu facturación mensual, se descontarán hasta 15 días de vacaciones del saldo a abonar.
+Si necesitás ausentarte, podés registrar vacaciones desde tu panel. Durante ese período tu perfil figura como inactivo y podés descontar hasta 20 días de vacaciones por año de tu saldo a abonar — sin perder tu lugar.
 
 💰 FACTURACIÓN INTELIGENTE POR CATEGORÍA
 Tu abono mensual se calcula según la categoría que elijas (Standard, Silver, Gold, Premium o Elite). Si durante el mes cambiás de categoría por decisión propia, el sistema registra la fecha del cambio y prorratea automáticamente los días en cada tarifa — sin sorpresas ni cálculos manuales.

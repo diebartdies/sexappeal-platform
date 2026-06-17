@@ -83,9 +83,10 @@ const config = {
 
     // Night window in which bulk sending is allowed. Local time, "HH:MM".
     // The window may cross midnight (e.g. 21:00 -> 08:00).
-    // Env: OUTREACH_NIGHT_START (default '21:00'), OUTREACH_NIGHT_END (default '08:00').
-    nightWindowStart: process.env.OUTREACH_NIGHT_START || '21:00',
-    nightWindowEnd: process.env.OUTREACH_NIGHT_END || '08:00',
+    // When start === end the window is 24h (no gating) — send ASAP, any hour.
+    // Env: OUTREACH_NIGHT_START (default '00:00'), OUTREACH_NIGHT_END (default '00:00').
+    nightWindowStart: process.env.OUTREACH_NIGHT_START || '00:00',
+    nightWindowEnd: process.env.OUTREACH_NIGHT_END || '00:00',
 
     // Local timezone offset (hours from UTC) used to evaluate the night window.
     // Argentina is UTC-3 year round. Env: OUTREACH_TZ_OFFSET (default -3).
@@ -93,9 +94,11 @@ const config = {
 
     // Jittered delay between messages (milliseconds). A uniform random value
     // in [minDelayMs, maxDelayMs] is waited after each successful send.
-    // Defaults: 60000-180000 (1-3 min). Env: OUTREACH_MIN_DELAY_MS, OUTREACH_MAX_DELAY_MS.
-    minDelayMs: parseInt(process.env.OUTREACH_MIN_DELAY_MS, 10) || 60000,
-    maxDelayMs: parseInt(process.env.OUTREACH_MAX_DELAY_MS, 10) || 180000,
+    // Defaults: 10000-20000 (random 10-20s, ~15s avg) — finish ASAP while
+    // keeping randomized spacing so it isn't a robotic constant (anti-ban).
+    // Env: OUTREACH_MIN_DELAY_MS, OUTREACH_MAX_DELAY_MS.
+    minDelayMs: parseInt(process.env.OUTREACH_MIN_DELAY_MS, 10) || 10000,
+    maxDelayMs: parseInt(process.env.OUTREACH_MAX_DELAY_MS, 10) || 20000,
 
     // Maximum messages to send per calendar night. 0 = unlimited.
     // When the cap is hit, sending pauses until the next night window opens.
