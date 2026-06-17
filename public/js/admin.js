@@ -424,6 +424,7 @@ export async function loadDashboard() {
                 
                 finishDashboardLoad('dashboardContent', 'loader');
                 applyStaticTranslations(content);
+                maybeWarnWhatsAppDisconnected();
                 return; // Stop execution to prevent loading professional specific data
             }
 
@@ -3432,6 +3433,88 @@ async function pollWhatsAppConfigStatus() {
     } catch (err) {
         console.error('WhatsApp config poll failed', err);
     }
+}
+
+async function maybeWarnWhatsAppDisconnected() {
+    try {
+        if (sessionStorage.getItem('waDisconnectWarnShown')) return;
+    } catch (_) {
+        return;
+    }
+
+    let body;
+    try {
+        const res = await fetch(`${API_URL}/admin/whatsapp/register/status`, {
+            headers: authHeaders(),
+            credentials: 'include'
+        });
+        if (!res.ok) return;
+        body = await res.json();
+    } catch (_) {
+        return;
+    }
+
+    if (!body || !body.success || !body.data || body.data.connected !== false) return;
+
+    try {
+        sessionStorage.setItem('waDisconnectWarnShown', '1');
+    } catch (_) { /* ignore */ }
+
+    showWhatsAppDisconnectedWarning();
+}
+
+function showWhatsAppDisconnectedWarning() {
+    if (document.getElementById('waDisconnectWarnModal')) return;
+
+    const modal = document.createElement('div');
+    modal.id = 'waDisconnectWarnModal';
+    modal.className = 'payment-modal-overlay';
+    Object.assign(modal.style, {
+        position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+        backgroundColor: 'rgba(0,0,0,0.85)', zIndex: '4000', display: 'flex',
+        alignItems: 'center', justifyContent: 'center', padding: '20px'
+    });
+
+    const titleId = 'waDisconnectWarnTitle';
+    const card = document.createElement('div');
+    card.className = 'card';
+    Object.assign(card.style, {
+        maxWidth: '440px', width: '100%', border: '1px solid var(--primary-gold)',
+        padding: '28px', textAlign: 'center'
+    });
+    card.innerHTML = `
+        <h3 id="${titleId}" class="gold-text" style="margin-bottom: 16px; font-size: 1.4rem;">${t('WhatsApp disconnected')}</h3>
+        <p style="color: #ddd; margin-bottom: 24px; line-height: 1.5;">${t('The platform WhatsApp (Tulio) is currently disconnected. Outreach and notifications will not be sent until you re-link it from Config → WhatsApp.')}</p>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+            <button id="waDisconnectWarnConfig" style="width: auto; padding: 10px 20px; background: var(--primary-gold); color: var(--dark-bg);">${t('Go to WhatsApp settings')}</button>
+            <button id="waDisconnectWarnOk" style="width: auto; padding: 10px 20px; background: transparent; color: var(--primary-gold); border: 1px solid var(--primary-gold);">${t('Understood')}</button>
+        </div>
+    `;
+
+    modal.appendChild(card);
+    document.body.appendChild(modal);
+
+    const close = () => {
+        deactivateAccessibleModal(modal);
+        modal.remove();
+        document.body.style.overflow = '';
+    };
+
+    card.querySelector('#waDisconnectWarnOk').addEventListener('click', close);
+    card.querySelector('#waDisconnectWarnConfig').addEventListener('click', () => {
+        close();
+        openDashboardConfigModal();
+    });
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
+    });
+
+    document.body.style.overflow = 'hidden';
+    activateAccessibleModal(modal, {
+        labelId: titleId,
+        onClose: close,
+        initialFocusSelector: '#waDisconnectWarnOk'
+    });
 }
 
 async function loadWhatsAppConfigPanel() {

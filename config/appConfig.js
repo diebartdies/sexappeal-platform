@@ -26,8 +26,18 @@ const config = {
   maxAliasLength: 50,
   minPasswordLength: 6,
   verificationCodeExpireMinutes: 20,
-  rateLimitWindow: 10 * 60 * 1000, // 10 minutes
-  rateLimitMax: 100,
+  // Strict limiter — auth (login/register/verify/recover), mutations and admin.
+  // Env: RATE_LIMIT_WINDOW (ms), RATE_LIMIT_MAX. Defaults preserve prior behavior.
+  rateLimitWindow: parseInt(process.env.RATE_LIMIT_WINDOW, 10) || 10 * 60 * 1000, // 10 minutes
+  rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX, 10) || 100,
+  // Generous limiter — high-volume public discovery/vault reads (professionals
+  // listing, profile/reviews, specialties, locations, public status, plus the
+  // photo-click tracking that fans out during normal browsing). Sized so a
+  // normal session (full pagination + count sweeps + curtain polling) never
+  // trips it, while still capping abusive scraping.
+  // Env: READ_RATE_LIMIT_WINDOW (ms), READ_RATE_LIMIT_MAX.
+  readRateLimitWindow: parseInt(process.env.READ_RATE_LIMIT_WINDOW, 10) || 60 * 1000, // 1 minute
+  readRateLimitMax: parseInt(process.env.READ_RATE_LIMIT_MAX, 10) || 600,
 
   // Enums
   roles: ['user', 'professional', 'admin'],
@@ -108,6 +118,71 @@ const config = {
     // How often (ms) to re-check the clock while paused (outside window / cap hit).
     // Env: OUTREACH_POLL_INTERVAL_MS (default 30000).
     pollIntervalMs: parseInt(process.env.OUTREACH_POLL_INTERVAL_MS, 10) || 30000
+  },
+
+  // SMS lead outreach via Twilio. Mirrors the WhatsApp `outreach` block but uses
+  // Twilio's REST API. Sending defaults to 24/7 (no night window) and a fast,
+  // jittered drip. All values overridable via env. Times are LOCAL (UTC-3) "HH:MM".
+  sms: {
+    // Twilio credentials. Required to send. Surface a clear error when missing.
+    // Env: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN.
+    accountSid: process.env.TWILIO_ACCOUNT_SID || '',
+    authToken: process.env.TWILIO_AUTH_TOKEN || '',
+
+    // Sender identity. Prefer a Messaging Service SID when set; otherwise fall
+    // back to a single "from" number. At least one must be configured.
+    // Env: TWILIO_MESSAGING_SERVICE_SID, TWILIO_FROM_NUMBER.
+    messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID || '',
+    fromNumber: process.env.TWILIO_FROM_NUMBER || '',
+
+    // Global master switch. When false (default), every SMS path no-ops safely
+    // (logs, never throws). Must be explicitly turned on to send anything.
+    // Env: SMS_ENABLED ("true" enables; default disabled).
+    enabled: process.env.SMS_ENABLED === 'true',
+
+    // Extra guard so SMS does not fire from a dev/non-production box even if a
+    // developer leaves SMS_ENABLED on. In non-production, sending also requires
+    // SMS_ALLOW_NON_PROD=true. Env: SMS_ALLOW_NON_PROD (default disabled).
+    allowNonProd: process.env.SMS_ALLOW_NON_PROD === 'true',
+
+    // Per-notification toggles for the transactional SMS channel. Each is
+    // independent so a single event type can be enabled/disabled in isolation.
+    // Env: SMS_NOTIFY_VISIBILITY, SMS_NOTIFY_DUEDATE, SMS_NOTIFY_TARIFF.
+    notifyVisibility: process.env.SMS_NOTIFY_VISIBILITY === 'true',
+    notifyDueDate: process.env.SMS_NOTIFY_DUEDATE === 'true',
+    notifyTariff: process.env.SMS_NOTIFY_TARIFF === 'true',
+
+    // Master switch for the slow nightly drip. When false, the fast burst
+    // pacing below is used with no night-window gating.
+    // Env: SMS_SLOW_DRIP ("true" enables nightly drip; default disabled = 24/7).
+    slowDripEnabled: process.env.SMS_SLOW_DRIP === 'true',
+
+    // Night window in which sending is allowed (only honored when slow drip is
+    // enabled). Local time "HH:MM"; may cross midnight. start === end == 24h.
+    // Env: SMS_NIGHT_START (default '00:00'), SMS_NIGHT_END (default '00:00').
+    nightWindowStart: process.env.SMS_NIGHT_START || '00:00',
+    nightWindowEnd: process.env.SMS_NIGHT_END || '00:00',
+
+    // Local timezone offset (hours from UTC) for the night window. Argentina is
+    // UTC-3. Env: SMS_TZ_OFFSET (default -3).
+    timezoneOffsetHours: parseFloat(process.env.SMS_TZ_OFFSET) || -3,
+
+    // Jittered delay between messages (ms). Uniform random in [min, max] after
+    // each successful send. Defaults 10000-20000 (~15s avg): reasonably fast
+    // but not a single burst. Env: SMS_MIN_DELAY_MS, SMS_MAX_DELAY_MS.
+    minDelayMs: parseInt(process.env.SMS_MIN_DELAY_MS, 10) || 10000,
+    maxDelayMs: parseInt(process.env.SMS_MAX_DELAY_MS, 10) || 20000,
+
+    // Maximum messages per calendar night (only honored with slow drip). 0 = unlimited.
+    // Env: SMS_NIGHTLY_CAP (default 0).
+    nightlyCap: parseInt(process.env.SMS_NIGHTLY_CAP, 10) || 0,
+
+    // How often (ms) to re-check the clock while paused. Env: SMS_POLL_INTERVAL_MS (default 30000).
+    pollIntervalMs: parseInt(process.env.SMS_POLL_INTERVAL_MS, 10) || 30000,
+
+    // Hard ceiling (ms) for a single Twilio API call so a hung request never
+    // stalls the loop. Env: SMS_SEND_TIMEOUT_MS (default 30000).
+    sendTimeoutMs: parseInt(process.env.SMS_SEND_TIMEOUT_MS, 10) || 30000
   }
 };
 

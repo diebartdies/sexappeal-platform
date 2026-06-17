@@ -13,6 +13,7 @@ const { isUploadPath, resolvePhotoForClient, resolvePhotosForClient, normalizePh
 const { getProfessionalIdNumberError, normalizeProfessionalIdNumber } = require('../utils/idNumber');
 const { resolveWhatsappNumber, hasContactNumber } = require('../utils/contactNumber');
 const { recordCategoryChange, normalizeQuality } = require('../utils/categoryBilling');
+const smsNotifications = require('../services/smsNotifications');
 
 // Simple in-memory cache setup
 const cache = new Map();
@@ -496,6 +497,14 @@ exports.notifyRateChange = async (req, res, next) => {
       }).catch(err => console.error(`Failed to send email to ${p.email}:`, err))
     );
 
+    // Mirror the broadcast over SMS (best-effort; gated by SMS_NOTIFY_TARIFF).
+    professionals.forEach(p =>
+      smsNotifications.notifyTariffChange(
+        p,
+        `la tarifa mensual de tu categoria (${p.professionalProfile?.quality || 'Standard'}) fue actualizada`
+      ).catch(() => {})
+    );
+
     res.status(200).json({
       success: true,
       message: `Rate change notification triggered for ${professionals.length} professionals`
@@ -710,6 +719,20 @@ exports.updateProfile = async (req, res, next) => {
       new: true,
       runValidators: true
     });
+
+    // SMS visibility notice on real transitions (self-service edit). Best-effort:
+    // gated by SMS_NOTIFY_VISIBILITY and never blocks the response.
+    const exposedChanged = req.body.isExposed !== undefined
+      && (req.body.isExposed === 'true') !== Boolean(oldProf.isExposed);
+    const vacationJustSet = Boolean(fieldsToUpdate['professionalProfile.vacation']);
+    if (exposedChanged) {
+      await smsNotifications.notifyVisibilityChange(
+        user,
+        req.body.isExposed === 'true' ? 'visible' : 'oculto'
+      ).catch(() => {});
+    } else if (vacationJustSet) {
+      await smsNotifications.notifyVisibilityChange(user, 'en vacaciones (inactivo)').catch(() => {});
+    }
 
     // Sync the many-to-many Specialties table
     if (req.body.services !== undefined) {

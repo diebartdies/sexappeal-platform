@@ -10,6 +10,8 @@
     "audit:check": "npm audit",
     "audit:fix": "npm audit fix",
     "outreach": "node whatsapp_outreach.js",
+    "sms:outreach": "node sms_outreach.js",
+    "sms:test": "node scripts/send-test-sms.js",
     "watch:server": "node scripts/server-watch.js",
     "watch:whatsapp-login": "node scripts/whatsapp-watch-login.js",
     "seo:locations": "node scripts/generate-seo-locations.js",
@@ -41,6 +43,7 @@
     "puppeteer": "^25.0.4",
     "qrcode-terminal": "^0.12.0",
     "sharp": "^0.33.2",
+    "twilio": "^6.0.2",
     "whatsapp-web.js": "^1.34.7"
   },
   "devDependencies": {

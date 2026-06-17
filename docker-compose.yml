@@ -18,6 +18,12 @@ services:
   app:
     build: .
     container_name: sexappeal_app
+    # Stable hostname so the persisted Chromium profile lock (SingletonLock in
+    # .wwebjs_auth) is always seen as "this machine" across recreates. Without a
+    # fixed hostname, Docker assigns the container ID, and after a rebuild the old
+    # lock looks like it belongs to "another computer", blocking the WhatsApp
+    # client from launching ("profile appears to be in use ... on another computer").
+    hostname: sexappeal_app
     restart: on-failure
     env_file: .env
     environment:

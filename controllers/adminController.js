@@ -6,6 +6,7 @@ const { isValidRejectionReason, buildRejectionEmail } = require('../utils/reject
 const { resolvePhotoForClient, resolvePhotosForClient, resolveFirstPhotoForClient } = require('../utils/photoUtils');
 const { getProfessionalIdNumberError, normalizeProfessionalIdNumber } = require('../utils/idNumber');
 const { resolveWhatsappNumber } = require('../utils/contactNumber');
+const smsNotifications = require('../services/smsNotifications');
 
 // @desc    Get all professionals
 // @route   GET /api/v1/admin/professionals
@@ -307,6 +308,12 @@ exports.verifyProfessional = async (req, res, next) => {
       }).catch(err => console.error(`Failed to send rejection email to ${user.email}:`, err.message));
     }
 
+    // SMS visibility notice (best-effort; never blocks the verification flow).
+    await smsNotifications.notifyVisibilityChange(
+      user,
+      status === 'approved' ? 'aprobado y visible' : 'no aprobado'
+    ).catch(() => {});
+
     const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket ? req.socket.remoteAddress : req.ip);
     await ActivityLog.create({
       professional: user._id,
@@ -374,12 +381,14 @@ exports.acknowledgePayment = async (req, res, next) => {
     user.professionalProfile.paymentProcessed = true;
     user.professionalProfile.subscriptionStatus = 'active';
 
+    let tariffChangedTo = null;
     if (user.professionalProfile.desiredQuality) {
       const previousQuality = normalizeQuality(user.professionalProfile.quality);
       const nextQuality = normalizeQuality(user.professionalProfile.desiredQuality);
       if (previousQuality !== nextQuality) {
         user.professionalProfile.categoryChangeLog = [...(user.professionalProfile.categoryChangeLog || [])];
         recordCategoryChange(user.professionalProfile, previousQuality, nextQuality);
+        tariffChangedTo = nextQuality;
       }
       user.professionalProfile.quality = nextQuality;
     }
@@ -392,6 +401,14 @@ exports.acknowledgePayment = async (req, res, next) => {
     }
 
     await user.save();
+
+    if (tariffChangedTo) {
+      await smsNotifications.notifyTariffChange(
+        user,
+        `tu categoria vigente cambio a ${tariffChangedTo}`
+      ).catch(() => {});
+    }
+
     res.status(200).json({ success: true, data: user });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
@@ -411,6 +428,11 @@ exports.updateProfessionalProfile = async (req, res, next) => {
         error: 'Professional not found'
       });
     }
+
+    // Capture pre-update state so we only fire SMS notices on real transitions.
+    const prevVerificationStatus = user.verificationStatus;
+    const prevIsExposed = user.professionalProfile?.isExposed;
+    const prevQualityForSms = normalizeQuality(user.professionalProfile?.quality);
 
     // Allow admin to update email, verification status, or nested profile data
     if (req.body.email) user.email = req.body.email;
@@ -467,6 +489,30 @@ exports.updateProfessionalProfile = async (req, res, next) => {
     }
 
     await user.save();
+
+    // Best-effort SMS notices for admin-driven transitions (never block the save).
+    if (req.body.verificationStatus && req.body.verificationStatus !== prevVerificationStatus) {
+      await smsNotifications.notifyVisibilityChange(
+        user,
+        req.body.verificationStatus === 'approved' ? 'aprobado y visible' : 'no visible'
+      ).catch(() => {});
+    } else {
+      const newExposed = user.professionalProfile?.isExposed;
+      if (prevIsExposed !== undefined && newExposed !== undefined && newExposed !== prevIsExposed) {
+        await smsNotifications.notifyVisibilityChange(
+          user,
+          newExposed ? 'visible' : 'oculto'
+        ).catch(() => {});
+      }
+    }
+
+    const newQualityForSms = normalizeQuality(user.professionalProfile?.quality);
+    if (newQualityForSms !== prevQualityForSms) {
+      await smsNotifications.notifyTariffChange(
+        user,
+        `tu categoria vigente cambio a ${newQualityForSms}`
+      ).catch(() => {});
+    }
 
     const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket ? req.socket.remoteAddress : req.ip);
     await ActivityLog.create({

@@ -88,9 +88,14 @@ function attachClientEvents(activeClient) {
   });
 
   activeClient.on('disconnected', (reason) => {
+    // Disconnected: mark not-connected and STOP — no auto-retry loop. Drop our
+    // client reference so a later explicit reconnect (admin register / next
+    // startup auto-reconnect) starts from a clean slate instead of a dead client.
     clientReady = false;
     regState.phase = 'error';
     regState.lastError = reason || 'WhatsApp disconnected';
+    client = null;
+    initializing = false;
   });
 }
 
@@ -112,11 +117,16 @@ function createClient() {
   attachClientEvents(client);
   regState.phase = 'initializing';
   regState.lastError = null;
+  // SINGLE attempt only. If initialization fails, mark as disconnected/errored
+  // and STOP — never loop-retry. Reset the client ref so the status reflects
+  // "not connected" and a later explicit reconnect starts from a clean slate.
   client.initialize().catch((err) => {
     regState.phase = 'error';
     regState.lastError = err.message;
+    clientReady = false;
     initializing = false;
     notifyReadyWaiters(err);
+    client = null;
   }).finally(() => {
     initializing = false;
   });
@@ -197,6 +207,17 @@ function getSharedClient() {
   return client;
 }
 
+// Called at server startup: if a WhatsApp session is already saved on disk,
+// bring the platform (Tulio) client up automatically so a container restart /
+// rebuild restores sending without a manual reconnect. No-op if already running
+// or if there is no saved session (nothing to reconnect to).
+function autoReconnectIfSessionSaved() {
+  if (client || initializing || clientReady) return false;
+  if (!sessionExistsOnDisk()) return false;
+  createClient();
+  return true;
+}
+
 function isClientReady() {
   return clientReady;
 }
@@ -214,6 +235,7 @@ module.exports = {
   sendMessage,
   destroyClient,
   getSharedClient,
+  autoReconnectIfSessionSaved,
   isClientReady,
   getQrCode,
   sessionExistsOnDisk

@@ -15,6 +15,7 @@ const { calculateMonthlyInvoiceAmount } = require('./utils/categoryBilling');
 const ActivityLog = require('./models/ActivityLog');
 const sendEmail = require('./sendEmail');
 const { resolveWhatsappNumber } = require('./utils/contactNumber');
+const smsNotifications = require('./services/smsNotifications');
 
 // Connect to database
 connectDB();
@@ -83,12 +84,48 @@ app.use(cors({
   credentials: true
 }));
 
-// Rate limiting
-const limiter = rateLimit({
+// Rate limiting — segmented so heavy public browsing of the vault never trips
+// the strict cap that protects auth/mutations/admin.
+// Strict limiter: auth (login/register/verify/recover), all mutations and admin.
+const strictLimiter = rateLimit({
   windowMs: config.rateLimitWindow,
-  max: config.rateLimitMax
+  max: config.rateLimitMax,
+  standardHeaders: true,
+  legacyHeaders: false
 });
-app.use('/api', limiter);
+// Generous limiter: high-volume public discovery/vault reads.
+const readLimiter = rateLimit({
+  windowMs: config.readRateLimitWindow,
+  max: config.readRateLimitMax,
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// True for the high-volume public discovery traffic that the vault grid fans
+// out (listing, profile detail, reviews, specialties, locations, public status)
+// plus the silent photo-click tracking. Everything else on /api stays strict.
+function isHighVolumePublicRead(req) {
+  const p = req.path;
+  if (req.method === 'GET') {
+    return (
+      p.startsWith('/api/v1/professionals') ||
+      p.startsWith('/api/v1/specialties') ||
+      p.startsWith('/api/v1/locations') ||
+      p.startsWith('/api/v1/public')
+    );
+  }
+  if (req.method === 'POST' && /^\/api\/v1\/professionals\/[^/]+\/track-photo-click\/?$/.test(p)) {
+    return true;
+  }
+  return false;
+}
+
+app.use((req, res, next) => {
+  if (!req.path.startsWith('/api')) return next();
+  return isHighVolumePublicRead(req)
+    ? readLimiter(req, res, next)
+    : strictLimiter(req, res, next);
+});
 
 // SEO routes (must be registered before static files)
 const seoController = require('./controllers/seoController');
@@ -315,6 +352,19 @@ const PORT = config.port;
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`\nServer running in ${config.env} mode on port ${PORT}`);
   console.log(`Access the application at http://localhost:${PORT}\n`);
+
+  // Auto-reconnect the platform WhatsApp (Tulio) client from its saved session so
+  // a restart/rebuild restores sending without a manual re-registration.
+  try {
+    const whatsappPlatformService = require('./services/whatsappPlatformService');
+    if (whatsappPlatformService.autoReconnectIfSessionSaved()) {
+      console.log('[WhatsApp] Saved platform session found — reconnecting Tulio client in background...');
+    } else {
+      console.log('[WhatsApp] No saved platform session — register via the admin panel to link a number.');
+    }
+  } catch (err) {
+    console.error('[WhatsApp] Auto-reconnect on startup failed:', err.message);
+  }
 });
 
 // Handle unhandled promise rejections
@@ -491,6 +541,11 @@ setInterval(async () => {
           await sendEmail({ email: user.email, subject: `SexAppeal Platform - Invoice for ${yyyyMm}`, message: `Hello ${user.professionalProfile?.alias || 'Professional'},\n\nYour subscription fee for ${yyyyMm} is $${amountToBill} ARS.\n\nPlease upload your receipt within the first 5 business days of next month to avoid a late fee and suspension.\n\nThank you!` });
           const notifyNumber = resolveWhatsappNumber(user.professionalProfile);
           if (notifyNumber) sendWhatsappNotification(notifyNumber, `Hello ${user.professionalProfile?.alias || 'Professional'}! 💎\n\nYour invoice for ${yyyyMm} is ready. The amount due is $${amountToBill} ARS. Please upload your receipt in the dashboard within the first 5 business days to keep your profile active.\n\nThank you!`);
+          const dueDate7 = new Date(today.getFullYear(), today.getMonth() + 1, 7);
+          await smsNotifications.notifyDueDate(
+            user,
+            `$${amountToBill} ARS vence el ${String(dueDate7.getDate()).padStart(2, '0')}/${String(dueDate7.getMonth() + 1).padStart(2, '0')}`
+          ).catch(() => {});
           console.log(`[Billing Engine] Generated invoice for ${user.email} - $${amountToBill}`);
         } else {
           user.professionalProfile.paymentProcessed = true;
@@ -518,6 +573,10 @@ setInterval(async () => {
             subject: 'SexAppeal Platform - Account Suspended (Late Payment)',
             message: `Hello ${user.professionalProfile?.alias || 'Professional'},\n\nYour profile has been temporarily removed from the public directory because we have not received your payment receipt within the first 5 active business days.\n\nA 2% late fee has been applied. Your new total balance for ${prevYyyyMm} is $${prevInvoice.amount} ARS.\n\nPlease upload your payment receipt to be reactivated.\n\nThank you.`
           });
+          await smsNotifications.notifyDueDate(
+            user,
+            `tu cuenta fue suspendida por pago vencido (${prevYyyyMm}), saldo $${prevInvoice.amount} ARS con recargo`
+          ).catch(() => {});
           console.log(`[Suspension Engine] Suspended ${user.email} and applied 2% late fee.`);
         }
       }
