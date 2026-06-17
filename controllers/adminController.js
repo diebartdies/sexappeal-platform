@@ -4,7 +4,6 @@ const ActivityLog = require('../models/ActivityLog');
 const sendEmail = require('../sendEmail');
 const { isValidRejectionReason, buildRejectionEmail } = require('../utils/rejectionMessages');
 const { resolvePhotoForClient, resolvePhotosForClient, resolveFirstPhotoForClient } = require('../utils/photoUtils');
-const { getProfessionalIdNumberError, normalizeProfessionalIdNumber } = require('../utils/idNumber');
 const { resolveWhatsappNumber } = require('../utils/contactNumber');
 const smsNotifications = require('../services/smsNotifications');
 
@@ -442,14 +441,6 @@ exports.updateProfessionalProfile = async (req, res, next) => {
     }
 
     if (req.body.professionalProfile) {
-      if (req.body.professionalProfile.idNumber !== undefined) {
-        const idNumberError = getProfessionalIdNumberError(req.body.professionalProfile.idNumber);
-        if (idNumberError) {
-          return res.status(400).json({ success: false, error: idNumberError });
-        }
-        req.body.professionalProfile.idNumber = normalizeProfessionalIdNumber(req.body.professionalProfile.idNumber);
-      }
-
       if (req.body.professionalProfile.photos) {
           const remainingUrls = req.body.professionalProfile.photos;
           const keptPhotos = (user.professionalProfile.photos || []).filter(p => {

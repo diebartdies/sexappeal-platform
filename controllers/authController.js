@@ -5,7 +5,6 @@ const crypto = require('crypto');
 const fs = require('fs');
 const ActivityLog = require('../models/ActivityLog');
 const Specialty = require('../models/Specialty');
-const { getProfessionalIdNumberError, normalizeProfessionalIdNumber } = require('../utils/idNumber');
 
 // @desc    Register user
 // @route   POST /api/v1/auth/register
@@ -27,11 +26,6 @@ exports.register = async (req, res, next) => {
     if (birthDate) {
         const dob = new Date(birthDate);
         age = Math.abs(new Date(Date.now() - dob.getTime()).getUTCFullYear() - 1970);
-        if (role === 'professional' && age < 18) {
-          return res.status(400).json({ success: false, error: 'You must be at least 18 years old to register as a professional.' });
-        }
-    } else if (role === 'professional') {
-      return res.status(400).json({ success: false, error: 'Birth date is required for professional registration.' });
     }
 
     if (role === 'professional') {
@@ -52,11 +46,6 @@ exports.register = async (req, res, next) => {
       if (!req.files || req.files.length < 3) {
         return res.status(400).json({ success: false, error: 'All three verification photos are required.' });
       }
-      const idNumberError = getProfessionalIdNumberError(idNumber);
-      if (idNumberError) {
-        return res.status(400).json({ success: false, error: idNumberError });
-      }
-      idNumber = normalizeProfessionalIdNumber(idNumber);
     }
 
     const allowedQualities = ['Standard', 'Silver', 'Gold', 'Premium', 'Elite'];

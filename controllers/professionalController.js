@@ -10,7 +10,6 @@ const Review = require('../models/Review');
 const Connection = require('../models/Connection');
 const ConnectionRequest = require('../models/ConnectionRequest');
 const { isUploadPath, resolvePhotoForClient, resolvePhotosForClient, normalizePhotosForStorage, resolveFirstPhotoForClient } = require('../utils/photoUtils');
-const { getProfessionalIdNumberError, normalizeProfessionalIdNumber } = require('../utils/idNumber');
 const { resolveWhatsappNumber, hasContactNumber } = require('../utils/contactNumber');
 const { recordCategoryChange, normalizeQuality } = require('../utils/categoryBilling');
 const smsNotifications = require('../services/smsNotifications');
@@ -589,11 +588,7 @@ exports.updateProfile = async (req, res, next) => {
       if (req.body.surname !== undefined) identityFields.surname = req.body.surname;
       if (req.body.middleName !== undefined) identityFields.middleName = req.body.middleName;
       if (req.body.idNumber !== undefined) {
-        const idNumberError = getProfessionalIdNumberError(req.body.idNumber);
-        if (idNumberError) {
-          return res.status(400).json({ success: false, error: idNumberError });
-        }
-        identityFields.idNumber = normalizeProfessionalIdNumber(req.body.idNumber);
+        identityFields.idNumber = req.body.idNumber;
       }
       if (req.body.birthDate) {
         identityFields.birthDate = new Date(req.body.birthDate);

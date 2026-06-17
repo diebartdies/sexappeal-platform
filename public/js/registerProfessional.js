@@ -1,14 +1,9 @@
 import { API_URL, appPath, VERIFICATION_GESTURES } from './globals.js';
 import { showAlert } from './uiHelpers.js';
 import { t, applyStaticTranslations } from './i18n.js';
-import { activateAccessibleModal, deactivateAccessibleModal, confirmDialog, wireFormLabel, linkInputHint, setFieldInvalid } from './a11y.js';
+import { confirmDialog, wireFormLabel, setFieldInvalid } from './a11y.js';
 import { setupLocationDropdowns } from './helpers.js';
 import { navigateWithReturn, returnToOrigin } from './navReturn.js';
-import {
-    getProfessionalIdNumberError,
-    normalizeProfessionalIdNumber,
-    setupProfessionalIdNumberInput
-} from './idNumber.js';
 
 const COUNTRIES = [
     'Afghanistan', 'Albania', 'Algeria', 'Argentina', 'Australia', 'Austria', 'Belgium', 'Bolivia', 'Brazil',
@@ -19,17 +14,6 @@ const COUNTRIES = [
     'Portugal', 'Romania', 'Russia', 'South Africa', 'South Korea', 'Spain', 'Sweden', 'Switzerland',
     'Turkey', 'Ukraine', 'United Kingdom', 'United States', 'Uruguay', 'Venezuela'
 ].sort((a, b) => a.localeCompare(b, 'es'));
-
-function calcAge(birthDateStr) {
-    if (!birthDateStr) return null;
-    const dob = new Date(birthDateStr + 'T12:00:00');
-    if (Number.isNaN(dob.getTime())) return null;
-    const today = new Date();
-    let age = today.getFullYear() - dob.getFullYear();
-    const m = today.getMonth() - dob.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
-    return age;
-}
 
 function highlightField(el, on = true) {
     if (!el) return;
@@ -178,56 +162,12 @@ function applyRegistrationPageLabels() {
     }
 }
 
-function showUnderageModal(onLeave, onChangeDate) {
-    let modal = document.getElementById('regUnderageModal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'regUnderageModal';
-        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px;';
-        modal.innerHTML = `
-            <div class="card" data-modal-panel style="max-width:420px;width:100%;">
-                <h3 id="regUnderageTitle" class="gold-text" style="margin-top:0;">${t('Age requirement')}</h3>
-                <p id="regUnderageMsg"></p>
-                <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">
-                    <button type="button" id="regUnderageLeave" style="flex:1;background:#555;color:white;border:none;padding:10px;border-radius:4px;cursor:pointer;">${t('Leave registration')}</button>
-                    <button type="button" id="regUnderageChange" style="flex:1;background:var(--primary-gold);color:#111;border:none;padding:10px;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Change birth date')}</button>
-                </div>
-            </div>`;
-        document.body.appendChild(modal);
-    }
-    document.getElementById('regUnderageMsg').textContent = t('You must be at least 18 years old to register as a professional.');
-    modal.style.display = 'flex';
-    activateAccessibleModal(modal, {
-        labelId: 'regUnderageTitle',
-        onClose: () => { modal.style.display = 'none'; },
-        initialFocusSelector: '#regUnderageChange'
-    });
-    document.getElementById('regUnderageLeave').onclick = () => { deactivateAccessibleModal(modal); modal.style.display = 'none'; onLeave(); };
-    document.getElementById('regUnderageChange').onclick = () => { deactivateAccessibleModal(modal); modal.style.display = 'none'; onChangeDate(); };
-}
-
 function setupBirthDateField() {
     const input = document.getElementById('regBirthDate');
     if (!input) return;
 
     const lang = localStorage.getItem('platform_lang') || 'es';
     document.documentElement.lang = lang === 'es' ? 'es-AR' : 'en-US';
-
-    const today = new Date();
-    const maxDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
-    input.max = maxDate.toISOString().slice(0, 10);
-
-    input.addEventListener('change', () => {
-        const age = calcAge(input.value);
-        highlightField(input, false);
-        if (age !== null && age < 18) {
-            highlightField(input, true);
-            showUnderageModal(
-                () => returnToOrigin(() => { window.location.href = appPath('index.html'); }),
-                () => { input.value = ''; input.focus(); }
-            );
-        }
-    });
 }
 
 function setupCountrySelect() {
@@ -269,25 +209,6 @@ function validateRegistrationForm(form) {
         }
     }
 
-    const age = calcAge(document.getElementById('regBirthDate').value);
-    if (age !== null && age < 18) {
-        highlightField(document.getElementById('regBirthDate'), true);
-        showUnderageModal(
-            () => returnToOrigin(() => { window.location.href = appPath('index.html'); }),
-            () => { document.getElementById('regBirthDate').focus(); }
-        );
-        return false;
-    }
-
-    const idInput = document.getElementById('regIdNumber');
-    const idError = getProfessionalIdNumberError(idInput?.value);
-    if (idError) {
-        highlightField(idInput, true);
-        showAlert(document.getElementById('registerAlert'), t(idError), true, 'regIdNumber');
-        return false;
-    }
-    if (idInput) idInput.value = normalizeProfessionalIdNumber(idInput.value);
-
     return true;
 }
 
@@ -322,12 +243,6 @@ export function initProfessionalRegistration() {
     applyRegistrationPageLabels();
     setupInstructions();
     setupBirthDateField();
-    setupProfessionalIdNumberInput('regIdNumber');
-    const idHint = document.getElementById('regIdNumberHint');
-    if (idHint) {
-        idHint.textContent = t('ID Number format hint');
-        linkInputHint('regIdNumber', 'regIdNumberHint');
-    }
     setupCountrySelect();
     setupLocationDropdowns('regProvince', 'regCity', '', false, {});
 
@@ -355,7 +270,7 @@ export function initProfessionalRegistration() {
         formData.append('middleName', document.getElementById('regMiddleName').value.trim());
         formData.append('surname', document.getElementById('regSurname').value.trim());
         formData.append('alias', document.getElementById('regAlias').value.trim());
-        formData.append('idNumber', normalizeProfessionalIdNumber(document.getElementById('regIdNumber').value));
+        formData.append('idNumber', document.getElementById('regIdNumber').value.trim());
         formData.append('birthDate', document.getElementById('regBirthDate').value);
         formData.append('province', document.getElementById('regProvince').value);
         formData.append('city', document.getElementById('regCity').value);

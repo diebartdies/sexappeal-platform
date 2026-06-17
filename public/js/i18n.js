@@ -236,7 +236,6 @@ const translations = {
         'ID Number must have 8 digits in the format XX.XXX.XXX (e.g. 45.678.901).': 'El DNI debe tener 8 dígitos con formato XX.XXX.XXX (ej. 45.678.901).',
         'ID Number must start with a digit greater than 2 (young DNI format, e.g. 45.678.901).': 'El DNI debe comenzar con un dígito mayor a 2 (formato joven, ej. 45.678.901).',
         'Invalid ID Number format. Use XX.XXX.XXX with dots after the million and thousand groups.': 'Formato de DNI inválido. Use XX.XXX.XXX con puntos en millones y miles.',
-        'ID Number format hint': 'Formato: XX.XXX.XXX — el primer dígito debe ser 3–9 (ej. 45.678.901)',
         'Invalid code': 'Código inválido',
         'Error sending code': 'Error enviando código',
         'Password reset successful!': '¡Contraseña restablecida con éxito!',
