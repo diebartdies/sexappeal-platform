@@ -94,6 +94,13 @@ function attachClientEvents(activeClient) {
     clientReady = false;
     regState.phase = 'error';
     regState.lastError = reason || 'WhatsApp disconnected';
+    // Tear down the underlying Puppeteer browser before dropping the reference.
+    // If we only null the ref, the orphaned browser keeps the LocalAuth session
+    // directory locked and the next "Register number" attempt fails to launch —
+    // making the admin button look broken (no QR ever appears).
+    if (client) {
+      Promise.resolve(client.destroy()).catch(() => { /* already gone */ });
+    }
     client = null;
     initializing = false;
   });
@@ -120,12 +127,18 @@ function createClient() {
   // SINGLE attempt only. If initialization fails, mark as disconnected/errored
   // and STOP — never loop-retry. Reset the client ref so the status reflects
   // "not connected" and a later explicit reconnect starts from a clean slate.
+  const launchingClient = client;
   client.initialize().catch((err) => {
     regState.phase = 'error';
     regState.lastError = err.message;
     clientReady = false;
     initializing = false;
     notifyReadyWaiters(err);
+    // Destroy the half-launched client so any partially-started browser releases
+    // the session lock; otherwise a retry of the registration cannot relaunch.
+    if (launchingClient) {
+      Promise.resolve(launchingClient.destroy()).catch(() => { /* already gone */ });
+    }
     client = null;
   }).finally(() => {
     initializing = false;

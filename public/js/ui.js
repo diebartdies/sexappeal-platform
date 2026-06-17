@@ -147,10 +147,23 @@ export function initGlobalTopBar() {
                 editLink.style.cssText = 'color: var(--dark-bg); background-color: var(--primary-gold); margin-left: 10px; text-decoration: none; font-size: 0.8rem; font-weight: bold; padding: 3px 8px; border-radius: 4px;';
                 editLink.textContent = `✏️ ${t('Edit Profile')}`;
                 userInfo.appendChild(editLink);
+            } else if (user.role === 'admin') {
+                // Give admins a clear top-menu link back to their home
+                // dashboard. On pages that render this global top bar, the
+                // universal floating button (adminHome.js) is suppressed, so
+                // this inline link is the single admin return-home entry point.
+                const segment = window.location.pathname.split('/').pop();
+                const page = (segment === '' || segment === '/') ? 'index.html' : segment;
+                if (page !== 'dashboard.html') {
+                    const adminLink = document.createElement('a');
+                    adminLink.id = 'topBarAdminHomeLink';
+                    adminLink.href = appPath('dashboard.html');
+                    adminLink.setAttribute('data-skip-nav-return', '');
+                    adminLink.style.cssText = 'color: var(--dark-bg); background-color: var(--primary-gold); margin-left: 10px; text-decoration: none; font-size: 0.8rem; font-weight: bold; padding: 3px 8px; border-radius: 4px;';
+                    adminLink.textContent = `🏠 ${t('Admin Menu')}`;
+                    userInfo.appendChild(adminLink);
+                }
             }
-            // Admin return-home link is handled globally by adminHome.js (a
-            // universal fixed button present on every page), so we no longer add
-            // a separate top-bar admin link here to avoid showing two links.
             isLoggedIn = true;
         } catch (e) { console.error('Failed to parse user', e); }
     }

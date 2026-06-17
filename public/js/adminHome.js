@@ -10,6 +10,11 @@
  * that is rendered ONLY when the logged-in user's role is `admin`. For every
  * other visitor (professional, regular user, logged-out guest) it is a safe
  * no-op and renders nothing.
+ *
+ * On pages that load the main app bundle (app.js) the global top bar already
+ * shows an inline admin return-home link, so this floating button is skipped
+ * there to avoid duplicate links. It therefore only appears on standalone
+ * pages without the top bar (e.g. plataforma.html, admin-potentials.html).
  */
 (function () {
     'use strict';
@@ -56,6 +61,15 @@
         return '/' + page.replace(/^\.\//, '');
     }
 
+    function rendersGlobalTopBar() {
+        // Pages that load the main app bundle build a global top bar (see
+        // ui.js initGlobalTopBar) which carries its own inline admin
+        // return-home link. On those pages we skip this floating button so the
+        // admin only sees one link (in the top menu). Detection is done via the
+        // static <script> tag so it is independent of script execution timing.
+        return !!document.querySelector('script[src*="/js/app.js"]');
+    }
+
     function injectStyles() {
         if (document.getElementById('adminHomeButtonStyles')) return;
         var style = document.createElement('style');
@@ -86,6 +100,9 @@
 
     function render() {
         if (!isAdmin()) return;
+        // On pages with the global top bar, the admin link lives in the top
+        // menu, so avoid showing a second (floating) link to the same place.
+        if (rendersGlobalTopBar()) return;
         // Never link the admin home page to itself.
         if (currentPage() === ADMIN_HOME_PAGE) return;
         if (document.getElementById(BUTTON_ID)) return;
