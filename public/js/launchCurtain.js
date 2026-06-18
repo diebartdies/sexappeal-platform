@@ -278,6 +278,20 @@ export async function saveLaunchCurtainEnabled(enabled) {
   return data.data;
 }
 
+export async function saveLaunchCurtainOpeningAt(openingAt) {
+  const res = await fetch(`${API_URL}/admin/launch-curtain`, {
+    method: 'PUT',
+    headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+    credentials: 'include',
+    body: JSON.stringify({ openingAt })
+  });
+  const data = await res.json();
+  if (!data.success) {
+    throw new Error(data.error || 'Could not update launch curtain');
+  }
+  return data.data;
+}
+
 export async function loadLaunchCurtainAdminState() {
   const res = await fetch(`${API_URL}/admin/launch-curtain`, {
     headers: buildAuthHeaders(),

@@ -79,7 +79,11 @@ const UserSchema = new mongoose.Schema({
       lastConnectedAt: Date
     },
     launchCurtain: {
-      enabled: { type: Boolean, default: false }
+      enabled: { type: Boolean, default: false },
+      // Grand opening moment as an ISO-8601 string with offset (Argentina, -03:00),
+      // e.g. '2026-06-24T00:00:00-03:00'. When set & valid this overrides the
+      // config/env default (config.launchCurtain.openingAt). null = use default.
+      openingAt: { type: String, default: null }
     }
   },
   professionalProfile: {
@@ -244,6 +248,11 @@ const UserSchema = new mongoose.Schema({
   },
   resetPasswordToken: String,
   resetPasswordExpire: Date,
+  // Age-verification + Terms & Conditions acceptance for this account.
+  // termsVersion records WHICH version of the legal text was accepted so a
+  // future text change (bumped TERMS_VERSION) can re-trigger acceptance.
+  termsAcceptedAt: Date,
+  termsVersion: String,
   createdAt: {
     type: Date,
     default: Date.now

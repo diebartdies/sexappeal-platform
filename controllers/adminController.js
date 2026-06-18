@@ -1,11 +1,31 @@
+const fs = require('fs');
+const path = require('path');
 const User = require('../models/User');
+const config = require('../config/appConfig');
 const { recordCategoryChange, normalizeQuality } = require('../utils/categoryBilling');
 const ActivityLog = require('../models/ActivityLog');
+const Statistic = require('../models/Statistic');
+const Specialty = require('../models/Specialty');
+const Review = require('../models/Review');
+const Connection = require('../models/Connection');
+const ConnectionRequest = require('../models/ConnectionRequest');
 const sendEmail = require('../sendEmail');
 const { isValidRejectionReason, buildRejectionEmail } = require('../utils/rejectionMessages');
-const { resolvePhotoForClient, resolvePhotosForClient, resolveFirstPhotoForClient } = require('../utils/photoUtils');
+const { isUploadPath, resolvePhotoForClient, resolvePhotosForClient, resolveFirstPhotoForClient } = require('../utils/photoUtils');
 const { resolveWhatsappNumber } = require('../utils/contactNumber');
 const smsNotifications = require('../services/smsNotifications');
+
+// Best-effort removal of an uploaded asset that lives under /public.
+// Mirrors the cleanup helper used by professionalController.deleteMyProfile.
+function tryDeleteUploadFile(storedPath) {
+  if (!isUploadPath(storedPath)) return;
+  const absolutePath = path.join(config.root, 'public', storedPath.replace(/^\//, ''));
+  try {
+    if (fs.existsSync(absolutePath)) fs.unlinkSync(absolutePath);
+  } catch (err) {
+    console.error('Failed to delete upload file:', err.message);
+  }
+}
 
 // @desc    Get all professionals
 // @route   GET /api/v1/admin/professionals
@@ -523,6 +543,51 @@ exports.updateProfessionalProfile = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: responseUser
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
+// @desc    Permanently delete a professional account (admin)
+// @route   DELETE /api/v1/admin/professionals/:id
+// @access  Private/Admin
+exports.deleteProfessional = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id).select('+verificationDocuments');
+
+    if (!user || user.role !== 'professional') {
+      return res.status(404).json({
+        success: false,
+        error: 'Professional not found'
+      });
+    }
+
+    const prof = user.professionalProfile || {};
+
+    // Clean up uploaded assets that live under /public.
+    (prof.photos || []).forEach(tryDeleteUploadFile);
+    tryDeleteUploadFile(prof.paymentReceiptUrl);
+    (prof.paymentHistory || []).forEach((entry) => tryDeleteUploadFile(entry.receiptUrl));
+
+    // Mirror deleteMyProfile cleanup of related collections.
+    await Promise.all([
+      ActivityLog.deleteMany({ professional: user._id }),
+      Statistic.deleteMany({ professionalId: user._id }),
+      Specialty.deleteMany({ user: user._id }),
+      Review.deleteMany({ $or: [{ professional: user._id }, { author: user._id }] }),
+      Connection.deleteMany({ $or: [{ professional: user._id }, { requester: user._id }] }),
+      ConnectionRequest.deleteMany({ $or: [{ professional: user._id }, { guestUser: user._id }] })
+    ]);
+
+    await User.findByIdAndDelete(user._id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Professional account has been permanently deleted.'
     });
   } catch (error) {
     res.status(400).json({

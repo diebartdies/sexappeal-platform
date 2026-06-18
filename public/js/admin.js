@@ -7,7 +7,7 @@ import { renderSpecialtyDropdown, setupLocationDropdowns } from './helpers.js';
 import { addPhotoToGrid, openPendingConnectionsModal, bindProfessionalProfileForm, hideProfessionalPaymentOverlays, renderProfessionalMainDashboardShell, injectProfessionalDashboardGuides } from './professional.js';
 import { buildCategoryQueue, resetLazyCategoryLoader, startLazyCategoryLoader } from './lazyCategoryLoader.js';
 import { beginModalSession, endModalSession, navigateWithReturn } from './navReturn.js';
-import { saveLaunchCurtainEnabled, loadLaunchCurtainAdminState } from './launchCurtain.js';
+import { saveLaunchCurtainEnabled, saveLaunchCurtainOpeningAt, loadLaunchCurtainAdminState } from './launchCurtain.js';
 
 const ADMIN_CATEGORY_ORDER = ['Elite', 'Premium', 'Gold', 'Silver', 'Standard', 'Uncategorized'];
 
@@ -109,13 +109,23 @@ function renderAdminCategorySection(content, cat, items, eagerImages = false) {
         editBtn.style.cssText = 'width: 100%; padding: 6px; font-size: 0.7rem; cursor: pointer; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold);';
         editBtn.textContent = '✏️ Edit';
 
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.style.cssText = 'width: 100%; padding: 6px; font-size: 0.7rem; cursor: pointer; background: transparent; border: 1px solid var(--accent-red); color: var(--accent-red); margin-top: 6px;';
+        deleteBtn.textContent = `🗑️ ${t('Delete')}`;
+
         card.appendChild(thumbWrap);
         card.appendChild(aliasEl);
         card.appendChild(emailEl);
         card.appendChild(editBtn);
+        card.appendChild(deleteBtn);
 
         editBtn.onclick = () => {
             openEditProfessionalModal(p);
+        };
+
+        deleteBtn.onclick = () => {
+            handleDeleteProfessional(p, card);
         };
 
         grid.appendChild(card);
@@ -123,6 +133,40 @@ function renderAdminCategorySection(content, cat, items, eagerImages = false) {
 
     catSection.appendChild(grid);
     content.appendChild(catSection);
+}
+
+// Permanently delete a professional from the admin grid, with confirmation.
+async function handleDeleteProfessional(p, card) {
+    const alias = p.professionalProfile?.alias || p.email || '';
+    const confirmed = await confirmDialog(
+        `${t('This will permanently delete this professional and all their data. This action cannot be undone.')}${alias ? `\n\n${alias}` : ''}`,
+        {
+            title: t('Delete professional'),
+            confirmLabel: t('Delete'),
+            cancelLabel: t('Cancel'),
+            destructive: true
+        }
+    );
+    if (!confirmed) return;
+
+    try {
+        const res = await fetch(`${API_URL}/admin/professionals/${p._id}`, {
+            method: 'DELETE',
+            headers: authHeaders(),
+            credentials: 'include'
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+            announceMessage(data.error || t('Failed to delete professional'));
+            return;
+        }
+
+        if (card && card.parentNode) card.parentNode.removeChild(card);
+        announceMessage(t('Professional deleted successfully.'), { isError: false });
+    } catch (err) {
+        announceMessage(t('Server connection error'));
+    }
 }
 
 export async function renderAdminGrid(container) {
@@ -3347,6 +3391,72 @@ function syncLaunchCurtainToggles(enabled) {
     if (config) config.checked = Boolean(enabled);
 }
 
+// The launch curtain is defined in Argentina time (America/Argentina/Buenos_Aires,
+// fixed UTC-03:00 year round). The <input type="datetime-local"> has no timezone,
+// so we explicitly map between the AR wall-clock value shown to the admin and the
+// stored ISO string with the -03:00 offset.
+const AR_OFFSET_MS = 3 * 60 * 60 * 1000; // UTC minus 3 hours
+
+function pad2(n) {
+    return String(n).padStart(2, '0');
+}
+
+// Stored ISO (any offset) -> "YYYY-MM-DDTHH:MM" expressing the AR wall-clock time.
+function arIsoToLocalDatetimeValue(iso) {
+    if (!iso) return '';
+    const instant = new Date(iso);
+    if (Number.isNaN(instant.getTime())) return '';
+    const ar = new Date(instant.getTime() - AR_OFFSET_MS);
+    return `${ar.getUTCFullYear()}-${pad2(ar.getUTCMonth() + 1)}-${pad2(ar.getUTCDate())}` +
+        `T${pad2(ar.getUTCHours())}:${pad2(ar.getUTCMinutes())}`;
+}
+
+// datetime-local value ("YYYY-MM-DDTHH:MM"[:SS]) interpreted as AR wall-clock ->
+// ISO string with the -03:00 offset.
+function localDatetimeValueToArIso(value) {
+    if (!value || typeof value !== 'string') return null;
+    const [datePart, timePart] = value.split('T');
+    if (!datePart || !timePart) return null;
+    const [hh = '00', mm = '00', ss = '00'] = timePart.split(':');
+    return `${datePart}T${pad2(parseInt(hh, 10))}:${pad2(parseInt(mm, 10))}:${pad2(parseInt(ss, 10))}-03:00`;
+}
+
+function syncLaunchCurtainOpeningInput(status) {
+    const input = document.getElementById('launchCurtainOpeningAt');
+    if (!input || !status) return;
+    input.value = arIsoToLocalDatetimeValue(status.openingAtLocal || status.openingAt);
+}
+
+async function handleLaunchCurtainOpeningSave() {
+    const input = document.getElementById('launchCurtainOpeningAt');
+    const btn = document.getElementById('launchCurtainSaveOpeningBtn');
+    const alertEl = document.getElementById('launchCurtainAlert');
+    if (!input) return;
+
+    const iso = localDatetimeValueToArIso(input.value);
+    if (!iso) {
+        if (alertEl) showAlert(alertEl, t('Enter an opening date and time'));
+        else announceMessage(t('Enter an opening date and time'));
+        return;
+    }
+
+    if (btn) btn.disabled = true;
+    try {
+        const status = await saveLaunchCurtainOpeningAt(iso);
+        syncLaunchCurtainToggles(status.enabled);
+        syncLaunchCurtainOpeningInput(status);
+        const statusLine = document.getElementById('launchCurtainStatusLine');
+        if (statusLine) statusLine.textContent = formatLaunchCurtainStatusLine(status);
+        if (alertEl) showAlert(alertEl, t('Opening date & time updated.'), false);
+        else announceMessage(t('Opening date & time updated.'));
+    } catch (err) {
+        if (alertEl) showAlert(alertEl, err.message || t('Could not update launch curtain'));
+        else announceMessage(err.message || t('Could not update launch curtain'));
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
 async function handleLaunchCurtainToggle(enabled, sourceEl) {
     const toggles = [
         document.getElementById('adminLaunchCurtainQuickToggle'),
@@ -3403,6 +3513,7 @@ async function loadLaunchCurtainConfigPanel() {
     try {
         const status = await loadLaunchCurtainAdminState();
         syncLaunchCurtainToggles(status.enabled);
+        syncLaunchCurtainOpeningInput(status);
         if (statusLine) statusLine.textContent = formatLaunchCurtainStatusLine(status);
     } catch {
         if (statusLine) statusLine.textContent = t('Could not load launch curtain settings');
@@ -3654,6 +3765,14 @@ export async function openDashboardConfigModal() {
                     </label>
                 </div>
                 <p id="launchCurtainStatusLine" style="color:#888;font-size:0.82rem;margin:12px 0 0;line-height:1.45;">—</p>
+                <div style="margin-top:16px;padding-top:16px;border-top:1px solid #333;">
+                    <label for="launchCurtainOpeningAt" style="display:block;color:#ccc;font-size:0.9rem;margin:0 0 8px 0;">${t('Opening date & time')}</label>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                        <input type="datetime-local" id="launchCurtainOpeningAt" style="flex:1;min-width:220px;padding:10px;background:#222;color:white;border:1px solid #444;border-radius:4px;">
+                        <button type="button" id="launchCurtainSaveOpeningBtn" style="padding:10px 16px;background:var(--primary-gold);color:var(--dark-bg);border:none;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Save date')}</button>
+                    </div>
+                    <p style="color:#888;font-size:0.8rem;margin:8px 0 0;">${t('Time is interpreted in Argentina time (UTC−03:00).')}</p>
+                </div>
             </section>
 
             <section style="border:1px solid rgba(212,175,55,0.25);border-radius:8px;padding:20px;margin-bottom:20px;">
@@ -3766,6 +3885,8 @@ export async function openDashboardConfigModal() {
         };
 
         wireLaunchCurtainToggle(document.getElementById('launchCurtainConfigToggle'));
+        const launchCurtainSaveOpeningBtn = document.getElementById('launchCurtainSaveOpeningBtn');
+        if (launchCurtainSaveOpeningBtn) launchCurtainSaveOpeningBtn.onclick = handleLaunchCurtainOpeningSave;
     }
 
     openAdminOverlay(modal);

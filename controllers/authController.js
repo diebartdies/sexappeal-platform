@@ -16,7 +16,7 @@ exports.register = async (req, res, next) => {
       email, password, role, alias, bio, hasOwnApartment, hasFantasyWardrobe, 
       province, city, neighborhood, measurements, height, services, verificationGesture,
       firstName, surname, middleName, idNumber, birthDate, mobilePhone, street, number, floor, apartment, postalCode,
-      originCountry, instagram, facebook, quality
+      originCountry, instagram, facebook, quality, termsAccepted
     } = req.body;
 
     // Normalize email to prevent case-sensitive duplicate accounts
@@ -111,6 +111,11 @@ exports.register = async (req, res, next) => {
       }
     }
 
+    // Age-verification + Terms & Conditions acceptance captured at registration.
+    // The frontend blocks submission until the checkbox is ticked, so this is
+    // expected to be truthy for every real registration.
+    const acceptedTerms = termsAccepted === true || termsAccepted === 'true' || termsAccepted === 'on';
+
     // Create user
     const user = await User.create({
       email,
@@ -123,8 +128,27 @@ exports.register = async (req, res, next) => {
       isVerified: role !== 'professional',
       isEmailVerified: false,
       emailVerificationCode: verificationCode,
-      emailVerificationCodeExpire: verificationCodeExpire
+      emailVerificationCodeExpire: verificationCodeExpire,
+      termsAcceptedAt: acceptedTerms ? new Date() : undefined,
+      termsVersion: acceptedTerms ? config.terms.version : undefined
     });
+
+    // Audit-log the registration acceptance alongside the per-account stamp.
+    if (acceptedTerms) {
+      try {
+        const TermsAcceptance = require('../models/TermsAcceptance');
+        const acceptIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket?.remoteAddress || req.ip);
+        await TermsAcceptance.create({
+          user: user._id,
+          termsVersion: config.terms.version,
+          source: 'registration',
+          ip: acceptIp,
+          userAgent: req.headers['user-agent'] ? String(req.headers['user-agent']).slice(0, 500) : undefined
+        });
+      } catch (err) {
+        console.error('Failed to log registration terms acceptance:', err.message);
+      }
+    }
 
     // Sync the new Specialties many-to-many junction table
     if (role === 'professional' && professionalProfile && professionalProfile.services && professionalProfile.services.length > 0) {

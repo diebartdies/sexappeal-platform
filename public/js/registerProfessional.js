@@ -4,6 +4,7 @@ import { t, applyStaticTranslations } from './i18n.js';
 import { confirmDialog, wireFormLabel, setFieldInvalid } from './a11y.js';
 import { setupLocationDropdowns } from './helpers.js';
 import { navigateWithReturn, returnToOrigin } from './navReturn.js';
+import { openFullTermsModal } from './terms.js';
 
 const COUNTRIES = [
     'Afghanistan', 'Albania', 'Algeria', 'Argentina', 'Australia', 'Austria', 'Belgium', 'Bolivia', 'Brazil',
@@ -209,6 +210,14 @@ function validateRegistrationForm(form) {
         }
     }
 
+    // Terms & Conditions acceptance is mandatory to register.
+    const termsCheckbox = document.getElementById('regTermsAccept');
+    if (termsCheckbox && !termsCheckbox.checked) {
+        showAlert(document.getElementById('registerAlert'), t('You must accept the terms and conditions to register.'), true, 'regTermsAccept');
+        termsCheckbox.focus();
+        return false;
+    }
+
     return true;
 }
 
@@ -250,6 +259,12 @@ export function initProfessionalRegistration() {
     bindFileInput('regIdPhotoBack', 'regIdPhotoBackLabel');
     bindFileInput('regSelfiePhoto', 'regSelfiePhotoLabel');
 
+    const termsLink = document.getElementById('regTermsLink');
+    if (termsLink && !termsLink.dataset.bound) {
+        termsLink.dataset.bound = '1';
+        termsLink.addEventListener('click', () => openFullTermsModal(termsLink));
+    }
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const alert = document.getElementById('registerAlert');
@@ -288,6 +303,7 @@ export function initProfessionalRegistration() {
         formData.append('verificationDocuments', document.getElementById('regIdPhotoBack').files[0]);
         formData.append('verificationDocuments', document.getElementById('regSelfiePhoto').files[0]);
         if (form.dataset.gestureCode) formData.append('verificationGesture', form.dataset.gestureCode);
+        formData.append('termsAccepted', document.getElementById('regTermsAccept')?.checked ? 'true' : 'false');
 
         try {
             const res = await fetch(`${API_URL}/auth/register`, { method: 'POST', body: formData });

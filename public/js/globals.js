@@ -2,6 +2,14 @@
 export const BASE_ORIGIN = window.location.protocol === 'file:' ? 'http://localhost:5000' : window.location.origin;
 export const API_URL = `${BASE_ORIGIN}/api/v1`;
 
+/**
+ * Age-verification + Terms & Conditions version.
+ * MUST stay in sync with config/appConfig.js -> terms.version on the backend.
+ * Bumping this re-triggers the acceptance gate for everyone (the stored
+ * localStorage acceptance no longer matches and the popup is shown again).
+ */
+export const TERMS_VERSION = '2026-06-18';
+
 /** Known static pages — must not be treated as profile aliases under /perfil/ */
 export const APP_PAGES = new Set([
     'index.html', 'login.html', 'register.html', 'recover.html', 'verify.html',

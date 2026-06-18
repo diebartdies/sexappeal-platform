@@ -311,6 +311,7 @@ app.put('/api/v1/admin/payments/:id/acknowledge', protect, authorize('admin'), a
 app.post('/api/v1/admin/notify-rate-change', protect, authorize('admin'), professionalController.notifyRateChange);
 app.get('/api/v1/admin/logs', protect, authorize('admin'), adminController.getActivityLogs);
 app.put('/api/v1/admin/professionals/:id', protect, authorize('admin'), adminController.updateProfessionalProfile);
+app.delete('/api/v1/admin/professionals/:id', protect, authorize('admin'), adminController.deleteProfessional);
 app.get('/api/v1/admin/professionals', protect, authorize('admin'), adminController.getAllProfessionals);
 app.get('/api/v1/admin/outreach/invite-message', protect, authorize('admin'), potentialProfessionalController.getInviteMessage);
 app.post('/api/v1/admin/outreach/bulk-whatsapp', protect, authorize('admin'), outreachController.startBulkWhatsApp);
@@ -329,6 +330,10 @@ const launchCurtainController = require('./controllers/launchCurtainController')
 const supportController = require('./controllers/supportController');
 
 app.get('/api/v1/public/launch-curtain', launchCurtainController.getPublicLaunchCurtainStatus);
+
+// Age-verification + Terms & Conditions acceptance (public; optional auth)
+const termsController = require('./controllers/termsController');
+app.post('/api/v1/terms/accept', termsController.acceptTerms);
 
 // Support message queue
 app.post('/api/v1/support', protect, authorize('professional'), supportController.createSupportMessage);

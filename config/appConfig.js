@@ -78,9 +78,18 @@ const config = {
     registerUrl: process.env.PLATFORM_REGISTER_URL || 'https://sexappeal.drsrv.net.ar/register.html'
   },
 
+  // Age-verification + Terms & Conditions acceptance.
+  // Bump TERMS_VERSION (env or here) whenever the legal text materially changes;
+  // every user/visitor will then be asked to accept again. Keep this value in
+  // sync with the frontend constant in public/js/globals.js (TERMS_VERSION).
+  terms: {
+    version: process.env.TERMS_VERSION || '2026-06-18',
+    contactEmail: 'admin@drsrv.net.ar'
+  },
+
   // Grand opening curtain (America/Argentina/Buenos_Aires)
   launchCurtain: {
-    openingAt: process.env.LAUNCH_OPENING_AT || '2026-06-19T00:00:00-03:00'
+    openingAt: process.env.LAUNCH_OPENING_AT || '2026-06-24T00:00:00-03:00'
   },
 
   // WhatsApp lead outreach pacing ("slow nightly drip")

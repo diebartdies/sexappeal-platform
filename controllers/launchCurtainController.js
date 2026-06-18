@@ -1,6 +1,7 @@
 const {
   getLaunchCurtainStatus,
-  setLaunchCurtainEnabled
+  setLaunchCurtainEnabled,
+  setLaunchCurtainOpeningAt
 } = require('../utils/launchCurtainConfig');
 
 // @desc    Public launch curtain status (for grid pages)
@@ -27,20 +28,39 @@ exports.getAdminLaunchCurtainConfig = async (req, res) => {
   }
 };
 
-// @desc    Enable or disable launch curtain (hide grids until opening)
+// @desc    Update launch curtain settings: enable toggle and/or opening date/time
 // @route   PUT /api/v1/admin/launch-curtain
 // @access  Private/Admin
 exports.updateLaunchCurtainConfig = async (req, res) => {
   try {
-    const { enabled } = req.body;
-    if (typeof enabled !== 'boolean') {
-      return res.status(400).json({ success: false, error: 'enabled must be a boolean' });
+    const { enabled, openingAt } = req.body;
+    const hasEnabled = typeof enabled === 'boolean';
+    const hasOpeningAt = typeof openingAt === 'string' && openingAt.trim() !== '';
+
+    if (!hasEnabled && !hasOpeningAt) {
+      return res.status(400).json({
+        success: false,
+        error: 'Provide enabled (boolean) and/or openingAt (ISO date string)'
+      });
     }
 
-    const status = await setLaunchCurtainEnabled(enabled);
+    let status;
+    const messages = [];
+
+    // Save the opening date first so the subsequent enable write (and the status
+    // it returns) reflects the freshly stored date.
+    if (hasOpeningAt) {
+      status = await setLaunchCurtainOpeningAt(openingAt);
+      messages.push('Opening date updated');
+    }
+    if (hasEnabled) {
+      status = await setLaunchCurtainEnabled(enabled);
+      messages.push(enabled ? 'Launch curtain enabled' : 'Launch curtain disabled');
+    }
+
     res.status(200).json({
       success: true,
-      message: enabled ? 'Launch curtain enabled' : 'Launch curtain disabled',
+      message: messages.join('. '),
       data: status
     });
   } catch (error) {
