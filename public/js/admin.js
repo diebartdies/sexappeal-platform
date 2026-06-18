@@ -1,6 +1,6 @@
 import { BASE_ORIGIN, API_URL, CATEGORY_META, getVerificationGesture, appPath, resolvePhotoSrc } from './globals.js';
 import { showAlert, getPendingApprovalBannerHtml, getResubmissionBannerHtml, getGeneralRejectionBannerHtml } from './uiHelpers.js';
-import { t, applyStaticTranslations } from './i18n.js';
+import { t, applyStaticTranslations, formatOpeningDateTime } from './i18n.js';
 import { activateAccessibleModal, deactivateAccessibleModal, announceMessage, confirmDialog } from './a11y.js';
 import { beginDashboardLoad, finishDashboardLoad, failDashboardLoad } from './dashboardShell.js';
 import { renderSpecialtyDropdown, setupLocationDropdowns } from './helpers.js';
@@ -3379,7 +3379,9 @@ function formatLaunchCurtainStatusLine(status) {
     }
     const days = status.daysRemaining ?? 0;
     const hours = status.hoursRemaining ?? 0;
-    return t('Launch curtain is on — grids hidden until Friday, June 19, 2026 ({days}d {hours}h remaining).')
+    const openingDate = formatOpeningDateTime(status.openingAtLocal || status.openingAt, { withTime: false });
+    return t('Launch curtain is on — grids hidden until {date} ({days}d {hours}h remaining).')
+        .replace('{date}', openingDate)
         .replace('{days}', String(days))
         .replace('{hours}', String(hours));
 }
@@ -3755,7 +3757,7 @@ export async function openDashboardConfigModal() {
 
             <section style="border:1px solid rgba(212,175,55,0.25);border-radius:8px;padding:20px;margin-bottom:20px;">
                 <h3 class="gold-text" style="margin:0 0 6px 0;">${t('Launch Curtain')}</h3>
-                <p style="color:#888;font-size:0.85rem;margin:0 0 16px 0;">${t('Hide treasure grids on categories, discover, and home until the grand opening. Visitors see a theater curtain with a countdown to Friday, June 19, 2026 at midnight.')}</p>
+                <p style="color:#888;font-size:0.85rem;margin:0 0 16px 0;">${t('Hide treasure grids on categories, discover, and home until the grand opening. Visitors see a theater curtain with a countdown to the configured opening date.')}</p>
                 <div id="launchCurtainAlert" class="alert hidden" style="padding:10px;border-radius:4px;border:1px solid transparent;margin-bottom:12px;"></div>
                 <div class="admin-launch-switch">
                     <span class="admin-launch-switch-label">${t('Hide treasure grids (launch curtain)')}</span>

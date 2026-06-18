@@ -1,5 +1,5 @@
 import { API_URL } from './globals.js';
-import { t, applyStaticTranslations } from './i18n.js';
+import { t, applyStaticTranslations, formatOpeningDateTime } from './i18n.js';
 
 let countdownTimer = null;
 let openingHandled = false;
@@ -106,7 +106,7 @@ function buildCurtainMarkup() {
       <div class="launch-curtain-center">
         <p class="launch-curtain-kicker gold-text">${t('Grand Opening')}</p>
         <h2 class="launch-curtain-title">${t('The curtain rises soon')}</h2>
-        <p class="launch-curtain-subtitle">${t('Our Living Treasures will be revealed on Friday, June 19, 2026 at midnight.')}</p>
+        <p class="launch-curtain-subtitle" data-curtain-subtitle></p>
         <div class="launch-curtain-countdown" aria-label="${t('Countdown to opening')}">
           <div class="launch-curtain-unit">
             <span class="launch-curtain-value" data-countdown-days>00</span>
@@ -131,13 +131,33 @@ function buildCurtainMarkup() {
   `;
 }
 
-function mountCurtain() {
+// Build the localized "revealed on <date>" copy from the resolved opening date.
+// Returns '' when the date is missing/unparseable so the line can be hidden.
+function buildOpeningCopy(status) {
+  const formatted = formatOpeningDateTime(status?.openingAtLocal || status?.openingAt, { withTime: true });
+  if (!formatted) return '';
+  return t('Our Living Treasures will be revealed on {date}.').replace('{date}', formatted);
+}
+
+// Set the subtitle via textContent (after applyStaticTranslations has run) so it
+// always reflects the resolved opening date in the active language, and hide the
+// line entirely when no valid date is available.
+function updateCurtainSubtitle(status) {
+  const el = document.querySelector('#launchCurtainStage [data-curtain-subtitle]');
+  if (!el) return;
+  const copy = buildOpeningCopy(status);
+  el.textContent = copy;
+  el.style.display = copy ? '' : 'none';
+}
+
+function mountCurtain(status) {
   const stage = getGridStage();
   if (!stage || document.getElementById('launchCurtainStage')) return;
 
   stage.classList.add('launch-curtain-slot-active');
   stage.insertAdjacentHTML('beforeend', buildCurtainMarkup());
   applyStaticTranslations(document.getElementById('launchCurtainStage'));
+  updateCurtainSubtitle(status);
   document.body.classList.add('launch-curtain-active');
   hideGridChrome();
 }
@@ -226,6 +246,8 @@ function startCountdown(status, onOpen) {
         return;
       }
       openingTime = Date.now() + Math.max(0, Number(fresh.msRemaining) || 0);
+      // Keep the displayed opening date in sync if the admin reschedules it.
+      updateCurtainSubtitle(fresh);
     }
   };
 
@@ -247,7 +269,7 @@ export async function resolveLaunchCurtain(onOpen) {
     return false;
   }
 
-  mountCurtain();
+  mountCurtain(status);
   startCountdown(status, onOpen);
   return true;
 }

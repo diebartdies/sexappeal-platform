@@ -498,10 +498,10 @@ const translations = {
         'Launch curtain': 'Telón de apertura',
         'Hide grids (launch curtain)': 'Ocultar grillas (telón de apertura)',
         'Hide treasure grids (launch curtain)': 'Ocultar grillas de tesoros (telón de apertura)',
-        'Hide treasure grids on categories, discover, and home until the grand opening. Visitors see a theater curtain with a countdown to Friday, June 19, 2026 at midnight.': 'Oculta las grillas en categorías, descubrir e inicio hasta la gran apertura. Los visitantes verán un telón de teatro con cuenta regresiva hasta el viernes 19 de junio de 2026 a medianoche.',
+        'Hide treasure grids on categories, discover, and home until the grand opening. Visitors see a theater curtain with a countdown to the configured opening date.': 'Oculta las grillas en categorías, descubrir e inicio hasta la gran apertura. Los visitantes verán un telón de teatro con cuenta regresiva hasta la fecha de apertura configurada.',
         'Launch curtain is off — treasure grids are visible to visitors.': 'Telón desactivado — las grillas de tesoros son visibles para los visitantes.',
         'Grand opening date has passed — grids stay visible even with the curtain enabled.': 'La fecha de apertura ya pasó — las grillas permanecen visibles aunque el telón esté activado.',
-        'Launch curtain is on — grids hidden until Friday, June 19, 2026 ({days}d {hours}h remaining).': 'Telón activo — grillas ocultas hasta el viernes 19/06/2026 ({days}d {hours}h restantes).',
+        'Launch curtain is on — grids hidden until {date} ({days}d {hours}h remaining).': 'Telón activo — grillas ocultas hasta {date} ({days}d {hours}h restantes).',
         'Launch curtain enabled — visitor grids are now hidden.': 'Telón activado — las grillas de visitantes quedan ocultas.',
         'Launch curtain disabled — visitor grids are visible.': 'Telón desactivado — las grillas de visitantes son visibles.',
         'Could not update launch curtain': 'No se pudo actualizar el telón de apertura',
@@ -514,7 +514,8 @@ const translations = {
         'Grand opening curtain': 'Telón de gran apertura',
         'Grand Opening': 'Gran Apertura',
         'The curtain rises soon': 'El telón se levantará pronto',
-        'Our Living Treasures will be revealed on Friday, June 19, 2026 at midnight.': 'Nuestros Tesoros Vivos se revelarán el viernes 19 de junio de 2026 a medianoche.',
+        'Our Living Treasures will be revealed on {date}.': 'Nuestros Tesoros Vivos se revelarán el {date}.',
+        'Argentina time': 'hora de Argentina',
         'Countdown to opening': 'Cuenta regresiva a la apertura',
         'Days': 'Días',
         'Hours': 'Horas',
@@ -763,6 +764,40 @@ export function translateWeekday(day) {
 export function formatWorkingDays(days) {
     if (!days || days.length === 0) return t('Everyday');
     return days.map((day) => translateWeekday(day)).join(', ');
+}
+
+// Format the launch opening date/time in the active language, always expressed
+// in Argentina wall-clock time (America/Argentina/Buenos_Aires) regardless of
+// the viewer's timezone. Returns '' for a missing/unparseable date so callers
+// can hide the line gracefully instead of rendering "Invalid Date".
+export function formatOpeningDateTime(iso, { withTime = true } = {}) {
+    if (!iso) return '';
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return '';
+
+    const isEnglish = currentLang === 'en';
+    const locale = isEnglish ? 'en-US' : 'es-AR';
+    const options = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: 'America/Argentina/Buenos_Aires'
+    };
+    if (withTime) {
+        options.hour = isEnglish ? 'numeric' : '2-digit';
+        options.minute = '2-digit';
+        options.hour12 = isEnglish;
+    }
+
+    let formatted;
+    try {
+        formatted = new Intl.DateTimeFormat(locale, options).format(date);
+    } catch {
+        return '';
+    }
+    if (!withTime) return formatted;
+    return `${formatted} (${t('Argentina time')})`;
 }
 
 export function t(text) {
