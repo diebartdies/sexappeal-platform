@@ -3523,6 +3523,110 @@ async function loadLaunchCurtainConfigPanel() {
 }
 
 let waConfigPollTimer = null;
+let waDripPollTimer = null;
+
+function renderWhatsAppDripStatus(data) {
+    if (!data) return;
+    const textEl = document.getElementById('waDripStatusText');
+    const startBtn = document.getElementById('waDripStartBtn');
+    const stopBtn = document.getElementById('waDripStopBtn');
+    if (!textEl) return;
+
+    const connected = data.clientReady;
+    const running = data.running;
+
+    const lines = [];
+    if (running) {
+        lines.push(`<span style="color:#25D366;font-weight:bold;">${t('Running')}</span>`);
+    } else if (!connected) {
+        lines.push(`<span style="color:#cc6666;">${t('WhatsApp not connected — link it above first')}</span>`);
+    } else {
+        lines.push(`<span style="color:#888;">${t('Stopped')}</span>`);
+    }
+
+    const pending = data.pending != null ? data.pending : '—';
+    lines.push(`${t('Pending leads')}: ${pending}`);
+    lines.push(`${t('Sent')}: ${data.sent || 0} · ${t('Failed')}: ${data.failed || 0} · ${t('Rejected')}: ${data.rejected || 0}`);
+
+    if (running && data.nextSendAt) {
+        lines.push(`${t('Next send')}: ${new Date(data.nextSendAt).toLocaleTimeString()}`);
+    }
+    if (data.lastSendAt && data.lastResult) {
+        lines.push(`${t('Last')}: ${new Date(data.lastSendAt).toLocaleTimeString()} — ${data.lastResult}`);
+    }
+
+    textEl.innerHTML = lines.join('<br>');
+
+    if (startBtn) startBtn.disabled = !connected || running;
+    if (stopBtn) stopBtn.disabled = !running;
+}
+
+async function pollWhatsAppDripStatus() {
+    try {
+        const res = await fetch(`${API_URL}/admin/whatsapp/drip/status`, {
+            headers: authHeaders(),
+            credentials: 'include'
+        });
+        const data = await res.json();
+        if (data.success) renderWhatsAppDripStatus(data.data);
+    } catch (err) {
+        console.error('WhatsApp drip poll failed', err);
+    }
+}
+
+function ensureWhatsAppDripPolling() {
+    if (waDripPollTimer) clearInterval(waDripPollTimer);
+    waDripPollTimer = setInterval(pollWhatsAppDripStatus, 3000);
+    pollWhatsAppDripStatus();
+}
+
+async function startWhatsAppDrip() {
+    const alertEl = document.getElementById('waConfigAlert');
+    const btn = document.getElementById('waDripStartBtn');
+    if (btn) btn.disabled = true;
+    try {
+        const res = await fetch(`${API_URL}/admin/whatsapp/drip/start`, {
+            method: 'POST',
+            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+            credentials: 'include'
+        });
+        const data = await res.json();
+        if (!data.success) {
+            showAlert(alertEl, data.error || t('Could not start automatic sending'));
+        } else {
+            showAlert(alertEl, t('Automatic sending started.'), false);
+        }
+        if (data.data) renderWhatsAppDripStatus(data.data);
+    } catch {
+        showAlert(alertEl, t('Server connection error'));
+    } finally {
+        ensureWhatsAppDripPolling();
+    }
+}
+
+async function stopWhatsAppDrip() {
+    const alertEl = document.getElementById('waConfigAlert');
+    const btn = document.getElementById('waDripStopBtn');
+    if (btn) btn.disabled = true;
+    try {
+        const res = await fetch(`${API_URL}/admin/whatsapp/drip/stop`, {
+            method: 'POST',
+            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+            credentials: 'include'
+        });
+        const data = await res.json();
+        if (!data.success) {
+            showAlert(alertEl, data.error || t('Could not stop automatic sending'));
+        } else {
+            showAlert(alertEl, t('Automatic sending stopped.'), false);
+        }
+        if (data.data) renderWhatsAppDripStatus(data.data);
+    } catch {
+        showAlert(alertEl, t('Server connection error'));
+    } finally {
+        ensureWhatsAppDripPolling();
+    }
+}
 
 function renderWhatsAppConfigStatus(data) {
     const statusEl = document.getElementById('waConfigStatusText');
@@ -3708,6 +3812,9 @@ async function loadWhatsAppConfigPanel() {
         if (phoneInput) phoneInput.value = data.data.phoneNumber || '';
         renderWhatsAppConfigStatus(data.data);
 
+        // Keep the in-app drip status live while the panel is open.
+        ensureWhatsAppDripPolling();
+
         // Keep status/QR live while the panel is open and not yet linked, so a
         // background reconnect that is mid-flight (or a periodically-refreshing QR)
         // is reflected instead of a one-shot stale snapshot. renderWhatsAppConfigStatus
@@ -3753,6 +3860,10 @@ export async function openDashboardConfigModal() {
             if (waConfigPollTimer) {
                 clearInterval(waConfigPollTimer);
                 waConfigPollTimer = null;
+            }
+            if (waDripPollTimer) {
+                clearInterval(waDripPollTimer);
+                waDripPollTimer = null;
             }
             closeAdminOverlay(modal);
         };
@@ -3823,6 +3934,16 @@ export async function openDashboardConfigModal() {
                         <img id="waConfigQrImg" alt="WhatsApp QR" style="max-width:240px;background:white;padding:10px;border-radius:8px;">
                     </div>
                     <button type="button" id="waConfigRegisterBtn" style="padding:10px 18px;background:#25D366;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Register number on WhatsApp')}</button>
+                </div>
+
+                <div style="margin-top:24px;padding-top:16px;border-top:1px solid #333;">
+                    <h4 style="margin:0 0 10px 0;color:#ccc;">3) ${t('Automatic sending (WhatsApp)')}</h4>
+                    <p style="color:#888;font-size:0.85rem;margin:0 0 12px 0;">${t('Sends the welcome invitation to pending leads at a slow, human-like pace of 4 messages per hour (one per 15-minute quarter, at a random minute). It runs inside the app using the linked WhatsApp and stops automatically when no pending leads remain.')}</p>
+                    <p id="waDripStatusText" style="color:#ccc;margin:0 0 12px 0;font-size:0.9rem;line-height:1.6;">—</p>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                        <button type="button" id="waDripStartBtn" style="padding:10px 18px;background:#25D366;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Start sending 4/h')}</button>
+                        <button type="button" id="waDripStopBtn" style="padding:10px 18px;background:transparent;color:#cc6666;border:1px solid #cc6666;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Stop sending')}</button>
+                    </div>
                 </div>
             </section>
         `;
@@ -3899,6 +4020,11 @@ export async function openDashboardConfigModal() {
                 btn.disabled = false;
             }
         };
+
+        const waDripStartBtn = document.getElementById('waDripStartBtn');
+        if (waDripStartBtn) waDripStartBtn.onclick = startWhatsAppDrip;
+        const waDripStopBtn = document.getElementById('waDripStopBtn');
+        if (waDripStopBtn) waDripStopBtn.onclick = stopWhatsAppDrip;
 
         wireLaunchCurtainToggle(document.getElementById('launchCurtainConfigToggle'));
         const launchCurtainSaveOpeningBtn = document.getElementById('launchCurtainSaveOpeningBtn');

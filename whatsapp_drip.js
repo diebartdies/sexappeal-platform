@@ -1,3 +1,20 @@
+// ---------------------------------------------------------------------------
+// ⚠️  STANDALONE PROCESS — RUN ONLY WHEN THE APP IS NOT HOLDING THE WHATSAPP CLIENT.
+//
+// This script spins up its OWN copy of the platform whatsapp-web.js singleton
+// (LocalAuth clientId 'platform', session dir .wwebjs_auth/session-platform). If
+// the running app container (sexappeal_app) already has that client connected
+// (admin linked it via the dashboard, kept alive by autoReconnectIfSessionSaved),
+// launching this script as a SECOND process on the same session dir will break
+// the singleton lock and disconnect WhatsApp.
+//
+// When the app IS holding the client (the normal case in production), DO NOT run
+// this script. Use the IN-APP drip instead — services/whatsappDripRunner.js,
+// controllable from the admin dashboard (WhatsApp config → "Envío automático") —
+// which reuses the app's already-connected shared client. This file is kept only
+// for offline/standalone use (e.g. a box where the app is stopped).
+// ---------------------------------------------------------------------------
+
 require('dotenv').config();
 const fs = require('fs');
 const qrcode = require('qrcode-terminal');

@@ -343,6 +343,9 @@ app.get('/api/v1/admin/whatsapp/config', protect, authorize('admin'), whatsappCo
 app.put('/api/v1/admin/whatsapp/config', protect, authorize('admin'), whatsappController.updateWhatsAppPhone);
 app.post('/api/v1/admin/whatsapp/register', protect, authorize('admin'), whatsappController.startWhatsAppRegistration);
 app.get('/api/v1/admin/whatsapp/register/status', protect, authorize('admin'), whatsappController.getWhatsAppRegistrationStatus);
+app.post('/api/v1/admin/whatsapp/drip/start', protect, authorize('admin'), whatsappController.startWhatsAppDrip);
+app.post('/api/v1/admin/whatsapp/drip/stop', protect, authorize('admin'), whatsappController.stopWhatsAppDrip);
+app.get('/api/v1/admin/whatsapp/drip/status', protect, authorize('admin'), whatsappController.getWhatsAppDripStatus);
 app.get('/api/v1/admin/launch-curtain', protect, authorize('admin'), launchCurtainController.getAdminLaunchCurtainConfig);
 app.put('/api/v1/admin/launch-curtain', protect, authorize('admin'), launchCurtainController.updateLaunchCurtainConfig);
 

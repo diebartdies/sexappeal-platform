@@ -5,6 +5,7 @@ const {
   getAdminWhatsAppSettings
 } = require('../utils/whatsappConfig');
 const platformService = require('../services/whatsappPlatformService');
+const dripRunner = require('../services/whatsappDripRunner');
 
 // @desc    Get platform WhatsApp configuration
 // @route   GET /api/v1/admin/whatsapp/config
@@ -79,6 +80,60 @@ exports.startWhatsAppRegistration = async (req, res) => {
 exports.getWhatsAppRegistrationStatus = async (req, res) => {
   try {
     const status = await platformService.getRegistrationStatus();
+    res.status(200).json({ success: true, data: status });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Start the in-app WhatsApp quarter-drip sender (4 msgs/hour)
+// @route   POST /api/v1/admin/whatsapp/drip/start
+// @access  Private/Admin
+exports.startWhatsAppDrip = async (req, res) => {
+  try {
+    const result = await dripRunner.start();
+    const status = await dripRunner.getStatus();
+
+    if (!result.ok) {
+      // Not-connected is a conflict (the admin must link WhatsApp first); every
+      // other refusal (already running / no pending leads) is a bad request.
+      const code = result.notConnected ? 409 : 400;
+      return res.status(code).json({ success: false, error: result.error, data: status });
+    }
+
+    res.status(202).json({
+      success: true,
+      message: 'WhatsApp drip started',
+      data: status
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Stop the in-app WhatsApp quarter-drip sender
+// @route   POST /api/v1/admin/whatsapp/drip/stop
+// @access  Private/Admin
+exports.stopWhatsAppDrip = async (req, res) => {
+  try {
+    dripRunner.stop();
+    const status = await dripRunner.getStatus();
+    res.status(200).json({
+      success: true,
+      message: 'WhatsApp drip stopped',
+      data: status
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Live status of the in-app WhatsApp quarter-drip sender
+// @route   GET /api/v1/admin/whatsapp/drip/status
+// @access  Private/Admin
+exports.getWhatsAppDripStatus = async (req, res) => {
+  try {
+    const status = await dripRunner.getStatus();
     res.status(200).json({ success: true, data: status });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
