@@ -81,7 +81,7 @@ function renderAdminCategorySection(content, cat, items, eagerImages = false) {
         card.style.border = '1px solid #333';
 
         const alias = p.professionalProfile?.alias || 'No Alias';
-        const photo = (p.professionalProfile?.photos && p.professionalProfile.photos.length > 0) ? p.professionalProfile.photos[0] : 'https://via.placeholder.com/150?text=No+Photo';
+        const photo = (p.professionalProfile?.photos && p.professionalProfile.photos.length > 0) ? p.professionalProfile.photos[0] : '/images/no-photo.svg';
         const vStatus = p.verificationStatus || 'pending';
         const statusColor = vStatus === 'approved' ? 'green' : (vStatus === 'rejected' ? 'red' : 'orange');
         const thumbWrap = document.createElement('div');
@@ -3569,7 +3569,12 @@ function renderWhatsAppConfigStatus(data) {
     }
 
     if (registerBtn) {
-        registerBtn.disabled = data.phase === 'initializing' || data.phase === 'qr';
+        // Never leave the button permanently disabled on a transient/stuck phase.
+        // A background reconnect that hangs in 'initializing' (stale/restricted
+        // session) must NOT lock the admin out — they have to be able to force a
+        // re-link. The click handler disables the button only for the duration of
+        // its own request and re-enables it afterwards.
+        registerBtn.disabled = false;
         if (data.connected) registerBtn.textContent = t('WhatsApp linked');
     }
 
@@ -3702,6 +3707,15 @@ async function loadWhatsAppConfigPanel() {
 
         if (phoneInput) phoneInput.value = data.data.phoneNumber || '';
         renderWhatsAppConfigStatus(data.data);
+
+        // Keep status/QR live while the panel is open and not yet linked, so a
+        // background reconnect that is mid-flight (or a periodically-refreshing QR)
+        // is reflected instead of a one-shot stale snapshot. renderWhatsAppConfigStatus
+        // clears this timer once it reaches 'ready' or 'error'.
+        if (!data.data.connected) {
+            if (waConfigPollTimer) clearInterval(waConfigPollTimer);
+            waConfigPollTimer = setInterval(pollWhatsAppConfigStatus, 2500);
+        }
     } catch {
         showAlert(alertEl, t('Server connection error'));
     }

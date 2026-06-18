@@ -1001,7 +1001,7 @@ export function addPhotoToGrid(fileOrUrl) {
             }
             return;
         }
-        img.src = 'https://via.placeholder.com/120x160?text=Photo';
+        img.src = '/images/no-photo.svg';
     };
 
     const removeBtn = document.createElement('button');

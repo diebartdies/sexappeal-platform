@@ -56,7 +56,7 @@ function renderTreasureCategorySection(grid, cat, items, eagerImages = false) {
         const card = document.createElement('div');
         const prof = treasure.professionalProfile || {};
         const validPhotos = (prof.photos || []).filter(p => p && p.trim() !== '');
-        const photoUrl = validPhotos.length > 0 ? resolvePhotoSrc(validPhotos[0]) : 'https://via.placeholder.com/300x400?text=No+Photo';
+        const photoUrl = validPhotos.length > 0 ? resolvePhotoSrc(validPhotos[0]) : '/images/no-photo.svg';
 
         card.className = 'card treasure-card';
         card.style.position = 'relative';
@@ -71,7 +71,7 @@ function renderTreasureCategorySection(grid, cat, items, eagerImages = false) {
         if (!eagerImages) img.loading = 'lazy';
         img.onerror = () => {
             img.onerror = null;
-            img.src = 'https://via.placeholder.com/300x400?text=No+Photo';
+            img.src = '/images/no-photo.svg';
         };
         imgContainer.appendChild(img);
 

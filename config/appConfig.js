@@ -129,6 +129,37 @@ const config = {
     pollIntervalMs: parseInt(process.env.OUTREACH_POLL_INTERVAL_MS, 10) || 30000
   },
 
+  // WhatsApp "quarter drip" scheduler (whatsapp_drip.js). A deliberately slow,
+  // human-like cadence to carefully resume WhatsApp outreach after a restriction.
+  // The hour is split into N equal quarters; exactly ONE message is sent per
+  // quarter at a RANDOM minute within it (re-randomized every hour). All values
+  // overridable via env.
+  whatsappDrip: {
+    // Messages per hour. With the default 4, the hour splits into 15-min quarters
+    // [0-14],[15-29],[30-44],[45-59] and one send lands at a random minute in each.
+    // Env: WHATSAPP_DRIP_PER_HOUR (default 4).
+    messagesPerHour: parseInt(process.env.WHATSAPP_DRIP_PER_HOUR, 10) || 4,
+
+    // Absolute path to the brand logo IMAGE attached to every message (the brand
+    // is shown as an image so the literal brand word never appears in the text).
+    // Must be a raster image (PNG/JPG) to render inline as a photo.
+    // Env: WHATSAPP_DRIP_IMAGE (default public/images/brand-logo.png).
+    brandImagePath: process.env.WHATSAPP_DRIP_IMAGE
+      || path.resolve(__dirname, '..', 'public', 'images', 'brand-logo.png'),
+
+    // OPTIONAL alias website domain to advertise instead of the real site domain
+    // (which contains the banned word). Leave empty to omit any website link and
+    // drive replies to WhatsApp only. If set, it MUST NOT contain "sex".
+    // Env: WHATSAPP_DRIP_ALIAS_DOMAIN (default '' = no website link).
+    aliasDomain: process.env.WHATSAPP_DRIP_ALIAS_DOMAIN || '',
+
+    // Hard ceiling (ms) for a single registration-check / send call so a hung
+    // whatsapp-web.js call never stalls the scheduler.
+    // Env: WHATSAPP_DRIP_REGISTER_TIMEOUT_MS, WHATSAPP_DRIP_SEND_TIMEOUT_MS.
+    registerCheckTimeoutMs: parseInt(process.env.WHATSAPP_DRIP_REGISTER_TIMEOUT_MS, 10) || 30000,
+    sendTimeoutMs: parseInt(process.env.WHATSAPP_DRIP_SEND_TIMEOUT_MS, 10) || 60000
+  },
+
   // SMS lead outreach via Twilio. Mirrors the WhatsApp `outreach` block but uses
   // Twilio's REST API. Sending defaults to 24/7 (no night window) and a fast,
   // jittered drip. All values overridable via env. Times are LOCAL (UTC-3) "HH:MM".

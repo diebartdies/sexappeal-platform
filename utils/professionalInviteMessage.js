@@ -1,7 +1,21 @@
+const path = require('path');
 const config = require('../config/appConfig');
 
 const PUBLIC_URL = config.platform?.publicUrl || 'https://sexappeal.drsrv.net.ar';
 const REGISTER_URL = config.platform?.registerUrl || `${PUBLIC_URL}/register.html`;
+
+// WhatsApp contact (E.164 digits, no '+') leads can reply to. Contains no banned
+// words, so it is safe to keep in the message text.
+const WHATSAPP_CONTACT_URL = 'https://wa.me/5491178280156';
+
+// Absolute path to the brand logo IMAGE attached to sanitized WhatsApp outreach.
+// The brand is conveyed by this image so the literal brand word never appears in
+// the message TEXT. Overridable via env (WHATSAPP_DRIP_IMAGE). NOTE: this must be
+// a raster image (PNG/JPG) for WhatsApp to render it inline as a photo — the only
+// brand asset currently in the repo is a 32x32 favicon (SVG/ICO), which WhatsApp
+// would send as a document, not a photo. A proper logo PNG must be supplied here.
+const BRAND_IMAGE_PATH = process.env.WHATSAPP_DRIP_IMAGE
+  || path.resolve(__dirname, '..', 'public', 'images', 'brand-logo.png');
 
 function normalizeWhatsAppPhone(phone) {
   if (!phone) return '';
@@ -57,6 +71,40 @@ Gracias por confiar en la Arquitectura de la Intimidad.
 — Equipo SexAppeal`;
 }
 
+// Sanitized WhatsApp caption sent ALONGSIDE the brand image (see BRAND_IMAGE_PATH).
+//
+// Hard constraints baked in here:
+//   1. The literal brand word (which contains "sex") never appears in this text —
+//      the brand is conveyed by the attached image only. We say "nuestra
+//      plataforma" / "la app" instead.
+//   2. The site domain `sexappeal.drsrv.net.ar` literally contains "sex", so it is
+//      DELIBERATELY OMITTED from the caption. Replies are driven to the WhatsApp
+//      contact instead. If a website link is ever required, set an alias domain
+//      that does NOT contain "sex" via config.whatsappDrip.aliasDomain (env
+//      WHATSAPP_DRIP_ALIAS_DOMAIN) and it will be appended; until then no URL with
+//      the banned word is ever emitted.
+function buildSanitizedWhatsAppCaption(alias) {
+  const name = (alias && String(alias).trim()) || 'hermosa';
+
+  const aliasDomain = (config.whatsappDrip && config.whatsappDrip.aliasDomain)
+    ? String(config.whatsappDrip.aliasDomain).trim()
+    : '';
+  // Only ever append a website line if a safe alias domain is configured AND it
+  // does not itself contain the banned word. Otherwise keep replies on WhatsApp.
+  const safeDomain = aliasDomain && !/sex/i.test(aliasDomain) ? aliasDomain : '';
+  const webLine = safeDomain ? `\n🌐 ${safeDomain}` : '';
+
+  return `Hola ${name} ✨
+
+Te queremos invitar a nuestra plataforma exclusiva para profesionales: tu vidriera personal para mostrar tu presencia y tus servicios de forma directa y discreta, sin intermediarios.
+
+💎 Tu primer mes es totalmente gratis.
+🔒 Perfiles verificados, contacto protegido y privacidad cuidada.
+
+¿Te interesa? Respondé a este chat o escribinos por WhatsApp y te contamos todo:
+${WHATSAPP_CONTACT_URL}${webLine}`;
+}
+
 function buildWhatsAppUrl(phone, alias) {
   const cleanPhone = normalizeWhatsAppPhone(phone);
   if (!cleanPhone) return null;
@@ -67,7 +115,10 @@ function buildWhatsAppUrl(phone, alias) {
 module.exports = {
   PUBLIC_URL,
   REGISTER_URL,
+  WHATSAPP_CONTACT_URL,
+  BRAND_IMAGE_PATH,
   normalizeWhatsAppPhone,
   buildProfessionalInviteMessage,
+  buildSanitizedWhatsAppCaption,
   buildWhatsAppUrl
 };

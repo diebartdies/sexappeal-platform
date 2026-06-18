@@ -53,6 +53,15 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./certbot/conf/live/sexappeal.drsrv.net.ar:/etc/nginx/certs:ro
+      # Certbot HTTP-01 webroot. nginx serves /.well-known/acme-challenge/ from
+      # here (read-only); certbot writes challenge files here when issuing certs.
+      # Host dir is created by the runbook (mkdir -p certbot/www) before deploy.
+      - ./certbot/www:/var/www/certbot:ro
+      # Neutral alias (fcwa) TLS cert — its OWN cert, separate from sexappeal.
+      # Referenced by the (initially commented-out) fcwa 443 block in nginx.conf.
+      # The host dir is auto-created empty by Docker on first up; it stays empty
+      # (and unreferenced) until the fcwa cert is issued per the runbook.
+      - ./certbot/conf/live/fcwa.drsrv.net.ar:/etc/nginx/certs-fcwa:ro
     depends_on:
       - app
 

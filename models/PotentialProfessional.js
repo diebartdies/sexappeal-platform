@@ -17,8 +17,28 @@ const PotentialProfessionalSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'contacted', 'joined', 'rejected'],
+    // `status` is the WhatsApp lead lifecycle field (the channel's "status field").
+    // 'contacted' = a WhatsApp message was sent; 'rejected' = unregistered/invalid
+    // number; 'failed' = a (transient) WhatsApp send error (kept distinct from
+    // 'rejected' so failed leads can be retried). 'pending'/missing/null = not yet
+    // contacted (what the drip scheduler selects).
+    enum: ['pending', 'contacted', 'joined', 'rejected', 'failed'],
     default: 'pending'
+  },
+  // WhatsApp send-outcome tracking. Mirrors the SMS fields below but on the
+  // WhatsApp channel: when the drip scheduler sends (or fails), it records the
+  // timestamp, the whatsapp-web.js message id, and any error string. These are
+  // additive/optional and never gate selection (the `status` field does that).
+  whatsappSentAt: {
+    type: Date
+  },
+  whatsappError: {
+    type: String,
+    trim: true
+  },
+  whatsappMessageId: {
+    type: String,
+    trim: true
   },
   // SMS outreach tracking, kept independent from the WhatsApp `status` above so
   // the two channels never clobber each other. Bulk SMS targets smsStatus 'pending'.

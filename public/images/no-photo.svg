@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 400" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Sin foto">
+  <rect width="300" height="400" fill="#1a1a1a"/>
+  <g fill="#4a4a4a">
+    <circle cx="150" cy="160" r="58"/>
+    <path d="M54 372c0-60 43-104 96-104s96 44 96 104z"/>
+  </g>
+  <text x="150" y="346" fill="#8a8a8a" font-family="Arial, Helvetica, sans-serif" font-size="26" text-anchor="middle">Sin foto</text>
+</svg>

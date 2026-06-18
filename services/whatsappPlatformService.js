@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const { resolveBrowserExecutable } = require('../utils/browserExecutable');
 const {
   getPlatformWhatsAppPhone,
@@ -165,14 +165,20 @@ async function getRegistrationStatus() {
 }
 
 async function startRegistration() {
-  if (clientReady) {
+  // If a QR is already on screen, keep showing it — don't kill a scan the admin
+  // may be midway through. (This is the ONLY early-return: a live, scannable QR.)
+  if (regState.phase === 'qr' && regState.qr) {
     return buildStatus();
   }
 
-  if (regState.phase === 'qr' || regState.phase === 'initializing') {
-    return buildStatus();
-  }
-
+  // Otherwise the admin explicitly asked to (re)link, so force a clean restart.
+  // Crucially we do NOT bail out on `clientReady` or a bare `initializing` phase:
+  // the startup auto-reconnect (autoReconnectIfSessionSaved) launches a client with
+  // the saved session; if that session is stale/restricted it can sit in
+  // `initializing` forever (browser alive, no `qr`/`ready` event), which previously
+  // made this whole endpoint a permanent no-op and left the admin button disabled.
+  // destroyClient() tears down the existing/half-dead browser (releasing the
+  // LocalAuth session lock) before we relaunch, so a fresh attempt can produce a QR.
   await destroyClient();
   regState.phase = 'initializing';
   regState.qr = null;
@@ -204,6 +210,14 @@ function waitForReady(timeoutMs = DEFAULT_TIMEOUT_MS) {
   });
 }
 
+// Send a WhatsApp message to a phone number.
+//   - Plain text  : sendMessage(phone, text)
+//   - Image + text: sendMessage(phone, caption, { mediaPath: '/abs/logo.png' })
+//                   The local file is wrapped in a MessageMedia and the `message`
+//                   string is used as the image caption (single message, image on
+//                   top + caption below). Use this to convey the brand via an
+//                   image while keeping the caption text sanitized.
+// Returns the sent message id (string) when available, else true.
 async function sendMessage(toPhone, message, options = {}) {
   const cleanPhone = normalizeWhatsAppPhone(toPhone);
   if (!cleanPhone) {
@@ -211,8 +225,20 @@ async function sendMessage(toPhone, message, options = {}) {
   }
 
   await waitForReady(options.timeoutMs || DEFAULT_TIMEOUT_MS);
-  await client.sendMessage(`${cleanPhone}@c.us`, message);
-  return true;
+
+  const chatId = `${cleanPhone}@c.us`;
+  let sent;
+  if (options.mediaPath) {
+    if (!fs.existsSync(options.mediaPath)) {
+      throw new Error(`WhatsApp media file not found: ${options.mediaPath}`);
+    }
+    const media = MessageMedia.fromFilePath(options.mediaPath);
+    sent = await client.sendMessage(chatId, media, { caption: message });
+  } else {
+    sent = await client.sendMessage(chatId, message);
+  }
+
+  return (sent && sent.id && (sent.id._serialized || sent.id.id)) || true;
 }
 
 function getSharedClient() {
