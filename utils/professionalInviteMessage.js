@@ -86,14 +86,9 @@ Gracias por confiar en la Arquitectura de la Intimidad.
 function buildSanitizedWhatsAppCaption(alias) {
   const name = (alias && String(alias).trim()) || 'hermosa';
 
-  const aliasDomain = (config.whatsappDrip && config.whatsappDrip.aliasDomain)
-    ? String(config.whatsappDrip.aliasDomain).trim()
-    : '';
-  // Only ever append a website line if a safe alias domain is configured AND it
-  // does not itself contain the banned word. Otherwise keep replies on WhatsApp.
-  const safeDomain = aliasDomain && !/sex/i.test(aliasDomain) ? aliasDomain : '';
-  const webLine = safeDomain ? `\n🌐 ${safeDomain}` : '';
-
+  // STEP 1 of a 2-step flow: this cold message carries NO link (lower spam/ban
+  // risk + less "scam" feel) and drives a REPLY in the same chat. The website
+  // link is sent only in STEP 2, once she replies and there is context/trust.
   return `Hola ${name} ✨
 
 Te invito a nuestra plataforma para profesionales — un directorio distinto a los demás:
@@ -103,8 +98,9 @@ Te invito a nuestra plataforma para profesionales — un directorio distinto a l
 ✅ Tu contacto es tuyo: no lo vendemos ni lo compartimos con terceros.
 ✅ No pagás los días que marcás como vacaciones.
 
-El costo depende de tu categoría, y tu primer mes es de prueba sin costo. ¿Te interesa? Respondé a este chat o escribinos por WhatsApp y te contamos todo:
-${WHATSAPP_CONTACT_URL}${webLine}`;
+El costo depende de tu categoría, y tu primer mes es de prueba sin costo.
+
+¿Te interesa? Respondé a este mismo chat y te cuento todo. 😊`;
 }
 
 function buildWhatsAppUrl(phone, alias) {

@@ -11,7 +11,7 @@ const Connection = require('../models/Connection');
 const ConnectionRequest = require('../models/ConnectionRequest');
 const sendEmail = require('../sendEmail');
 const { isValidRejectionReason, buildRejectionEmail } = require('../utils/rejectionMessages');
-const { isUploadPath, resolvePhotoForClient, resolvePhotosForClient, resolveFirstPhotoForClient } = require('../utils/photoUtils');
+const { isUploadPath, resolvePhotoForClient, resolvePhotosForClient, resolveFirstPhotoForClient, normalizePhotosForStorage } = require('../utils/photoUtils');
 const { resolveWhatsappNumber } = require('../utils/contactNumber');
 const smsNotifications = require('../services/smsNotifications');
 
@@ -68,6 +68,31 @@ exports.getAllProfessionals = async (req, res, next) => {
       pagination: { page: parseInt(page, 10), limit: parseInt(limit, 10), total },
       data: professionalsData
     });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Get a single professional with ALL photos resolved for the client.
+//          The list endpoint (getAllProfessionals) truncates photos to the
+//          cover only, so the admin edit form fetches the full record here to
+//          manage the complete photo gallery.
+// @route   GET /api/v1/admin/professionals/:id
+// @access  Private/Admin
+exports.getProfessionalById = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+
+    if (!user || user.role !== 'professional') {
+      return res.status(404).json({ success: false, error: 'Professional not found' });
+    }
+
+    const obj = user.toObject();
+    if (obj.professionalProfile && obj.professionalProfile.photos) {
+      obj.professionalProfile.photos = resolvePhotosForClient(obj.professionalProfile.photos);
+    }
+
+    res.status(200).json({ success: true, data: obj });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
   }
@@ -462,14 +487,18 @@ exports.updateProfessionalProfile = async (req, res, next) => {
 
     if (req.body.professionalProfile) {
       if (req.body.professionalProfile.photos) {
-          const remainingUrls = req.body.professionalProfile.photos;
-          const keptPhotos = (user.professionalProfile.photos || []).filter(p => {
-              if (typeof p === 'string') return remainingUrls.includes(p);
-              if (p.url) return remainingUrls.includes(p.url);
-              const blobUrl = `/api/v1/professionals/photo/${user._id}/${p._id}`;
-              return remainingUrls.includes(blobUrl);
-          });
-          user.professionalProfile.photos = keptPhotos;
+          // The admin photo carousel sends the full, ORDERED gallery: existing
+          // photos are re-sent as their stored value (base64 data URI / URL) and
+          // newly uploaded photos arrive as fresh base64 data URIs. Persisting the
+          // array verbatim (after normalization) supports add, delete, reorder and
+          // set-first/cover (index 0 is the public thumbnail) in one pass.
+          const incomingPhotos = Array.isArray(req.body.professionalProfile.photos)
+            ? req.body.professionalProfile.photos
+            : [];
+          user.professionalProfile.photos = normalizePhotosForStorage(
+            incomingPhotos,
+            user.professionalProfile.photos || []
+          );
           delete req.body.professionalProfile.photos;
       }
 

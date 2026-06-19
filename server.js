@@ -313,6 +313,7 @@ app.get('/api/v1/admin/logs', protect, authorize('admin'), adminController.getAc
 app.put('/api/v1/admin/professionals/:id', protect, authorize('admin'), adminController.updateProfessionalProfile);
 app.delete('/api/v1/admin/professionals/:id', protect, authorize('admin'), adminController.deleteProfessional);
 app.get('/api/v1/admin/professionals', protect, authorize('admin'), adminController.getAllProfessionals);
+app.get('/api/v1/admin/professionals/:id', protect, authorize('admin'), adminController.getProfessionalById);
 app.get('/api/v1/admin/outreach/invite-message', protect, authorize('admin'), potentialProfessionalController.getInviteMessage);
 app.post('/api/v1/admin/outreach/bulk-whatsapp', protect, authorize('admin'), outreachController.startBulkWhatsApp);
 app.post('/api/v1/admin/outreach/whatsapp/targeted', protect, authorize('admin'), outreachController.startTargetedWhatsApp);

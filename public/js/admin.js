@@ -1,4 +1,4 @@
-import { BASE_ORIGIN, API_URL, CATEGORY_META, getVerificationGesture, appPath, resolvePhotoSrc } from './globals.js';
+import { BASE_ORIGIN, API_URL, CATEGORY_META, getVerificationGesture, appPath } from './globals.js';
 import { showAlert, getPendingApprovalBannerHtml, getResubmissionBannerHtml, getGeneralRejectionBannerHtml } from './uiHelpers.js';
 import { t, applyStaticTranslations, formatOpeningDateTime } from './i18n.js';
 import { activateAccessibleModal, deactivateAccessibleModal, announceMessage, confirmDialog } from './a11y.js';
@@ -3112,9 +3112,19 @@ export function renderEditForm(prof) {
             <label>Height</label>
             <input type="text" id="adminEditHeight" value="${profile.height || ''}" style="padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
 
-            <label>${t('Manage Photos')}</label>
-            <p style="font-size: 0.8rem; color: #888; margin: 0 0 8px;">${t('Click a photo to enlarge and review its content.')}</p>
-            <div id="adminEditPhotos" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;"></div>
+            <div class="card fileteado-section" style="margin-bottom: 15px; border: 1px solid var(--primary-gold);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 class="gold-text" style="margin: 0;">${t('Manage Photos')}</h3>
+                    <button type="button" id="adminBtnUploadPhoto" style="padding: 8px 16px; background: var(--primary-gold); color: #111; font-weight: bold; border: none; border-radius: 4px; cursor: pointer;">Upload</button>
+                </div>
+                <p style="font-size: 0.85rem; color: #ccc; margin-bottom: 15px;">${t('Admin upload, update, remove actions. Drag photos to reorder.')} ${t('Click a photo to enlarge and review its content.')}</p>
+                <input type="file" id="newPhotoInput" accept="image/png, image/jpeg, image/jpg, image/webp" multiple style="display: none;">
+                <div id="photoGrid" style="display: flex; flex-wrap: wrap; gap: 15px;">
+                    <label class="add-photo-frame" style="width: 120px; height: 160px; border: 2px dashed var(--primary-gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--primary-gold); font-size: 2rem; background: rgba(212, 175, 55, 0.05); transition: background 0.3s ease; flex-shrink: 0;">
+                        <span>+</span>
+                    </label>
+                </div>
+            </div>
 
             <button type="submit" style="margin-top: 10px;">Save Changes</button>
         </form>
@@ -3123,32 +3133,56 @@ export function renderEditForm(prof) {
     setupLocationDropdowns('adminEditProvince', 'adminEditCity', 'adminEditNeigh', false, profile.location || {});
     renderSpecialtyDropdown('adminEditServices', profile.services || []);
 
-    const photosHost = document.getElementById('adminEditPhotos');
-    (profile.photos || []).forEach((photoSrc) => {
-        const item = document.createElement('div');
-        item.className = 'admin-photo-item';
-        item.style.cssText = 'position: relative; width: 100px; height: 100px;';
-        const resolvedSrc = resolvePhotoSrc(photoSrc);
-        const img = document.createElement('img');
-        img.src = resolvedSrc;
-        img.alt = t('Manage Photos');
-        img.title = t('Click to enlarge');
-        img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 4px; cursor: zoom-in;';
-        img.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            openImageModal(resolvedSrc);
+    // Photo carousel — reuse the professional dashboard helper (addPhotoToGrid)
+    // so the admin gets the exact same add / view / reorder / set-first / delete
+    // behaviour. The cover/thumbnail is always the photo in the first position
+    // (refreshCoverHighlight inside addPhotoToGrid marks index 0).
+    const adminNewPhotoInput = document.getElementById('newPhotoInput');
+    const adminBtnUploadPhoto = document.getElementById('adminBtnUploadPhoto');
+    const adminPhotoGrid = document.getElementById('photoGrid');
+    const adminAddFrame = adminPhotoGrid ? adminPhotoGrid.querySelector('.add-photo-frame') : null;
+
+    if (adminNewPhotoInput && adminAddFrame) {
+        // Move the hidden file input inside the "+" frame so clicking the frame
+        // (a <label>) opens the picker, mirroring the professional dashboard.
+        adminAddFrame.appendChild(adminNewPhotoInput);
+        if (adminBtnUploadPhoto) adminBtnUploadPhoto.onclick = () => adminNewPhotoInput.click();
+        adminNewPhotoInput.addEventListener('change', (e) => {
+            if (!e.target.files) return;
+            for (const file of e.target.files) {
+                if (!file.type.startsWith('image/')) continue;
+                addPhotoToGrid(file);
+            }
+            // Allow re-selecting the same file again later.
+            e.target.value = '';
         });
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'remove-photo-btn';
-        btn.textContent = 'X';
-        btn.style.cssText = 'position: absolute; top: 0; right: 0; background: var(--accent-red); color: white; border: none; cursor: pointer; padding: 2px 6px; z-index: 2;';
-        btn.addEventListener('click', (e) => e.stopPropagation());
-        item.appendChild(img);
-        item.appendChild(btn);
-        photosHost.appendChild(item);
-    });
+    }
+
+    // Populate the grid with the professional's CURRENT full gallery. The list
+    // endpoint only returns the cover photo, so fetch the complete record.
+    const seedAdminPhotos = (photos) => {
+        (photos || []).forEach((url) => addPhotoToGrid(url));
+    };
+    if (Array.isArray(profile.photos) && profile.photos.length > 1) {
+        seedAdminPhotos(profile.photos);
+    } else {
+        (async () => {
+            try {
+                const res = await fetch(`${API_URL}/admin/professionals/${prof._id}`, {
+                    headers: authHeaders(),
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                if (data.success && data.data?.professionalProfile?.photos) {
+                    seedAdminPhotos(data.data.professionalProfile.photos);
+                } else {
+                    seedAdminPhotos(profile.photos);
+                }
+            } catch (err) {
+                seedAdminPhotos(profile.photos);
+            }
+        })();
+    }
 
     document.getElementById('backToListBtn').onclick = () => {
         if (editModalReturnMode === 'dashboard') {
@@ -3158,13 +3192,6 @@ export function renderEditForm(prof) {
         }
     };
 
-    // Attach photo removal logic
-    document.querySelectorAll('.remove-photo-btn').forEach(btn => {
-        btn.onclick = (e) => {
-            e.preventDefault();
-            btn.parentElement.remove();
-        };
-    });
     applyStaticTranslations(container);
 
     document.getElementById('adminEditProfForm').onsubmit = async (e) => {
@@ -3174,7 +3201,36 @@ export function renderEditForm(prof) {
         submitBtn.disabled = true;
         submitBtn.textContent = 'Saving...';
         
-        const remainingPhotos = Array.from(document.querySelectorAll('#adminEditPhotos img')).map(img => img.getAttribute('src'));
+        // Gather the gallery in DOM order. Existing photos keep their stored
+        // value (data-original-url = base64 data URI / URL); freshly uploaded
+        // photos are blob: object URLs that we read back into base64 data URIs
+        // so they persist through the JSON save. Order is preserved so reorder
+        // and set-first/cover work on the backend.
+        const blobUrlToDataUri = (url) => fetch(url)
+            .then((r) => r.blob())
+            .then((blob) => new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            }));
+
+        const photoImgs = Array.from(document.querySelectorAll('#photoGrid .photo-item img'));
+        const remainingPhotos = [];
+        for (const img of photoImgs) {
+            const original = img.getAttribute('data-original-url');
+            if (original && !original.startsWith('blob:')) {
+                remainingPhotos.push(original);
+            } else if (img.src.startsWith('blob:')) {
+                try {
+                    remainingPhotos.push(await blobUrlToDataUri(img.src));
+                } catch (err) {
+                    /* skip an unreadable upload rather than abort the whole save */
+                }
+            } else if (img.src) {
+                remainingPhotos.push(img.src);
+            }
+        }
 
         const payload = {
             email: document.getElementById('adminEditEmail').value,
