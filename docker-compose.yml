@@ -55,14 +55,12 @@ services:
       - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./certbot/conf/live/sexappeal.drsrv.net.ar:/etc/nginx/certs:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certbot/conf/live:/etc/nginx/certs-live:ro
       # Certbot HTTP-01 webroot. nginx serves /.well-known/acme-challenge/ from
       # here (read-only); certbot writes challenge files here when issuing certs.
       # Host dir is created by the runbook (mkdir -p certbot/www) before deploy.
       - ./certbot/www:/var/www/certbot:ro
-      # Neutral alias (SelfAppeal) TLS cert — separate from sexappeal.drsrv.net.ar.
-      # Issue with certbot --webroot after DNS A record for selfappeal.drsrv.net.ar.
-      - ./certbot/conf/live/selfappeal.drsrv.net.ar:/etc/nginx/certs-selfappeal:ro
     depends_on:
       - app
 

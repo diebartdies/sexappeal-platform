@@ -15,8 +15,18 @@ echo [1/7] Syncing SSL certs (sexappeal.chain/key -^> fullchain.pem/privkey.pem)
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\sync-ssl-certs.ps1"
 if errorlevel 1 goto ssl_failed
 
+echo [1a/7] Syncing SelfAppeal SSL certs (D:\Certs-Selfapeal -^> certbot/live/selfappeal.drsrv.net.ar)...
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\sync-ssl-certs-selfappeal.ps1"
+if errorlevel 1 goto ssl_selfappeal_failed
+
+echo [1c/7] Uploading SelfAppeal TLS certs to server...
+ssh %SSH_OPTS% %SERVER_USER%@%SERVER_IP% "mkdir -p %SERVER_PATH%/certbot/conf/live/selfappeal.drsrv.net.ar"
+if errorlevel 1 goto ssl_selfappeal_failed
+scp %SSH_OPTS% "%~dp0certbot\conf\live\selfappeal.drsrv.net.ar\fullchain.pem" "%~dp0certbot\conf\live\selfappeal.drsrv.net.ar\privkey.pem" %SERVER_USER%@%SERVER_IP%:%SERVER_PATH%/certbot/conf/live/selfappeal.drsrv.net.ar/
+if errorlevel 1 goto ssl_selfappeal_failed
+
 echo [1b/7] Normalizing deploy script line endings (LF)...
-powershell -NoProfile -Command "$paths=@('%~dp0scripts\deploy-extract.sh','%~dp0scripts\deploy-restart.sh','%~dp0scripts\disk-housekeeping.sh','%~dp0scripts\install-housekeeping-cron.sh','%~dp0scripts\git-backup-push.sh','%~dp0scripts\install-git-backup-cron.sh','%~dp0scripts\install-daily-backup-cron.sh'); foreach($p in $paths){ $t=[IO.File]::ReadAllText($p) -replace \"`r`n\",\"`n\" -replace \"`r\",\"\"; [IO.File]::WriteAllText($p,$t,(New-Object System.Text.UTF8Encoding $false)) }"
+powershell -NoProfile -Command "$paths=@('%~dp0scripts\deploy-extract.sh','%~dp0scripts\deploy-restart.sh','%~dp0scripts\disk-housekeeping.sh','%~dp0scripts\install-housekeeping-cron.sh','%~dp0scripts\git-backup-push.sh','%~dp0scripts\install-git-backup-cron.sh','%~dp0scripts\install-daily-backup-cron.sh','%~dp0scripts\nginx-write-selfappeal-conf.sh','%~dp0scripts\nginx-emergency-fix.sh','%~dp0scripts\sync-ssl-certs-selfappeal.sh'); foreach($p in $paths){ if(-not(Test-Path $p)){continue}; $t=[IO.File]::ReadAllText($p) -replace \"`r`n\",\"`n\" -replace \"`r\",\"\"; [IO.File]::WriteAllText($p,$t,(New-Object System.Text.UTF8Encoding $false)) }"
 if errorlevel 1 goto line_endings_failed
 
 echo [2/7] Compressing project files locally (ignoring heavy cache files)...
@@ -41,17 +51,17 @@ if errorlevel 1 goto upload_archive_failed
 ssh %SSH_OPTS% %SERVER_USER%@%SERVER_IP% "mkdir -p %SERVER_PATH%/scripts"
 if errorlevel 1 goto upload_scripts_failed
 
-scp %SSH_OPTS% "%~dp0scripts\deploy-extract.sh" "%~dp0scripts\deploy-restart.sh" "%~dp0scripts\disk-housekeeping.sh" "%~dp0scripts\install-housekeeping-cron.sh" "%~dp0scripts\git-backup-push.sh" "%~dp0scripts\install-git-backup-cron.sh" "%~dp0scripts\install-daily-backup-cron.sh" %SERVER_USER%@%SERVER_IP%:%SERVER_PATH%/scripts/
+scp %SSH_OPTS% "%~dp0scripts\deploy-extract.sh" "%~dp0scripts\deploy-restart.sh" "%~dp0scripts\disk-housekeeping.sh" "%~dp0scripts\install-housekeeping-cron.sh" "%~dp0scripts\git-backup-push.sh" "%~dp0scripts\install-git-backup-cron.sh" "%~dp0scripts\install-daily-backup-cron.sh" "%~dp0scripts\nginx-write-selfappeal-conf.sh" %SERVER_USER%@%SERVER_IP%:%SERVER_PATH%/scripts/
 if errorlevel 1 goto upload_scripts_failed
 
-ssh %SSH_OPTS% %SERVER_USER%@%SERVER_IP% "sed -i 's/\r$//' %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%/scripts/disk-housekeeping.sh %SERVER_PATH%/scripts/install-housekeeping-cron.sh %SERVER_PATH%/scripts/git-backup-push.sh %SERVER_PATH%/scripts/install-git-backup-cron.sh %SERVER_PATH%/scripts/install-daily-backup-cron.sh"
+ssh %SSH_OPTS% %SERVER_USER%@%SERVER_IP% "sed -i 's/\r$//' %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%/scripts/disk-housekeeping.sh %SERVER_PATH%/scripts/install-housekeeping-cron.sh %SERVER_PATH%/scripts/git-backup-push.sh %SERVER_PATH%/scripts/install-git-backup-cron.sh %SERVER_PATH%/scripts/install-daily-backup-cron.sh %SERVER_PATH%/scripts/nginx-write-selfappeal-conf.sh"
 
 echo.
 echo [5/7] Verifying integrity and extracting on server...
-ssh %SSH_OPTS% %SERVER_USER%@%SERVER_IP% "chmod +x %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%/scripts/disk-housekeeping.sh %SERVER_PATH%/scripts/install-housekeeping-cron.sh %SERVER_PATH%/scripts/git-backup-push.sh %SERVER_PATH%/scripts/install-git-backup-cron.sh %SERVER_PATH%/scripts/install-daily-backup-cron.sh && bash %SERVER_PATH%/scripts/deploy-extract.sh !LOCAL_CHECKSUM! %SERVER_PATH%"
+ssh %SSH_OPTS% %SERVER_USER%@%SERVER_IP% "chmod +x %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%/scripts/disk-housekeeping.sh %SERVER_PATH%/scripts/install-housekeeping-cron.sh %SERVER_PATH%/scripts/git-backup-push.sh %SERVER_PATH%/scripts/install-git-backup-cron.sh %SERVER_PATH%/scripts/install-daily-backup-cron.sh %SERVER_PATH%/scripts/nginx-write-selfappeal-conf.sh && bash %SERVER_PATH%/scripts/deploy-extract.sh !LOCAL_CHECKSUM! %SERVER_PATH%"
 if errorlevel 1 goto extract_failed
 
-ssh %SSH_OPTS% %SERVER_USER%@%SERVER_IP% "sed -i 's/\r$//' %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%/scripts/disk-housekeeping.sh %SERVER_PATH%/scripts/install-housekeeping-cron.sh %SERVER_PATH%/scripts/git-backup-push.sh %SERVER_PATH%/scripts/install-git-backup-cron.sh %SERVER_PATH%/scripts/install-daily-backup-cron.sh && chmod +x %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%/scripts/disk-housekeeping.sh %SERVER_PATH%/scripts/install-housekeeping-cron.sh %SERVER_PATH%/scripts/git-backup-push.sh %SERVER_PATH%/scripts/install-git-backup-cron.sh %SERVER_PATH%/scripts/install-daily-backup-cron.sh"
+ssh %SSH_OPTS% %SERVER_USER%@%SERVER_IP% "sed -i 's/\r$//' %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%/scripts/disk-housekeeping.sh %SERVER_PATH%/scripts/install-housekeeping-cron.sh %SERVER_PATH%/scripts/git-backup-push.sh %SERVER_PATH%/scripts/install-git-backup-cron.sh %SERVER_PATH%/scripts/install-daily-backup-cron.sh %SERVER_PATH%/scripts/nginx-write-selfappeal-conf.sh && chmod +x %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%/scripts/disk-housekeeping.sh %SERVER_PATH%/scripts/install-housekeeping-cron.sh %SERVER_PATH%/scripts/git-backup-push.sh %SERVER_PATH%/scripts/install-git-backup-cron.sh %SERVER_PATH%/scripts/install-daily-backup-cron.sh %SERVER_PATH%/scripts/nginx-write-selfappeal-conf.sh"
 
 echo.
 echo [5b/7] Server disk housekeeping (before Docker build)...
@@ -68,7 +78,11 @@ echo 🚀 DEPLOYMENT SUCCEEDED! Application is now running the new code.
 goto cleanup
 
 :ssl_failed
-echo ❌ ERROR: SSL cert sync failed.
+echo ❌ ERROR: SexAppeal SSL cert sync failed.
+goto cleanup
+
+:ssl_selfappeal_failed
+echo ❌ ERROR: SelfAppeal SSL cert sync/upload failed. Check D:\Certs-Selfapeal and scripts\sync-ssl-certs-selfappeal.ps1
 goto cleanup
 
 :line_endings_failed

@@ -45,14 +45,19 @@ reconcile_stack_network() {
 
 ensure_docker
 
-SELFAPPEAL_CERT="$DEPLOY_DIR/certbot/conf/live/selfappeal.drsrv.net.ar/fullchain.pem"
-FCWA_CERT="$DEPLOY_DIR/certbot/conf/live/fcwa.drsrv.net.ar/fullchain.pem"
-if [ ! -f "$SELFAPPEAL_CERT" ] && [ -f "$FCWA_CERT" ]; then
-  echo "WARN: selfappeal cert missing — symlinking fcwa cert so nginx can start..."
-  mkdir -p "$DEPLOY_DIR/certbot/conf/live/selfappeal.drsrv.net.ar"
-  ln -sf "../fcwa.drsrv.net.ar/fullchain.pem" "$DEPLOY_DIR/certbot/conf/live/selfappeal.drsrv.net.ar/fullchain.pem"
-  ln -sf "../fcwa.drsrv.net.ar/privkey.pem" "$DEPLOY_DIR/certbot/conf/live/selfappeal.drsrv.net.ar/privkey.pem"
-fi
+bash "$DEPLOY_DIR/scripts/nginx-write-selfappeal-conf.sh" "$DEPLOY_DIR"
+
+nginx_config_test() {
+  echo "Testing nginx configuration..."
+  if ! docker run --rm \
+    -v "$DEPLOY_DIR/nginx.conf:/etc/nginx/nginx.conf:ro" \
+    -v "$DEPLOY_DIR/nginx/conf.d:/etc/nginx/conf.d:ro" \
+    -v "$DEPLOY_DIR/certbot/conf/live:/etc/nginx/certs-live:ro" \
+    nginx:alpine nginx -t 2>&1; then
+    echo "ERROR: nginx -t failed. Fix certbot/conf/live/ paths before starting nginx."
+    return 1
+  fi
+}
 
 if [ -f "$DEPLOY_DIR/scripts/disk-housekeeping.sh" ]; then
   echo "Running disk housekeeping before build..."
@@ -114,9 +119,11 @@ fi
 
 if docker ps --format '{{.Names}}' | grep -qx sexappeal_nginx; then
   echo "Restarting nginx for SSL/config reload..."
+  nginx_config_test || exit 1
   docker restart sexappeal_nginx 2>/dev/null || $DC up -d --no-recreate nginx
 else
   echo "Starting nginx..."
+  nginx_config_test || exit 1
   $DC up -d --pull never nginx
 fi
 
