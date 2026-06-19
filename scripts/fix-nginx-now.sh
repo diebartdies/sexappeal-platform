@@ -5,6 +5,12 @@ set -eu
 DEPLOY_DIR="${1:-/root/SexAppeal-platform}"
 cd "$DEPLOY_DIR"
 
+if docker compose version >/dev/null 2>&1; then
+  DC="docker compose"
+else
+  DC="docker-compose"
+fi
+
 echo "==> Stopping nginx..."
 docker stop sexappeal_nginx 2>/dev/null || true
 
@@ -64,13 +70,17 @@ docker run --rm "${net_args[@]}" \
   -v "$DEPLOY_DIR/certbot/conf/live:/etc/nginx/certs-live:ro" \
   nginx:alpine nginx -t
 
-echo "==> Starting nginx..."
-if docker compose version >/dev/null 2>&1; then
-  DC="docker compose"
-else
-  DC="docker-compose"
+if [ -f "$DEPLOY_DIR/docker-compose.override.yml" ]; then
+  if grep -qE 'certs-selfappeal|/etc/nginx/certs:' "$DEPLOY_DIR/docker-compose.override.yml" 2>/dev/null; then
+    echo "ERROR: docker-compose.override.yml overrides nginx with old cert mounts."
+    echo "       Edit $DEPLOY_DIR/docker-compose.override.yml or remove stale volume lines."
+    exit 1
+  fi
 fi
-$DC up -d --no-recreate nginx
+
+echo "==> Recreating nginx (docker restart keeps old cert volume mounts)..."
+docker rm -f sexappeal_nginx 2>/dev/null || true
+$DC up -d --force-recreate --pull never nginx
 
 sleep 2
 docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E 'nginx|NAMES' || true

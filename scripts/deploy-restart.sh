@@ -130,14 +130,18 @@ elif ! docker logs sexappeal_app 2>&1 | tail -20 | grep -q 'MongoDB Connected'; 
   fi
 fi
 
-if docker ps --format '{{.Names}}' | grep -qx sexappeal_nginx; then
-  echo "Restarting nginx for SSL/config reload..."
-  nginx_config_test || exit 1
-  docker restart sexappeal_nginx 2>/dev/null || $DC up -d --no-recreate nginx
+recreate_nginx() {
+  echo "Recreating nginx container (required after cert/config mount changes)..."
+  nginx_config_test || return 1
+  docker rm -f sexappeal_nginx 2>/dev/null || true
+  $DC up -d --force-recreate --pull never nginx
+}
+
+if docker ps -a --format '{{.Names}}' | grep -qx sexappeal_nginx; then
+  recreate_nginx || exit 1
 else
   echo "Starting nginx..."
-  nginx_config_test || exit 1
-  $DC up -d --pull never nginx
+  recreate_nginx || exit 1
 fi
 
 echo "Containers:"

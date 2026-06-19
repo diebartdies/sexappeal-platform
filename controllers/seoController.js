@@ -10,6 +10,8 @@ const {
 } = require('../utils/seoMeta');
 const {
   resolveRequestBaseUrl,
+  isSelfAppealHost,
+  buildSelfAppealRobotsTxt,
   baseUrlForNamedSite,
   buildSitemapForBase,
   buildRobotsTxt
@@ -39,6 +41,11 @@ function sendSitemapXml(res, xml) {
 }
 
 exports.robotsTxt = (req, res) => {
+  if (isSelfAppealHost(req)) {
+    res.type('text/plain');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    return res.send(buildSelfAppealRobotsTxt());
+  }
   const baseUrl = resolveRequestBaseUrl(req);
   res.type('text/plain');
   res.setHeader('Cache-Control', 'public, max-age=3600');
@@ -47,6 +54,11 @@ exports.robotsTxt = (req, res) => {
 
 exports.sitemapXml = async (req, res, next) => {
   try {
+    if (isSelfAppealHost(req)) {
+      res.status(404);
+      res.type('text/plain');
+      return res.send('Not found');
+    }
     const baseUrl = resolveRequestBaseUrl(req);
     const { xml } = await buildSitemapForBase(baseUrl);
     sendSitemapXml(res, xml);

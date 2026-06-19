@@ -32,6 +32,16 @@ server {
     ssl_session_timeout 1d;
 
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Robots-Tag "noindex, nofollow" always;
+
+    location = /robots.txt {
+        default_type text/plain;
+        return 200 "User-agent: *\nDisallow: /\n";
+    }
+
+    location = /sitemap.xml {
+        return 404;
+    }
 
     location / {
         set $backend http://app:5000;

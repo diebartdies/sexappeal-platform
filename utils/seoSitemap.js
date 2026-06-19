@@ -96,6 +96,22 @@ function resolveRequestBaseUrl(req) {
   return SEXAPPEAL_BASE;
 }
 
+function isSelfAppealHost(req) {
+  const host = (req?.get?.('x-forwarded-host') || req?.get?.('host') || '')
+    .split(',')[0]
+    .trim()
+    .toLowerCase();
+  return host.includes('selfappeal.');
+}
+
+function buildSelfAppealRobotsTxt() {
+  return [
+    'User-agent: *',
+    'Disallow: /',
+    ''
+  ].join('\n');
+}
+
 function baseUrlForNamedSite(site) {
   if (site === 'selfappeal') return SELFAPPEAL_BASE;
   return SEXAPPEAL_BASE;
@@ -196,6 +212,8 @@ module.exports = {
   SEXAPPEAL_BASE,
   SELFAPPEAL_BASE,
   resolveRequestBaseUrl,
+  isSelfAppealHost,
+  buildSelfAppealRobotsTxt,
   baseUrlForNamedSite,
   collectSitemapUrls,
   buildSitemapForBase,

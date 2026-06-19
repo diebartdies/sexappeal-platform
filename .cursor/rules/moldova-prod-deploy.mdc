@@ -18,7 +18,11 @@ Nginx mounts `./certbot/conf/live` from the **server filesystem**. Local Windows
 | sexappeal.drsrv.net.ar | `certbot/conf/live/sexappeal.drsrv.net.ar/` (`sexappeal.chain`, `sexappeal.key`) | `certbot/conf/live/sexappeal.drsrv.net.ar/fullchain.pem`, `privkey.pem` |
 | selfappeal.drsrv.net.ar | `D:\Certs-Selfapeal` (`selfa.chain`, `selfa.key`) | `certbot/conf/live/selfappeal.drsrv.net.ar/fullchain.pem`, `privkey.pem` |
 
-**Always keep both certificate sets** on the Moldova server. Never replace one with the other or use fcwa fallback.
+**Rebrand:** outreach alias is **selfappeal.drsrv.net.ar** (replaced **fcwa.drsrv.net.ar**). Same app as sexappeal; used for WhatsApp step-2 links only.
+
+**Google SEO:** only **sexappeal.drsrv.net.ar** goes in Search Console (`/sitemap.xml`). SelfAppeal is noindex — do not submit to Google.
+
+**Always keep both certificate sets** on the Moldova server.
 
 **Always run** `scripts/upload-ssl-certs-to-prod.bat` (or full deploy) after renewing either certificate.
 
