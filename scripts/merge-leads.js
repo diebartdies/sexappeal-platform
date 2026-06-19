@@ -21,7 +21,8 @@
  *
  * USAGE
  * -----
- *   node scripts/merge-leads.js                       # merge ONLY the fresh exports/*-leads.csv -> exports/all-leads-deduped.csv
+ *   node scripts/merge-leads.js                       # merge ONLY the fresh exports/*-leads.csv -> exports/all-leads-deduped.csv (CSV only)
+ *   node scripts/merge-leads.js --save                # ALSO import the deduped universe into potential_professionals (status 'pending')
  *   node scripts/merge-leads.js --include-legacy      # also fold in the stale scraped_leads.csv
  *   node scripts/merge-leads.js --in exports --in .   # extra folders to scan for *.csv
  *   node scripts/merge-leads.js --out exports/universe.csv
@@ -31,6 +32,7 @@
  *   --in DIR          a directory to scan for "*-leads.csv" / "scraped_leads.csv" (repeatable; default: exports)
  *   --files LIST      comma-separated explicit CSV paths (added on top of the dir scan)
  *   --include-legacy  also include the old scraped_leads.csv (EXCLUDED by default — it's the stale/over-collected set)
+ *   --save            upsert the deduped unique leads into the DB by phone (new -> 'pending'; existing left untouched)
  *   --out PATH        merged output CSV (default exports/all-leads-deduped.csv)
  */
 
@@ -62,13 +64,14 @@ if (typeof normalizePhone !== 'function') {
 }
 
 function parseArgs(argv) {
-  const args = { inDirs: [], files: [], out: path.join('exports', 'all-leads-deduped.csv'), includeLegacy: false };
+  const args = { inDirs: [], files: [], out: path.join('exports', 'all-leads-deduped.csv'), includeLegacy: false, save: false };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--in') args.inDirs.push(argv[++i]);
     else if (a === '--files') args.files.push(...(argv[++i] || '').split(',').map((s) => s.trim()).filter(Boolean));
     else if (a === '--out') args.out = argv[++i] || args.out;
     else if (a === '--include-legacy') args.includeLegacy = true;
+    else if (a === '--save') args.save = true;
   }
   // DEFAULT: only the FRESH per-site adapter exports. The legacy scraped_leads.csv
   // is the stale/over-collected dataset and is EXCLUDED unless --include-legacy.
@@ -155,7 +158,7 @@ function collectFiles(args) {
   return [...found];
 }
 
-(function main() {
+(async function main() {
   const args = parseArgs(process.argv);
   const files = collectFiles(args);
   if (!files.length) {
@@ -272,4 +275,47 @@ function collectFiles(args) {
   }
   fs.writeFileSync(outPath, outLines.join('\n') + '\n', 'utf8');
   console.log(`\n[merge] wrote ${unique.length} unique leads -> ${outPath}`);
+
+  // ---- optional DB import (--save) -------------------------------------------
+  // Imports ONLY this deduped universe (not the legacy scraped_leads.csv unless
+  // --include-legacy was also passed). Upserts by phone: new -> status 'pending';
+  // existing -> left untouched (won't reset a 'contacted' lead). sourceUrl records
+  // the source site(s); province/city are stored when known.
+  if (!args.save) {
+    console.log('[merge] DRY CSV only — pass --save to also import this deduped set into the DB.');
+    return;
+  }
+  if (!unique.length) {
+    console.log('[merge] --save given but there are no unique leads to import; skipping DB.');
+    return;
+  }
+  require('dotenv').config();
+  const mongoose = require('mongoose');
+  const connectDB = require('../config/database');
+  const PotentialProfessional = require('../models/PotentialProfessional');
+
+  console.log(`\n[merge] --save: upserting ${unique.length} unique leads into potential_professionals...`);
+  await connectDB();
+  let inserted = 0;
+  let existed = 0;
+  for (const r of unique) {
+    const setOnInsert = {
+      phone: r.phone,
+      alias: r.alias || '',
+      sourceUrl: [...r.sites].sort().join('|'),
+      status: 'pending',
+      createdAt: new Date()
+    };
+    if (r.province) setOnInsert.province = r.province;
+    if (r.city) setOnInsert.city = r.city;
+    const res = await PotentialProfessional.updateOne(
+      { phone: r.phone },
+      { $setOnInsert: setOnInsert },
+      { upsert: true }
+    );
+    if (res.upsertedCount && res.upsertedCount > 0) inserted++;
+    else existed++;
+  }
+  console.log(`[merge] DB import done — inserted ${inserted} new, ${existed} already existed.`);
+  await mongoose.disconnect();
 })();
