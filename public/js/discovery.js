@@ -15,6 +15,35 @@ import {
 
 const TREASURE_CATEGORY_ORDER = ['Elite', 'Premium', 'Gold', 'Silver', 'Standard'];
 
+// Detect the logged-in admin the same way the rest of the frontend does
+// (adminHome.js / admin.js): read the cached `user` object from localStorage
+// and check `role === 'admin'`. Any failure (missing/corrupt value, no role)
+// resolves to NOT-admin so the launch curtain stays in place for everyone else.
+function isAdminUser() {
+    try {
+        const raw = localStorage.getItem('user');
+        if (!raw) return false;
+        const user = JSON.parse(raw);
+        return !!user && user.role === 'admin';
+    } catch {
+        return false;
+    }
+}
+
+// Build the foot-of-photo location line from the professional's location,
+// mirroring the detail page's CABA handling (neighborhood + "CABA" when the
+// province is CABA, otherwise neighborhood + city). Returns '' when empty.
+function buildCardLocation(loc) {
+    if (!loc) return '';
+    const province = (loc.province || '').trim();
+    const city = (loc.city || '').trim();
+    const neighborhood = (loc.neighborhood || '').trim();
+    if (province.toLowerCase() === 'caba') {
+        return [neighborhood, 'CABA'].filter(Boolean).join(', ');
+    }
+    return [neighborhood, city].filter(Boolean).join(', ');
+}
+
 function renderTreasureCategorySection(grid, cat, items, eagerImages = false) {
     let catSection = document.getElementById(`cat-section-${cat}`);
     let innerGrid;
@@ -75,17 +104,38 @@ function renderTreasureCategorySection(grid, cat, items, eagerImages = false) {
         };
         imgContainer.appendChild(img);
 
-        const aliasEl = document.createElement('h3');
-        aliasEl.className = 'treasure-alias gold-text';
-        aliasEl.style.cursor = 'pointer';
-        aliasEl.style.marginBottom = '0';
-        aliasEl.style.fontSize = '0.95rem';
+        // Foot-of-photo caption: alias, barrio/ciudad and primary specialty.
+        // White italic text, left-aligned with a small left padding, sitting on
+        // a subtle dark gradient scrim so it stays legible over any photo.
+        const locationLine = buildCardLocation(prof.location);
+        const primarySpecialty = (prof.services || []).find(s => s && s.trim() !== '') || '';
+
+        const caption = document.createElement('div');
+        caption.className = 'treasure-caption';
+
+        const aliasEl = document.createElement('span');
+        aliasEl.className = 'treasure-caption-alias';
         aliasEl.textContent = prof.alias || 'Unknown';
+        caption.appendChild(aliasEl);
+
+        if (locationLine) {
+            const locEl = document.createElement('span');
+            locEl.className = 'treasure-caption-location';
+            locEl.textContent = locationLine;
+            caption.appendChild(locEl);
+        }
+
+        if (primarySpecialty) {
+            const specEl = document.createElement('span');
+            specEl.className = 'treasure-caption-specialty';
+            specEl.textContent = primarySpecialty;
+            caption.appendChild(specEl);
+        }
+
+        imgContainer.appendChild(caption);
 
         card.appendChild(imgContainer);
-        card.appendChild(aliasEl);
         imgContainer.addEventListener('click', () => trackDashboardPhotoClick(prof.alias));
-        aliasEl.addEventListener('click', () => trackDashboardPhotoClick(prof.alias));
         innerGrid.appendChild(card);
     });
 }
@@ -127,7 +177,11 @@ export async function loadTreasures(page = 1, append = false, options = {}) {
     const grid = document.getElementById('treasureGrid');
     if (!grid) return;
 
-    if (!append && page === 1 && !options.skipCurtainCheck) {
+    // Admins bypass the launch curtain so they can preview the live grid before
+    // the public opening. Everyone else (professionals, regular users, guests)
+    // still gets the curtain. If the role can't be determined we fall through to
+    // the normal curtain check, so the curtain is the safe default.
+    if (!append && page === 1 && !options.skipCurtainCheck && !isAdminUser()) {
         const blocked = await resolveLaunchCurtain(() => {
             loadTreasures(1, false, { skipCurtainCheck: true });
         });
@@ -145,8 +199,48 @@ export async function loadTreasures(page = 1, append = false, options = {}) {
         const style = document.createElement('style');
         style.id = 'treasureHoverStyles';
         style.textContent = `
-            .treasure-img-container { margin: -15px -15px 15px -15px; overflow: hidden; border-radius: 4px 4px 0 0; aspect-ratio: 1/1; position: relative; }
-            .treasure-img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
+            /* Rectangular portrait photo (taller than wide) with rounded corners
+               and a thin metallic-gray "iPhone" gradient frame. The frame is the
+               container padding; the inner photo gets its own rounded corners. */
+            .treasure-img-container {
+                margin: 0 0 10px 0;
+                position: relative;
+                aspect-ratio: 3 / 4;
+                padding: 4px;
+                border-radius: 18px;
+                background: linear-gradient(150deg, #d7d7da 0%, #8a8a8f 22%, #4a4a4e 50%, #8a8a8f 78%, #e2e2e6 100%);
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+                overflow: hidden;
+            }
+            .treasure-img {
+                width: 100%;
+                height: 100%;
+                display: block;
+                object-fit: cover;
+                border-radius: 14px;
+                transition: transform 0.5s ease;
+            }
+            /* Foot caption: white italic, left-aligned with small left padding,
+               on a dark bottom gradient scrim so it reads over any photo. */
+            .treasure-caption {
+                position: absolute;
+                left: 4px;
+                right: 4px;
+                bottom: 4px;
+                display: flex;
+                flex-direction: column;
+                gap: 1px;
+                padding: 18px 10px 8px 12px;
+                border-radius: 0 0 14px 14px;
+                background: linear-gradient(to top, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.55) 45%, rgba(0, 0, 0, 0) 100%);
+                text-align: left;
+                font-style: italic;
+                color: #fff;
+                pointer-events: none;
+            }
+            .treasure-caption-alias { font-weight: 700; font-size: 0.95rem; line-height: 1.2; color: #fff; }
+            .treasure-caption-location { font-size: 0.78rem; line-height: 1.2; color: #fff; opacity: 0.92; }
+            .treasure-caption-specialty { font-size: 0.78rem; line-height: 1.2; color: #fff; opacity: 0.92; }
             .treasure-card { transition: box-shadow 0.3s ease, transform 0.3s ease; }
             .treasure-card:hover { box-shadow: 0 15px 30px rgba(0, 0, 0, 0.8), 0 0 15px rgba(212, 175, 55, 0.1); transform: translateY(-4px); }
             .treasure-card:hover .treasure-img { transform: scale(1.08); }

@@ -4,7 +4,24 @@ const puppeteer = require('puppeteer');
 const connectDB = require('../../config/database');
 const PotentialProfessional = require('../../models/PotentialProfessional');
 
-// Add the URLs of the root domain pages you want to scrape here
+// ---------------------------------------------------------------------------
+// LEGACY broad scraper. KNOWN TO OVER-COLLECT and should be migrated to
+// accurate PER-SITE ADAPTERS (see scripts/scrape-simpleescorts.js and
+// scripts/test-argxp.js). This script loads a site homepage, visits the first
+// ~25 internal links, and runs a broad Argentine-phone regex over the ENTIRE
+// page HTML — so it grabs every phone-like string on a page (related profiles,
+// ads, site chrome, junk) and has NO country filter. On an INTERNATIONAL
+// directory like simpleescorts that mixes in non-Argentine numbers and inflates
+// counts massively (e.g. ~580 collected vs the site's ~158 real Argentine ads).
+//
+// GO-FORWARD: prefer a dedicated adapter per site that (a) discovers profile
+// URLs from the listing, (b) reads the SPECIFIC contact element on each profile
+// (not whole-page regex), and (c) applies the site's own Argentina
+// classification. See scripts/scrape-simpleescorts.js for the reference model.
+//
+// NOTE: putasvip.com was removed from the targets below — it is a MEXICAN site
+// (out of scope for Argentine lead collection).
+// ---------------------------------------------------------------------------
 const targetWebpages = [
     'https://www.gemidos.tv',
     'https://www.bairesgirls.com',
@@ -12,7 +29,6 @@ const targetWebpages = [
     'https://www.pekadoras.com',
     'https://www.selfieescorts.com',
     'https://www.sexysabor.com',
-    'https://www.putasvip.com',
     'https://www.escortbuenosaires.com',
     'https://www.simpleescorts.com'
 ];

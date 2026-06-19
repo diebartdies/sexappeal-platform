@@ -944,12 +944,18 @@ body.small-grid-mode #treasureGrid .grid {
 }
 
 body.small-grid-mode #treasureGrid .treasure-card h3,
-body.small-grid-mode #treasureGrid .treasure-alias {
+body.small-grid-mode #treasureGrid .treasure-alias,
+body.small-grid-mode #treasureGrid .treasure-caption-alias {
     font-size: 0.85rem !important;
 }
 
+body.small-grid-mode #treasureGrid .treasure-caption-location,
+body.small-grid-mode #treasureGrid .treasure-caption-specialty {
+    font-size: 0.7rem !important;
+}
+
 body.small-grid-mode #treasureGrid .treasure-img-container {
-    margin: -10px -10px 10px -10px !important;
+    margin: 0 0 8px 0 !important;
 }
 
 body.small-grid-mode #treasureGrid .treasure-card {

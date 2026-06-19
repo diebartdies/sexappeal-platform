@@ -497,6 +497,8 @@ const translations = {
         'Launch Curtain': 'Telón de Apertura',
         'Launch curtain': 'Telón de apertura',
         'Hide grids (launch curtain)': 'Ocultar grillas (telón de apertura)',
+        'Preview live grid': 'Vista previa de la grilla',
+        'Preview the live grid (admins bypass the curtain)': 'Vista previa de la grilla en vivo (los administradores omiten el telón)',
         'Hide treasure grids (launch curtain)': 'Ocultar grillas de tesoros (telón de apertura)',
         'Hide treasure grids on categories, discover, and home until the grand opening. Visitors see a theater curtain with a countdown to the configured opening date.': 'Oculta las grillas en categorías, descubrir e inicio hasta la gran apertura. Los visitantes verán un telón de teatro con cuenta regresiva hasta la fecha de apertura configurada.',
         'Launch curtain is off — treasure grids are visible to visitors.': 'Telón desactivado — las grillas de tesoros son visibles para los visitantes.',

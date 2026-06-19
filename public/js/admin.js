@@ -425,6 +425,7 @@ export async function loadDashboard() {
                                         <span class="admin-toggle-slider"></span>
                                     </label>
                                 </div>
+                                <a id="btnPreviewGrid" class="admin-nav-btn" href="/categories.html" target="_blank" rel="noopener" style="display: block; text-align: left; text-decoration: none; margin-top: 8px;" title="${t('Preview the live grid (admins bypass the curtain)')}">👁️ ${t('Preview live grid')}</a>
                             </div>
                         </div>
                     </div>

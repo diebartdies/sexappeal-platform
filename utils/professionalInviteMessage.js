@@ -52,7 +52,7 @@ En este primer mes, tu perfil aparecerá en una categoría asignada al azar entr
 Cuando finalice tu mes gratuito y tu primer pago sea validado por nuestro equipo, pasarás automáticamente a la categoría que elijas al registrarte — y pagarás únicamente la tarifa correspondiente a esa categoría.
 
 🏖️ VACACIONES
-Si necesitás ausentarte, podés registrar vacaciones desde tu panel. Durante ese período tu perfil figura como inactivo y podés descontar hasta 20 días de vacaciones por año de tu saldo a abonar — sin perder tu lugar.
+Si necesitás ausentarte, podés registrar vacaciones desde tu panel. Durante ese período tu perfil figura como inactivo y podés descontar hasta 15 días de vacaciones por mes de tu saldo a abonar — sin perder tu lugar.
 
 💰 FACTURACIÓN INTELIGENTE POR CATEGORÍA
 Tu abono mensual se calcula según la categoría que elijas (Standard, Silver, Gold, Premium o Elite). Si durante el mes cambiás de categoría por decisión propia, el sistema registra la fecha del cambio y prorratea automáticamente los días en cada tarifa — sin sorpresas ni cálculos manuales.
@@ -96,12 +96,14 @@ function buildSanitizedWhatsAppCaption(alias) {
 
   return `Hola ${name} ✨
 
-Te queremos invitar a nuestra plataforma exclusiva para profesionales: tu vidriera personal para mostrar tu presencia y tus servicios de forma directa y discreta, sin intermediarios.
+Te invito a nuestra plataforma para profesionales — un directorio distinto a los demás:
 
-💎 Tu primer mes es totalmente gratis.
-🔒 Perfiles verificados, contacto protegido y privacidad cuidada.
+✅ Posición rotativa: todas aparecen por igual, nadie paga para estar arriba.
+✅ Verificación de identidad y edad: perfiles reales, ambiente serio.
+✅ Tu contacto es tuyo: no lo vendemos ni lo compartimos con terceros.
+✅ No pagás los días que marcás como vacaciones.
 
-¿Te interesa? Respondé a este chat o escribinos por WhatsApp y te contamos todo:
+El costo depende de tu categoría, y tu primer mes es de prueba sin costo. ¿Te interesa? Respondé a este chat o escribinos por WhatsApp y te contamos todo:
 ${WHATSAPP_CONTACT_URL}${webLine}`;
 }
 
