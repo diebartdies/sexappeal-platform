@@ -1,3 +1,4 @@
+const config = require('../config/appConfig');
 const outreachService = require('../services/whatsappOutreachService');
 const smsOutreachService = require('../services/smsOutreachService');
 
@@ -65,6 +66,12 @@ exports.startTargetedWhatsApp = async (req, res, next) => {
 // @access  Private/Admin
 exports.startBulkSms = async (req, res, next) => {
   try {
+    if (config.sms.senderBypass) {
+      return res.status(503).json({
+        success: false,
+        error: 'SMS/Twilio sender bypass is active (TWILIO_SENDER_BYPASS). Configure WhatsApp Business / Twilio sender, then set TWILIO_SENDER_BYPASS=false and rebuild with INSTALL_TWILIO=1.'
+      });
+    }
     const status = smsOutreachService.startBulkOutreachBackground();
     res.status(202).json({
       success: true,
@@ -95,6 +102,12 @@ exports.getBulkSmsStatus = async (req, res, next) => {
 // @access  Private/Admin
 exports.startTargetedSms = async (req, res, next) => {
   try {
+    if (config.sms.senderBypass) {
+      return res.status(503).json({
+        success: false,
+        error: 'SMS/Twilio sender bypass is active (TWILIO_SENDER_BYPASS). Configure WhatsApp Business / Twilio sender first.'
+      });
+    }
     const { leadIds = [] } = req.body;
     const hasLeads = Array.isArray(leadIds) && leadIds.length > 0;
 

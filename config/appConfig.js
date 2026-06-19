@@ -180,6 +180,11 @@ const config = {
     // Env: SMS_ENABLED ("true" enables; default disabled).
     enabled: process.env.SMS_ENABLED === 'true',
 
+    // When true, bulk SMS outreach API returns 503 immediately (Twilio sender not
+    // ready yet). Does not block deploy or container startup.
+    // Env: TWILIO_SENDER_BYPASS ("true" = bypass until WhatsApp Business is set up).
+    senderBypass: process.env.TWILIO_SENDER_BYPASS !== 'false',
+
     // Extra guard so SMS does not fire from a dev/non-production box even if a
     // developer leaves SMS_ENABLED on. In non-production, sending also requires
     // SMS_ALLOW_NON_PROD=true. Env: SMS_ALLOW_NON_PROD (default disabled).

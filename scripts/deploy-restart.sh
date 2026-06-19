@@ -45,6 +45,15 @@ reconcile_stack_network() {
 
 ensure_docker
 
+SELFAPPEAL_CERT="$DEPLOY_DIR/certbot/conf/live/selfappeal.drsrv.net.ar/fullchain.pem"
+FCWA_CERT="$DEPLOY_DIR/certbot/conf/live/fcwa.drsrv.net.ar/fullchain.pem"
+if [ ! -f "$SELFAPPEAL_CERT" ] && [ -f "$FCWA_CERT" ]; then
+  echo "WARN: selfappeal cert missing — symlinking fcwa cert so nginx can start..."
+  mkdir -p "$DEPLOY_DIR/certbot/conf/live/selfappeal.drsrv.net.ar"
+  ln -sf "../fcwa.drsrv.net.ar/fullchain.pem" "$DEPLOY_DIR/certbot/conf/live/selfappeal.drsrv.net.ar/fullchain.pem"
+  ln -sf "../fcwa.drsrv.net.ar/privkey.pem" "$DEPLOY_DIR/certbot/conf/live/selfappeal.drsrv.net.ar/privkey.pem"
+fi
+
 if [ -f "$DEPLOY_DIR/scripts/disk-housekeeping.sh" ]; then
   echo "Running disk housekeeping before build..."
   bash "$DEPLOY_DIR/scripts/disk-housekeeping.sh" "$DEPLOY_DIR"
@@ -76,8 +85,14 @@ echo "Using: $DC"
 echo "Ensuring mongo 4.4 is running (no recreate, no pull)..."
 $DC up -d --no-recreate --pull never mongo
 
-echo "Building app image..."
-$DC build app
+echo "Building app image (Twilio optional — INSTALL_TWILIO=0 by default)..."
+mkdir -p "$DEPLOY_DIR/.cache"
+BUILD_LOG="$DEPLOY_DIR/.cache/docker-build.log"
+if ! $DC build app 2>&1 | tee "$BUILD_LOG"; then
+  echo "ERROR: docker build failed. Tail of log:"
+  tail -n 40 "$BUILD_LOG" || true
+  exit 1
+fi
 
 if ! replace_app_container; then
   echo "WARN: first app replace failed — retrying after Docker restart..."

@@ -9,7 +9,7 @@ echo.
 set SERVER_USER=root
 set SERVER_IP=91.208.206.35
 set SERVER_PATH=/root/SexAppeal-platform
-set SSH_OPTS=-o ConnectTimeout=60 -o ServerAliveInterval=30 -o ServerAliveCountMax=10
+set SSH_OPTS=-o ConnectTimeout=60 -o ServerAliveInterval=15 -o ServerAliveCountMax=480 -o TCPKeepAlive=yes
 
 echo [1/7] Syncing SSL certs (sexappeal.chain/key -^> fullchain.pem/privkey.pem)...
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\sync-ssl-certs.ps1"
@@ -61,7 +61,7 @@ if errorlevel 1 goto disk_failed
 echo.
 echo [6/7] Building and restarting containers (app + nginx for SSL)...
 echo     This step takes about 4-8 minutes (npm install + image export). Do NOT press Ctrl+C.
-ssh %SSH_OPTS% -o ServerAliveCountMax=120 %SERVER_USER%@%SERVER_IP% "bash %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%"
+ssh %SSH_OPTS% -o ServerAliveCountMax=480 %SERVER_USER%@%SERVER_IP% "bash %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%"
 if errorlevel 1 goto docker_failed
 
 echo 🚀 DEPLOYMENT SUCCEEDED! Application is now running the new code.
