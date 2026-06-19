@@ -140,18 +140,18 @@ const config = {
     // Env: WHATSAPP_DRIP_PER_HOUR (default 4).
     messagesPerHour: parseInt(process.env.WHATSAPP_DRIP_PER_HOUR, 10) || 4,
 
-    // Absolute path to the brand logo IMAGE attached to every message (the brand
-    // is shown as an image so the literal brand word never appears in the text).
-    // Must be a raster image (PNG/JPG) to render inline as a photo.
-    // Env: WHATSAPP_DRIP_IMAGE (default public/images/brand-logo.png).
+    // Outreach drip image (PNG/JPG). Default is outreach-logo.png ("SelfAppeal"
+    // wordmark — no "sex" substring for OCR). Site UI keeps brand-logo.png.
+    // Env: WHATSAPP_DRIP_IMAGE (override path).
     brandImagePath: process.env.WHATSAPP_DRIP_IMAGE
-      || path.resolve(__dirname, '..', 'public', 'images', 'brand-logo.png'),
+      || path.resolve(__dirname, '..', 'public', 'images', 'outreach-logo.png'),
 
-    // OPTIONAL alias website domain to advertise instead of the real site domain
-    // (which contains the banned word). Leave empty to omit any website link and
-    // drive replies to WhatsApp only. If set, it MUST NOT contain "sex".
-    // Env: WHATSAPP_DRIP_ALIAS_DOMAIN (default '' = no website link).
-    aliasDomain: process.env.WHATSAPP_DRIP_ALIAS_DOMAIN || '',
+    // Neutral outreach alias (same app, no "sex" in hostname). Used for WhatsApp
+    // step-2 register links (manual reply), NOT in the cold drip caption.
+    // Env: WHATSAPP_DRIP_ALIAS_DOMAIN (unset = selfappeal.drsrv.net.ar; "" = off).
+    aliasDomain: process.env.WHATSAPP_DRIP_ALIAS_DOMAIN !== undefined
+      ? process.env.WHATSAPP_DRIP_ALIAS_DOMAIN
+      : 'selfappeal.drsrv.net.ar',
 
     // Hard ceiling (ms) for a single registration-check / send call so a hung
     // whatsapp-web.js call never stalls the scheduler.

@@ -8,14 +8,40 @@ const REGISTER_URL = config.platform?.registerUrl || `${PUBLIC_URL}/register.htm
 // words, so it is safe to keep in the message text.
 const WHATSAPP_CONTACT_URL = 'https://wa.me/5491178280156';
 
-// Absolute path to the brand logo IMAGE attached to sanitized WhatsApp outreach.
-// The brand is conveyed by this image so the literal brand word never appears in
-// the message TEXT. Overridable via env (WHATSAPP_DRIP_IMAGE). NOTE: this must be
-// a raster image (PNG/JPG) for WhatsApp to render it inline as a photo — the only
-// brand asset currently in the repo is a 32x32 favicon (SVG/ICO), which WhatsApp
-// would send as a document, not a photo. A proper logo PNG must be supplied here.
+// Outreach drip image (PNG/JPG). Default outreach-logo.png uses the SelfAppeal
+// wordmark (no "sex" in OCR text). Site pages use brand-logo.png separately.
+// Overridable via WHATSAPP_DRIP_IMAGE.
 const BRAND_IMAGE_PATH = process.env.WHATSAPP_DRIP_IMAGE
-  || path.resolve(__dirname, '..', 'public', 'images', 'brand-logo.png');
+  || path.resolve(__dirname, '..', 'public', 'images', 'outreach-logo.png');
+
+// Neutral outreach hostname (SelfAppeal alias — no "sex" substring). Same app as
+// sexappeal.drsrv.net.ar; used for WhatsApp step-2 register links only.
+function getOutreachAliasDomain() {
+  const raw = (config.whatsappDrip?.aliasDomain || '').trim();
+  if (!raw) return '';
+  return raw.replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
+}
+
+function buildOutreachRegisterUrl() {
+  const host = getOutreachAliasDomain();
+  if (!host) return null;
+  return `https://${host}/register.html`;
+}
+
+// Step 2 (manual reply after she writes back): safe link on the SelfAppeal alias.
+function buildStep2OutreachReply(alias) {
+  const name = (alias && String(alias).trim()) || '';
+  const greeting = name ? `¡Genial ${name}!` : '¡Genial!';
+  const url = buildOutreachRegisterUrl();
+  if (!url) {
+    return `${greeting} Te cuento más por acá. ¿Querés que te explique cómo funciona el registro?`;
+  }
+  return `${greeting} Acá podés registrarte en SelfAppeal (primer mes de prueba sin costo):
+
+${url}
+
+Cualquier duda, respondeme por acá. 😊`;
+}
 
 function normalizeWhatsAppPhone(phone) {
   if (!phone) return '';
@@ -79,10 +105,8 @@ Gracias por confiar en la Arquitectura de la Intimidad.
 //      plataforma" / "la app" instead.
 //   2. The site domain `sexappeal.drsrv.net.ar` literally contains "sex", so it is
 //      DELIBERATELY OMITTED from the caption. Replies are driven to the WhatsApp
-//      contact instead. If a website link is ever required, set an alias domain
-//      that does NOT contain "sex" via config.whatsappDrip.aliasDomain (env
-//      WHATSAPP_DRIP_ALIAS_DOMAIN) and it will be appended; until then no URL with
-//      the banned word is ever emitted.
+//      contact instead. Step-2 replies use buildStep2OutreachReply() with the
+//      SelfAppeal alias (selfappeal.drsrv.net.ar by default).
 function buildSanitizedWhatsAppCaption(alias) {
   const name = (alias && String(alias).trim()) || 'hermosa';
 
@@ -115,6 +139,9 @@ module.exports = {
   REGISTER_URL,
   WHATSAPP_CONTACT_URL,
   BRAND_IMAGE_PATH,
+  getOutreachAliasDomain,
+  buildOutreachRegisterUrl,
+  buildStep2OutreachReply,
   normalizeWhatsAppPhone,
   buildProfessionalInviteMessage,
   buildSanitizedWhatsAppCaption,

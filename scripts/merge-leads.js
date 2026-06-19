@@ -23,6 +23,8 @@
  * -----
  *   node scripts/merge-leads.js                       # merge ONLY the fresh exports/*-leads.csv -> exports/all-leads-deduped.csv (CSV only)
  *   node scripts/merge-leads.js --save                # ALSO import the deduped universe into potential_professionals (status 'pending')
+ *   node scripts/merge-leads.js --files exports/all-leads-deduped.csv --save --replace
+ *                                                     # WIPE outreach pool (keep status 'joined' only), then import this CSV fresh
  *   node scripts/merge-leads.js --include-legacy      # also fold in the stale scraped_leads.csv
  *   node scripts/merge-leads.js --in exports --in .   # extra folders to scan for *.csv
  *   node scripts/merge-leads.js --out exports/universe.csv
@@ -33,6 +35,9 @@
  *   --files LIST      comma-separated explicit CSV paths (added on top of the dir scan)
  *   --include-legacy  also include the old scraped_leads.csv (EXCLUDED by default — it's the stale/over-collected set)
  *   --save            upsert the deduped unique leads into the DB by phone (new -> 'pending'; existing left untouched)
+ *   --replace         with --save: DELETE all outreach leads first (every status except 'joined'), then import
+ *                     the deduped set as fresh 'pending'. Use this to drop the old 607 stale leads and keep only
+ *                     the new accurate universe. Requires --save.
  *   --out PATH        merged output CSV (default exports/all-leads-deduped.csv)
  */
 
@@ -64,7 +69,7 @@ if (typeof normalizePhone !== 'function') {
 }
 
 function parseArgs(argv) {
-  const args = { inDirs: [], files: [], out: path.join('exports', 'all-leads-deduped.csv'), includeLegacy: false, save: false };
+  const args = { inDirs: [], files: [], out: path.join('exports', 'all-leads-deduped.csv'), includeLegacy: false, save: false, replace: false };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--in') args.inDirs.push(argv[++i]);
@@ -72,6 +77,7 @@ function parseArgs(argv) {
     else if (a === '--out') args.out = argv[++i] || args.out;
     else if (a === '--include-legacy') args.includeLegacy = true;
     else if (a === '--save') args.save = true;
+    else if (a === '--replace') args.replace = true;
   }
   // DEFAULT: only the FRESH per-site adapter exports. The legacy scraped_leads.csv
   // is the stale/over-collected dataset and is EXCLUDED unless --include-legacy.
@@ -188,7 +194,7 @@ function collectFiles(args) {
     const iAlias = colIndex(header, ['alias', 'name', 'nombre']);
     const iProv = colIndex(header, ['province', 'provincia']);
     const iCity = colIndex(header, ['city', 'ciudad', 'localidad']);
-    const iSrc = colIndex(header, ['sourceurl', 'source', 'fuente', 'url']);
+    const iSrc = colIndex(header, ['sourceurl', 'source', 'fuente', 'url', 'sourcesites', 'sites']);
     const tag = path.basename(file);
     perFile[tag] = { rows: 0, ok: 0, bad: 0 };
 
@@ -217,8 +223,16 @@ function collectFiles(args) {
       rec.files.add(tag);
       const srcVal = iSrc !== -1 ? cells[iSrc] : '';
       if (srcVal) rec.sourceUrls.add(srcVal);
-      // record the source SITE (host), preferring the row's Source URL
-      rec.sites.add(siteFromUrl(srcVal) || siteFromFile(tag));
+      // Record the source SITE(s). A row may carry a single "Source URL" (per-site
+      // exports) or a '|'-joined site list (when re-importing all-leads-deduped.csv);
+      // handle both so re-imports preserve the original origins.
+      if (srcVal) {
+        for (const part of String(srcVal).split('|').map((s) => s.trim()).filter(Boolean)) {
+          rec.sites.add(siteFromUrl(part) || part);
+        }
+      } else {
+        rec.sites.add(siteFromFile(tag));
+      }
     }
   }
 
@@ -279,9 +293,13 @@ function collectFiles(args) {
   // ---- optional DB import (--save) -------------------------------------------
   // Imports ONLY this deduped universe (not the legacy scraped_leads.csv unless
   // --include-legacy was also passed). Upserts by phone: new -> status 'pending';
-  // existing -> left untouched (won't reset a 'contacted' lead). sourceUrl records
-  // the source site(s); province/city are stored when known.
+  // existing -> left untouched (won't reset a 'contacted' lead) unless --replace
+  // was used (which deletes the old pool first). sourceUrl = source site(s).
   if (!args.save) {
+    if (args.replace) {
+      console.error('[merge] --replace requires --save.');
+      process.exit(1);
+    }
     console.log('[merge] DRY CSV only — pass --save to also import this deduped set into the DB.');
     return;
   }
@@ -294,28 +312,40 @@ function collectFiles(args) {
   const connectDB = require('../config/database');
   const PotentialProfessional = require('../models/PotentialProfessional');
 
-  console.log(`\n[merge] --save: upserting ${unique.length} unique leads into potential_professionals...`);
   await connectDB();
-  let inserted = 0;
-  let existed = 0;
-  for (const r of unique) {
-    const setOnInsert = {
-      phone: r.phone,
-      alias: r.alias || '',
-      sourceUrl: [...r.sites].sort().join('|'),
-      status: 'pending',
-      createdAt: new Date()
-    };
-    if (r.province) setOnInsert.province = r.province;
-    if (r.city) setOnInsert.city = r.city;
-    const res = await PotentialProfessional.updateOne(
-      { phone: r.phone },
-      { $setOnInsert: setOnInsert },
-      { upsert: true }
-    );
-    if (res.upsertedCount && res.upsertedCount > 0) inserted++;
-    else existed++;
+  try {
+    if (args.replace) {
+      const wipe = await PotentialProfessional.deleteMany({ status: { $ne: 'joined' } });
+      console.log(
+        `[merge] --replace: removed ${wipe.deletedCount} outreach lead(s) (kept status 'joined' only).`
+      );
+    }
+
+    console.log(`[merge] --save: upserting ${unique.length} unique leads into potential_professionals...`);
+    let inserted = 0;
+    let existed = 0;
+    for (const r of unique) {
+      const setOnInsert = {
+        phone: r.phone,
+        alias: r.alias || '',
+        sourceUrl: [...r.sites].sort().join('|'),
+        status: 'pending',
+        createdAt: new Date()
+      };
+      const res = await PotentialProfessional.updateOne(
+        { phone: r.phone },
+        { $setOnInsert: setOnInsert },
+        { upsert: true }
+      );
+      if (res.upsertedCount && res.upsertedCount > 0) inserted++;
+      else existed++;
+    }
+    const pending = await PotentialProfessional.countDocuments({
+      $or: [{ status: 'pending' }, { status: { $exists: false } }, { status: null }]
+    });
+    console.log(`[merge] DB import done — inserted ${inserted} new, ${existed} already existed (e.g. joined).`);
+    console.log(`[merge] pending leads ready for drip: ${pending}`);
+  } finally {
+    await mongoose.disconnect();
   }
-  console.log(`[merge] DB import done — inserted ${inserted} new, ${existed} already existed.`);
-  await mongoose.disconnect();
 })();

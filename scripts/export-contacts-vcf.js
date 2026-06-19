@@ -15,71 +15,46 @@ const { normalizeSmsPhone } = require('../utils/professionalInviteSms');
  * WHAT: Reads the `potential_professionals` collection, normalizes each `phone`
  * to E.164 (+549...) with the project's shared normalizer, de-duplicates by
  * number, and writes:
- *   - exports/leads-contacts.vcf  (vCard 3.0 - primary Android import format)
- *   - exports/leads-contacts.csv  (Google Contacts CSV - secondary import option)
+ *   - exports/leads-contacts.vcf  (vCard 3.0 - import on the outreach phone)
  *
- * NAMING: Contacts are named like natural EVENT GUEST LISTS so the saved batch
- * does not look like a scraped bulk import. A small set of "roots" (event names)
- * is distributed across the contacts using configurable WEIGHTS (scaled to the
- * real total contact count), then each contact gets `"<root> <i>"` with a
- * sequential per-root index (e.g. "Cumpleanos Victor 137"). The lead alias and
- * phone are NOT used in the display name anymore. The TEL;TYPE=CELL:+549...
+ * PHONE vs GOOGLE: vCard has no universal field that forces "device only" storage.
+ * At import time you must pick Teléfono / Dispositivo / Phone (NOT your Gmail).
+ * Do NOT import via contacts.google.com. Optional --google-csv writes a CSV meant
+ * only for Google Contacts web (off by default).
+ *
+ * NAMING: Each contact uses the lead's real `alias` from the DB or CSV. Empty
+ * aliases fall back to "Contacto" plus the last four phone digits. Duplicate
+ * display names get a numeric suffix ("Megan 2"). The TEL;TYPE=CELL:+549...
  * value is kept exactly (that is what WhatsApp matches).
  *
  * Usage:
  *   node scripts/export-contacts-vcf.js
  *   node scripts/export-contacts-vcf.js --pending-only
+ *   node scripts/export-contacts-vcf.js --from-csv exports/all-leads-deduped.csv
+ *   node scripts/export-contacts-vcf.js --google-csv    # also write Google Contacts CSV
  *   node scripts/export-contacts-vcf.js --sample        # offline: write a tiny demo .vcf, no DB
  *
  * Env overrides:
- *   CONTACTS_ROOTS='[{"label":"Foo","weight":10}]'   (override roots/weights; JSON array)
  *   MONGO_URI=...                                     (DB connection, mirrors the rest of the project)
  */
-
-// ---------------------------------------------------------------------------
-// Roots / weights config (event-guest-list naming)
-// ---------------------------------------------------------------------------
-// Default roots + weights. The weights are treated as PROPORTIONS and scaled to
-// the real total contact count N at runtime. "Cumplea\u00f1os" is written with a
-// unicode escape so this source file stays pure ASCII (robust to any tooling),
-// while the generated .vcf/.csv still contain the proper accented characters.
-const DEFAULT_ROOTS = [
-  { label: 'Fiesta de 15 Mariela', weight: 178 },
-  { label: 'Cumplea\u00f1os Victor', weight: 205 },
-  { label: 'Bautismo Clemente', weight: 83 },
-  { label: 'Bar Mitzvah Roque', weight: 200 }
-];
-
-function loadRoots() {
-  if (process.env.CONTACTS_ROOTS) {
-    try {
-      const parsed = JSON.parse(process.env.CONTACTS_ROOTS);
-      if (Array.isArray(parsed) && parsed.length) {
-        const cleaned = parsed
-          .map((r) => ({ label: String(r.label), weight: Number(r.weight) || 0 }))
-          .filter((r) => r.label && r.weight > 0);
-        if (cleaned.length) return cleaned;
-      }
-    } catch (err) {
-      console.warn('Invalid CONTACTS_ROOTS env, using defaults:', err.message);
-    }
-  }
-  return DEFAULT_ROOTS;
-}
-
-const ROOTS = loadRoots();
 
 // ---------------------------------------------------------------------------
 // CLI / config parsing
 // ---------------------------------------------------------------------------
 function parseArgs(argv) {
-  const args = { pendingOnly: false, sample: false };
+  const args = { pendingOnly: false, sample: false, googleCsv: false, fromCsv: null };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === '--pending-only') {
       args.pendingOnly = true;
     } else if (a === '--sample') {
       args.sample = true;
+    } else if (a === '--google-csv') {
+      args.googleCsv = true;
+    } else if (a === '--from-csv') {
+      args.fromCsv = argv[++i] || null;
+    } else if (a.startsWith('--from-csv=')) {
+      args.fromCsv = a.slice('--from-csv='.length) || null;
     }
   }
   return args;
@@ -147,83 +122,56 @@ function buildContacts(leads) {
       duplicates += 1;
       continue;
     }
-    seen.set(normalized, { phone: normalized });
+    const alias = lead.alias != null ? String(lead.alias).trim() : '';
+    seen.set(normalized, { phone: normalized, alias });
   }
 
   return { contacts: Array.from(seen.values()), skipped, duplicates };
 }
 
 // ---------------------------------------------------------------------------
-// Naming: distribute roots across contacts by weight, then number sequentially.
+// Naming: use each lead's alias; suffix duplicates; fallback when missing.
 // ---------------------------------------------------------------------------
-
-// Fisher-Yates in-place shuffle so root assignment is random w.r.t. phone order.
-function shuffle(arr) {
-  for (let i = arr.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const tmp = arr[i];
-    arr[i] = arr[j];
-    arr[j] = tmp;
-  }
-  return arr;
+function sanitizeAlias(value) {
+  return String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80);
 }
 
-// Per-root counts = round(weight / sumWeights * N), with rounding drift added to
-// (or subtracted from) the root with the largest weight so the counts sum to N.
-function computeRootCounts(n, roots) {
-  const sumWeights = roots.reduce((acc, r) => acc + r.weight, 0) || 1;
-  const counts = roots.map((r) => Math.round((r.weight / sumWeights) * n));
-  const total = counts.reduce((acc, c) => acc + c, 0);
-  let drift = n - total;
-  if (drift !== 0) {
-    let largestIdx = 0;
-    for (let i = 1; i < roots.length; i += 1) {
-      if (roots[i].weight > roots[largestIdx].weight) largestIdx = i;
-    }
-    counts[largestIdx] += drift;
-    // Spill negative overflow onto other roots if the largest cannot absorb it.
-    let idx = 0;
-    while (counts[largestIdx] < 0 && idx < counts.length) {
-      if (idx !== largestIdx && counts[idx] > 0) {
-        const take = Math.min(counts[idx], -counts[largestIdx]);
-        counts[idx] -= take;
-        counts[largestIdx] += take;
-      }
-      idx += 1;
-    }
-    if (counts[largestIdx] < 0) counts[largestIdx] = 0;
-    drift = 0;
-  }
-  return counts;
+function fallbackName(phone) {
+  const digits = String(phone || '').replace(/\D/g, '');
+  const tail = digits.slice(-4) || '????';
+  return `Contacto ${tail}`;
 }
 
-// Shuffle contacts, compute per-root counts, then assign sequential names.
-function assignNames(contacts) {
-  shuffle(contacts);
-  const counts = computeRootCounts(contacts.length, ROOTS);
-  const perRoot = {};
-  ROOTS.forEach((r) => { perRoot[r.label] = 0; });
+function assignAliases(contacts) {
+  const used = new Map();
+  let fromAlias = 0;
+  let fromFallback = 0;
+  let renamedDuplicates = 0;
 
-  let idx = 0;
-  for (let r = 0; r < ROOTS.length; r += 1) {
-    const label = ROOTS[r].label;
-    for (let k = 1; k <= counts[r] && idx < contacts.length; k += 1) {
-      contacts[idx].name = `${label} ${k}`;
-      perRoot[label] += 1;
-      idx += 1;
+  for (const contact of contacts) {
+    let base = sanitizeAlias(contact.alias);
+    if (base) {
+      fromAlias += 1;
+    } else {
+      base = fallbackName(contact.phone);
+      fromFallback += 1;
+    }
+
+    const key = base.toLowerCase();
+    const count = used.get(key) || 0;
+    used.set(key, count + 1);
+    if (count === 0) {
+      contact.name = base;
+    } else {
+      contact.name = `${base} ${count + 1}`;
+      renamedDuplicates += 1;
     }
   }
-  // Safety net: any leftover contacts (rounding edge cases) join the last root.
-  if (idx < contacts.length) {
-    const label = ROOTS[ROOTS.length - 1].label;
-    while (idx < contacts.length) {
-      perRoot[label] += 1;
-      contacts[idx].name = `${label} ${perRoot[label]}`;
-      idx += 1;
-    }
-  }
 
-  return { counts, perRoot };
+  return { fromAlias, fromFallback, renamedDuplicates };
 }
 
 function writeOutputs(contacts) {
@@ -232,7 +180,9 @@ function writeOutputs(contacts) {
   const vcf = contacts.map((c) => buildVCard(c.name, c.phone)).join('\r\n') + '\r\n';
   fs.writeFileSync(VCF_PATH, vcf, 'utf8');
 
-  // Google Contacts-friendly CSV (Name + phone columns).
+  if (!cli.googleCsv) return;
+
+  // Google Contacts web import only — do NOT use for phone-local storage.
   const header = ['Name', 'Given Name', 'Phone 1 - Type', 'Phone 1 - Value'];
   const rows = contacts.map((c) => [
     csvEscape(c.name),
@@ -243,7 +193,19 @@ function writeOutputs(contacts) {
   fs.writeFileSync(CSV_PATH, [header.join(','), ...rows].join('\r\n') + '\r\n', 'utf8');
 }
 
-function printSummary({ total, written, skipped, duplicates, mode, perRoot }) {
+function printPhoneImportInstructions() {
+  console.log('');
+  console.log('Importar SOLO en el teléfono (no Google):');
+  console.log('  1. Pasá leads-contacts.vcf al celular de outreach (USB, Telegram, etc.)');
+  console.log('  2. Abrí la app Contactos (no Gmail ni contacts.google.com)');
+  console.log('  3. Menú → Administrar contactos → Importar → elegí el .vcf');
+  console.log('  4. Destino: Teléfono / Dispositivo / Phone — NO tu cuenta Gmail');
+  console.log('  5. Si abrís el .vcf desde Drive/Gmail, puede ir directo a Google;');
+  console.log('     usá siempre Importar dentro de la app Contactos.');
+  console.log('');
+}
+
+function printSummary({ total, written, skipped, duplicates, mode, naming }) {
   console.log('--------------------------------------------------');
   console.log('Lead contacts export summary');
   console.log('--------------------------------------------------');
@@ -252,13 +214,19 @@ function printSummary({ total, written, skipped, duplicates, mode, perRoot }) {
   console.log(`Contacts written:    ${written}`);
   console.log(`Skipped (no/invalid phone): ${skipped}`);
   console.log(`Duplicates removed:  ${duplicates}`);
-  console.log('Per-root counts:');
-  ROOTS.forEach((r) => {
-    console.log(`  - ${r.label}: ${(perRoot && perRoot[r.label]) || 0}`);
-  });
+  if (naming) {
+    console.log(`Named from alias:    ${naming.fromAlias}`);
+    console.log(`Fallback names:      ${naming.fromFallback}`);
+    console.log(`Duplicate aliases:   ${naming.renamedDuplicates}`);
+  }
   console.log(`vCard output:        ${VCF_PATH}`);
-  console.log(`CSV output:          ${CSV_PATH}`);
+  if (cli.googleCsv) {
+    console.log(`CSV output:          ${CSV_PATH} (Google Contacts web only)`);
+  } else {
+    console.log('CSV output:          (skipped — use --google-csv if you need Google web import)');
+  }
   console.log('--------------------------------------------------');
+  printPhoneImportInstructions();
 }
 
 // ---------------------------------------------------------------------------
@@ -266,20 +234,82 @@ function printSummary({ total, written, skipped, duplicates, mode, perRoot }) {
 // ---------------------------------------------------------------------------
 function runSample() {
   const fabricated = [
-    { phone: '1134679434' },
-    { phone: '+5491122334455' },
-    { phone: '011 6789 0123' }
+    { phone: '1134679434', alias: 'Rubi Alba' },
+    { phone: '+5491122334455', alias: 'Solcito' },
+    { phone: '011 6789 0123', alias: '' }
   ];
   const { contacts, skipped, duplicates } = buildContacts(fabricated);
-  const { perRoot } = assignNames(contacts);
+  const naming = assignAliases(contacts);
   writeOutputs(contacts);
   printSummary({
     total: fabricated.length,
     written: contacts.length,
     skipped,
     duplicates,
-    perRoot,
+    naming,
     mode: 'SAMPLE (fabricated rows, no DB)'
+  });
+}
+
+// ---------------------------------------------------------------------------
+// CSV mode: read Phone column from a merged export (no DB).
+// ---------------------------------------------------------------------------
+function splitCsvLine(line) {
+  const out = [];
+  let cur = '';
+  let inQ = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const c = line[i];
+    if (inQ) {
+      if (c === '"') {
+        if (line[i + 1] === '"') {
+          cur += '"';
+          i += 1;
+        } else inQ = false;
+      } else cur += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ',') {
+      out.push(cur);
+      cur = '';
+    } else cur += c;
+  }
+  out.push(cur);
+  return out;
+}
+
+function readLeadsFromCsv(csvPath) {
+  const resolved = path.resolve(csvPath);
+  if (!fs.existsSync(resolved)) {
+    throw new Error(`CSV not found: ${resolved}`);
+  }
+  const lines = fs.readFileSync(resolved, 'utf8').split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length < 2) return [];
+  const header = splitCsvLine(lines[0]).map((h) => h.trim().toLowerCase());
+  const phoneIdx = header.indexOf('phone');
+  const aliasIdx = header.indexOf('alias');
+  if (phoneIdx === -1) throw new Error('CSV must have a Phone column');
+  const leads = [];
+  for (let i = 1; i < lines.length; i += 1) {
+    const cols = splitCsvLine(lines[i]);
+    const phone = (cols[phoneIdx] || '').trim();
+    const alias = aliasIdx >= 0 ? (cols[aliasIdx] || '').trim() : '';
+    if (phone) leads.push({ phone, alias });
+  }
+  return leads;
+}
+
+function runFromCsv(csvPath) {
+  const leads = readLeadsFromCsv(csvPath);
+  const { contacts, skipped, duplicates } = buildContacts(leads);
+  const naming = assignAliases(contacts);
+  writeOutputs(contacts);
+  printSummary({
+    total: leads.length,
+    written: contacts.length,
+    skipped,
+    duplicates,
+    naming,
+    mode: `CSV (${path.basename(csvPath)})`
   });
 }
 
@@ -301,14 +331,14 @@ async function runLive() {
     .lean();
 
   const { contacts, skipped, duplicates } = buildContacts(leads);
-  const { perRoot } = assignNames(contacts);
+  const naming = assignAliases(contacts);
   writeOutputs(contacts);
   printSummary({
     total: leads.length,
     written: contacts.length,
     skipped,
     duplicates,
-    perRoot,
+    naming,
     mode: cli.pendingOnly ? 'LIVE (--pending-only)' : 'LIVE (all leads)'
   });
 }
@@ -316,6 +346,10 @@ async function runLive() {
 (async () => {
   if (cli.sample) {
     runSample();
+    process.exit(0);
+  }
+  if (cli.fromCsv) {
+    runFromCsv(cli.fromCsv);
     process.exit(0);
   }
   await runLive();

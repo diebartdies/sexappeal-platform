@@ -131,6 +131,8 @@ app.use((req, res, next) => {
 const seoController = require('./controllers/seoController');
 app.get('/robots.txt', seoController.robotsTxt);
 app.get('/sitemap.xml', seoController.sitemapXml);
+app.get('/sitemap-sexappeal.xml', seoController.sitemapSexAppealXml);
+app.get('/sitemap-selfappeal.xml', seoController.sitemapSelfAppealXml);
 app.get('/acompanantes/:provinceSlug/:areaSlug', seoController.renderLocationPage);
 app.get('/acompanantes/:provinceSlug', seoController.renderLocationPage);
 app.get('/perfil/:alias', seoController.renderProfilePage);
