@@ -1,0 +1,25 @@
+---
+description: Moldova production deploy — TLS certs must live on the VPS, not only locally
+alwaysApply: true
+---
+
+# Moldova production server (SexAppeal platform)
+
+- **Host:** `root@91.208.206.35` (Moldova VPS)
+- **App path:** `/root/SexAppeal-platform`
+- **Deploy:** `upload_to_server.bat` (full) or `scripts/fix-nginx-now.bat` (nginx + certs)
+
+## TLS on prod (required every deploy / cert renewal)
+
+Nginx mounts `./certbot/conf/live` from the **server filesystem**. Local Windows cert files are **not** used at runtime unless uploaded.
+
+| Domain | Local source | Server path (fullchain + privkey) |
+|--------|--------------|-----------------------------------|
+| sexappeal.drsrv.net.ar | `certbot/conf/live/sexappeal.drsrv.net.ar/` (`sexappeal.chain`, `sexappeal.key`) | `certbot/conf/live/sexappeal.drsrv.net.ar/fullchain.pem`, `privkey.pem` |
+| selfappeal.drsrv.net.ar | `D:\Certs-Selfapeal` (`selfa.chain`, `selfa.key`) | `certbot/conf/live/selfappeal.drsrv.net.ar/fullchain.pem`, `privkey.pem` |
+
+**Always keep both certificate sets** on the Moldova server. Never replace one with the other or use fcwa fallback.
+
+**Always run** `scripts/upload-ssl-certs-to-prod.bat` (or full deploy) after renewing either certificate.
+
+`certbot/` is excluded from the deploy tarball — certs are uploaded separately via `scp`.

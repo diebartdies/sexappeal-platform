@@ -10,10 +10,10 @@ $fullchain = Join-Path $CertDir 'fullchain.pem'
 $privkey = Join-Path $CertDir 'privkey.pem'
 
 if (-not (Test-Path $chainSrc)) {
-    Write-Error "Missing $chainSrc — obtain/renew certs first."
+    Write-Error "Missing $chainSrc - obtain/renew certs first."
 }
 if (-not (Test-Path $keySrc)) {
-    Write-Error "Missing $keySrc — obtain/renew certs first."
+    Write-Error "Missing $keySrc - obtain/renew certs first."
 }
 
 Copy-Item $fullchain "$fullchain.selfsigned.bak" -Force -ErrorAction SilentlyContinue
@@ -25,4 +25,4 @@ Copy-Item $keySrc $privkey -Force
 $certCount = (Select-String -Path $fullchain -Pattern 'BEGIN CERTIFICATE').Count
 Write-Host "OK: $fullchain ($certCount cert(s) in chain)"
 Write-Host "OK: $privkey"
-Write-Host "Nginx will use fullchain.pem + privkey.pem on next deploy."
+Write-Host 'Nginx on Moldova prod reads these after upload-ssl-certs-to-prod.bat (fullchain.pem + privkey.pem).'

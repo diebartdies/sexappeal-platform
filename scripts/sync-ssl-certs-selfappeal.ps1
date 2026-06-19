@@ -51,4 +51,4 @@ if (Get-Command openssl -ErrorAction SilentlyContinue) {
     }
 }
 
-Write-Host 'Nginx expects these on the server at certbot/conf/live/selfappeal.drsrv.net.ar/ (upload_to_server.bat uploads them).'
+Write-Host 'Upload to Moldova prod with scripts/upload-ssl-certs-to-prod.bat (or upload_to_server.bat).'

@@ -49,12 +49,25 @@ bash "$DEPLOY_DIR/scripts/nginx-write-selfappeal-conf.sh" "$DEPLOY_DIR"
 
 nginx_config_test() {
   echo "Testing nginx configuration..."
-  if ! docker run --rm \
+  local net=""
+  if docker inspect sexappeal_app >/dev/null 2>&1; then
+    net=$(docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}' sexappeal_app 2>/dev/null | head -1)
+  fi
+  local net_args=()
+  if [ -n "$net" ]; then
+    net_args=(--network "$net")
+  else
+    net_args=(--add-host app:127.0.0.1)
+  fi
+  if ! docker run --rm "${net_args[@]}" \
     -v "$DEPLOY_DIR/nginx.conf:/etc/nginx/nginx.conf:ro" \
     -v "$DEPLOY_DIR/nginx/conf.d:/etc/nginx/conf.d:ro" \
     -v "$DEPLOY_DIR/certbot/conf/live:/etc/nginx/certs-live:ro" \
     nginx:alpine nginx -t 2>&1; then
-    echo "ERROR: nginx -t failed. Fix certbot/conf/live/ paths before starting nginx."
+    echo "ERROR: nginx -t failed. Common fixes:"
+    echo "  - grep certs-selfappeal nginx.conf (must be empty; redeploy latest nginx.conf)"
+    echo "  - ls certbot/conf/live/sexappeal.drsrv.net.ar/fullchain.pem privkey.pem"
+    echo "  - ls certbot/conf/live/selfappeal.drsrv.net.ar/fullchain.pem privkey.pem"
     return 1
   fi
 }

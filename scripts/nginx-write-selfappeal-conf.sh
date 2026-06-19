@@ -6,20 +6,13 @@ DEPLOY_DIR="${1:-/root/SexAppeal-platform}"
 CONF_D="$DEPLOY_DIR/nginx/conf.d"
 SELFAPPEAL_SSL="$CONF_D/selfappeal.ssl.conf"
 SELFAPPEAL_DIR="$DEPLOY_DIR/certbot/conf/live/selfappeal.drsrv.net.ar"
-FCWA_DIR="$DEPLOY_DIR/certbot/conf/live/fcwa.drsrv.net.ar"
 
 mkdir -p "$CONF_D"
 rm -f "$SELFAPPEAL_SSL"
 
-if [ ! -f "$SELFAPPEAL_DIR/fullchain.pem" ] && [ -f "$FCWA_DIR/fullchain.pem" ]; then
-  echo "WARN: selfappeal cert missing — copying fcwa cert as temporary alias TLS (run sync-ssl-certs-selfappeal on Windows)..."
-  mkdir -p "$SELFAPPEAL_DIR"
-  cp -f "$FCWA_DIR/fullchain.pem" "$SELFAPPEAL_DIR/fullchain.pem"
-  cp -f "$FCWA_DIR/privkey.pem" "$SELFAPPEAL_DIR/privkey.pem"
-fi
-
 if [ ! -f "$SELFAPPEAL_DIR/fullchain.pem" ] || [ ! -f "$SELFAPPEAL_DIR/privkey.pem" ]; then
-  echo "INFO: No alias TLS cert — selfappeal HTTPS vhost omitted (HTTP :80 still serves ACME)."
+  echo "INFO: selfappeal TLS missing in $SELFAPPEAL_DIR - alias HTTPS vhost omitted."
+  echo "      Run scripts/upload-ssl-certs-to-prod.bat from Windows (keeps both sex + self certs)."
   exit 0
 fi
 
@@ -41,7 +34,8 @@ server {
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
     location / {
-        proxy_pass http://app:5000;
+        set $backend http://app:5000;
+        proxy_pass $backend;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';

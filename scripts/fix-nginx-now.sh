@@ -1,0 +1,79 @@
+#!/bin/bash
+# Stop nginx restart loop and apply latest certs-live layout on the server.
+set -eu
+
+DEPLOY_DIR="${1:-/root/SexAppeal-platform}"
+cd "$DEPLOY_DIR"
+
+echo "==> Stopping nginx..."
+docker stop sexappeal_nginx 2>/dev/null || true
+
+if grep -q 'certs-selfappeal' "$DEPLOY_DIR/nginx.conf" 2>/dev/null; then
+  echo "ERROR: nginx.conf on disk is STALE (references certs-selfappeal)."
+  echo "       From Windows run: upload_to_server.bat"
+  echo "       Or scp nginx.conf + docker-compose.yml to $DEPLOY_DIR/ then re-run this script."
+  exit 1
+fi
+
+SEXAPPEAL_DIR="$DEPLOY_DIR/certbot/conf/live/sexappeal.drsrv.net.ar"
+SELFAPPEAL_DIR="$DEPLOY_DIR/certbot/conf/live/selfappeal.drsrv.net.ar"
+
+missing=0
+if [ ! -f "$SEXAPPEAL_DIR/fullchain.pem" ] || [ ! -f "$SEXAPPEAL_DIR/privkey.pem" ]; then
+  echo "ERROR: missing sexappeal TLS in $SEXAPPEAL_DIR (fullchain.pem + privkey.pem)"
+  missing=1
+fi
+if [ ! -f "$SELFAPPEAL_DIR/fullchain.pem" ] || [ ! -f "$SELFAPPEAL_DIR/privkey.pem" ]; then
+  echo "ERROR: missing selfappeal TLS in $SELFAPPEAL_DIR (fullchain.pem + privkey.pem)"
+  missing=1
+fi
+if [ "$missing" -eq 1 ]; then
+  echo "       From Windows run: scripts/upload-ssl-certs-to-prod.bat (uploads BOTH domains)"
+  exit 1
+fi
+
+echo "==> OK: sexappeal + selfappeal TLS present on prod"
+echo "==> Regenerating selfappeal vhost snippet..."
+if [ -x "$DEPLOY_DIR/scripts/nginx-write-selfappeal-conf.sh" ]; then
+  bash "$DEPLOY_DIR/scripts/nginx-write-selfappeal-conf.sh" "$DEPLOY_DIR"
+else
+  echo "ERROR: nginx-write-selfappeal-conf.sh not found"
+  exit 1
+fi
+
+if [ ! -f "$DEPLOY_DIR/nginx/conf.d/selfappeal.ssl.conf" ]; then
+  echo "ERROR: selfappeal.ssl.conf was not generated despite certs present"
+  exit 1
+fi
+
+echo "==> Testing nginx configuration..."
+net=""
+if docker inspect sexappeal_app >/dev/null 2>&1; then
+  net=$(docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}' sexappeal_app 2>/dev/null | head -1)
+fi
+net_args=()
+if [ -n "$net" ]; then
+  net_args=(--network "$net")
+else
+  net_args=(--add-host app:127.0.0.1)
+fi
+
+docker run --rm "${net_args[@]}" \
+  -v "$DEPLOY_DIR/nginx.conf:/etc/nginx/nginx.conf:ro" \
+  -v "$DEPLOY_DIR/nginx/conf.d:/etc/nginx/conf.d:ro" \
+  -v "$DEPLOY_DIR/certbot/conf/live:/etc/nginx/certs-live:ro" \
+  nginx:alpine nginx -t
+
+echo "==> Starting nginx..."
+if docker compose version >/dev/null 2>&1; then
+  DC="docker compose"
+else
+  DC="docker-compose"
+fi
+$DC up -d --no-recreate nginx
+
+sleep 2
+docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E 'nginx|NAMES' || true
+echo "==> Recent nginx logs:"
+docker logs sexappeal_nginx --tail 8 2>&1 || true
+echo "Done."
