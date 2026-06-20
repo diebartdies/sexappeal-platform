@@ -3710,6 +3710,10 @@ function renderWhatsAppConfigStatus(data) {
     const phoneDisplay = document.getElementById('waConfigCurrentPhone');
     const sessionEl = document.getElementById('waConfigSessionState');
     const registerBtn = document.getElementById('waConfigRegisterBtn');
+    const webJsSection = document.getElementById('waConfigWebJsSection');
+    const twilioApi = Boolean(data.twilioApi);
+
+    if (webJsSection) webJsSection.style.display = twilioApi ? 'none' : 'block';
 
     if (phoneDisplay) {
         phoneDisplay.textContent = data.displayPhone || data.phoneNumber || '+5491178280156';
@@ -3721,12 +3725,18 @@ function renderWhatsAppConfigStatus(data) {
     syncWhatsAppPhoneEditor(data);
 
     if (sessionEl) {
-        if (data.connected) {
+        if (twilioApi && data.connected) {
+            sessionEl.textContent = t('Connected via Twilio WhatsApp API');
+            sessionEl.style.color = '#25D366';
+        } else if (data.connected) {
             sessionEl.textContent = t('Connected');
             sessionEl.style.color = '#25D366';
         } else if (data.sessionSaved) {
             sessionEl.textContent = t('Session saved — reconnect if sending fails');
             sessionEl.style.color = '#f0ad4e';
+        } else if (twilioApi && data.lastError) {
+            sessionEl.textContent = data.lastError;
+            sessionEl.style.color = '#cc6666';
         } else {
             sessionEl.textContent = t('Not registered');
             sessionEl.style.color = '#cc6666';
@@ -3734,10 +3744,10 @@ function renderWhatsAppConfigStatus(data) {
     }
 
     const phaseLabels = {
-        idle: t('Ready to register'),
+        idle: twilioApi ? t('Twilio WhatsApp ready when sender is configured') : t('Ready to register'),
         initializing: t('Connecting to WhatsApp...'),
         qr: t('Scan QR with WhatsApp on your phone'),
-        ready: t('WhatsApp linked successfully'),
+        ready: twilioApi ? t('Twilio WhatsApp API active') : t('WhatsApp linked successfully'),
         error: data.lastError || t('Registration failed')
     };
 
@@ -3745,7 +3755,7 @@ function renderWhatsAppConfigStatus(data) {
         statusEl.textContent = phaseLabels[data.phase] || data.phase || '—';
     }
 
-    if (data.phase === 'qr' && data.qr && qrWrap && qrImg) {
+    if (!twilioApi && data.phase === 'qr' && data.qr && qrWrap && qrImg) {
         qrWrap.classList.remove('hidden');
         qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(data.qr)}`;
     } else if (qrWrap) {
@@ -3753,16 +3763,22 @@ function renderWhatsAppConfigStatus(data) {
     }
 
     if (registerBtn) {
-        // Never leave the button permanently disabled on a transient/stuck phase.
-        // A background reconnect that hangs in 'initializing' (stale/restricted
-        // session) must NOT lock the admin out — they have to be able to force a
-        // re-link. The click handler disables the button only for the duration of
-        // its own request and re-enables it afterwards.
         registerBtn.disabled = false;
-        if (data.connected) registerBtn.textContent = t('WhatsApp linked');
+        if (twilioApi) {
+            registerBtn.textContent = data.connected
+                ? t('Twilio WhatsApp active')
+                : t('Verify Twilio WhatsApp');
+        } else if (data.connected) {
+            registerBtn.textContent = t('WhatsApp linked');
+        } else {
+            registerBtn.textContent = t('Register number on WhatsApp');
+        }
     }
 
-    if (data.phase === 'ready' || data.phase === 'error') {
+    const twilioApiNote = document.getElementById('waConfigTwilioApiNote');
+    if (twilioApiNote) twilioApiNote.classList.toggle('hidden', !twilioApi);
+
+    if (!twilioApi && (data.phase === 'ready' || data.phase === 'error')) {
         if (waConfigPollTimer) {
             clearInterval(waConfigPollTimer);
             waConfigPollTimer = null;
@@ -4009,7 +4025,7 @@ export async function openDashboardConfigModal() {
                     </div>
                 </div>
 
-                <div style="padding-top:16px;border-top:1px solid #333;">
+                <div id="waConfigWebJsSection" style="padding-top:16px;border-top:1px solid #333;">
                     <h4 style="margin:0 0 10px 0;color:#ccc;">2) ${t('Register number on WhatsApp')}</h4>
                     <p style="color:#888;font-size:0.85rem;margin:0 0 12px 0;">${t('Link the platform as a WhatsApp Web device. Open WhatsApp on the origin phone → Linked devices → Link a device, then scan the QR below.')}</p>
                     <p id="waConfigStatusText" style="color:#ccc;margin:0 0 12px 0;font-size:0.9rem;">—</p>
@@ -4018,6 +4034,8 @@ export async function openDashboardConfigModal() {
                     </div>
                     <button type="button" id="waConfigRegisterBtn" style="padding:10px 18px;background:#25D366;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Register number on WhatsApp')}</button>
                 </div>
+
+                <p id="waConfigTwilioApiNote" class="hidden" style="color:#25D366;font-size:0.85rem;margin:16px 0 0 0;padding:12px;background:#0a1a0f;border:1px solid #1a3a24;border-radius:6px;">${t('Twilio WhatsApp API mode: no QR or phone scan needed. Save your Twilio sender above, set TWILIO_WHATSAPP_CONTENT_SID on the server for cold outreach templates, then start sending below.')}</p>
 
                 <div style="margin-top:24px;padding-top:16px;border-top:1px solid #333;">
                     <h4 style="margin:0 0 10px 0;color:#ccc;">3) ${t('Automatic sending (WhatsApp)')}</h4>

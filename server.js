@@ -371,7 +371,9 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   // a restart/rebuild restores sending without a manual re-registration.
   try {
     const whatsappPlatformService = require('./services/whatsappPlatformService');
-    if (whatsappPlatformService.autoReconnectIfSessionSaved()) {
+    if (whatsappPlatformService.isTwilioApiMode()) {
+      console.log('[WhatsApp] Twilio WhatsApp API mode — no QR session required.');
+    } else if (whatsappPlatformService.autoReconnectIfSessionSaved()) {
       console.log('[WhatsApp] Saved platform session found — reconnecting Tulio client in background...');
     } else {
       console.log('[WhatsApp] No saved platform session — register via the admin panel to link a number.');

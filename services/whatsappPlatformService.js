@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const { resolveBrowserExecutable } = require('../utils/browserExecutable');
+const twilioWhatsApp = require('./twilioWhatsAppService');
 const {
   getPlatformWhatsAppPhone,
   markWhatsAppRegistered,
@@ -158,6 +159,23 @@ function createClient() {
 
 async function buildStatus() {
   const phoneNumber = await getPlatformWhatsAppPhone();
+
+  if (twilioWhatsApp.isApiModeEnabled()) {
+    const configError = twilioWhatsApp.getConfigError();
+    const ready = !configError;
+    return {
+      phase: ready ? 'ready' : 'error',
+      qr: null,
+      lastError: configError || regState.lastError,
+      phoneNumber,
+      displayPhone: formatWhatsAppPhoneDisplay(phoneNumber),
+      sessionSaved: false,
+      connected: ready,
+      transport: 'twilio',
+      twilioApi: true
+    };
+  }
+
   return {
     phase: clientReady ? 'ready' : regState.phase,
     qr: regState.qr,
@@ -165,7 +183,9 @@ async function buildStatus() {
     phoneNumber,
     displayPhone: formatWhatsAppPhoneDisplay(phoneNumber),
     sessionSaved: sessionExistsOnDisk(),
-    connected: clientReady
+    connected: clientReady,
+    transport: 'webjs',
+    twilioApi: false
   };
 }
 
@@ -174,6 +194,24 @@ async function getRegistrationStatus() {
 }
 
 async function startRegistration() {
+  if (twilioWhatsApp.isApiModeEnabled()) {
+    const configError = twilioWhatsApp.getConfigError();
+    if (configError) {
+      regState.phase = 'error';
+      regState.lastError = configError;
+      return buildStatus();
+    }
+    regState.phase = 'ready';
+    regState.qr = null;
+    regState.lastError = null;
+    try {
+      await markWhatsAppRegistered();
+    } catch (err) {
+      console.error('[whatsapp] Failed to persist Twilio registration timestamp:', err.message);
+    }
+    return buildStatus();
+  }
+
   // If a QR is already on screen, keep showing it — don't kill a scan the admin
   // may be midway through. (This is the ONLY early-return: a live, scannable QR.)
   if (regState.phase === 'qr' && regState.qr) {
@@ -197,6 +235,12 @@ async function startRegistration() {
 }
 
 function waitForReady(timeoutMs = DEFAULT_TIMEOUT_MS) {
+  if (twilioWhatsApp.isApiModeEnabled()) {
+    const configError = twilioWhatsApp.getConfigError();
+    if (configError) return Promise.reject(new Error(configError));
+    return Promise.resolve();
+  }
+
   if (clientReady) return Promise.resolve();
 
   createClient();
@@ -219,6 +263,18 @@ function waitForReady(timeoutMs = DEFAULT_TIMEOUT_MS) {
   });
 }
 
+async function isRegisteredUser(phoneOrChatId) {
+  if (twilioWhatsApp.isApiModeEnabled()) return true;
+
+  const raw = String(phoneOrChatId || '');
+  const chatId = raw.includes('@') ? raw : `${normalizeWhatsAppPhone(raw)}@c.us`;
+  if (!chatId || chatId === '@c.us') return false;
+
+  await waitForReady();
+  if (!client) return false;
+  return client.isRegisteredUser(chatId);
+}
+
 // Send a WhatsApp message to a phone number.
 //   - Plain text  : sendMessage(phone, text)
 //   - Image + text: sendMessage(phone, caption, { mediaPath: '/abs/logo.png' })
@@ -228,6 +284,14 @@ function waitForReady(timeoutMs = DEFAULT_TIMEOUT_MS) {
 //                   image while keeping the caption text sanitized.
 // Returns the sent message id (string) when available, else true.
 async function sendMessage(toPhone, message, options = {}) {
+  if (twilioWhatsApp.isApiModeEnabled()) {
+    return twilioWhatsApp.sendWhatsAppMessage(toPhone, message, {
+      ...options,
+      alias: options.alias,
+      includeMedia: Boolean(options.mediaPath)
+    });
+  }
+
   const cleanPhone = normalizeWhatsAppPhone(toPhone);
   if (!cleanPhone) {
     throw new Error('Invalid WhatsApp recipient phone number');
@@ -260,6 +324,7 @@ function getSharedClient() {
 // rebuild restores sending without a manual reconnect. No-op if already running
 // or if there is no saved session (nothing to reconnect to).
 function autoReconnectIfSessionSaved() {
+  if (twilioWhatsApp.isApiModeEnabled()) return false;
   if (client || initializing || clientReady) return false;
   if (!sessionExistsOnDisk()) return false;
   createClient();
@@ -267,7 +332,14 @@ function autoReconnectIfSessionSaved() {
 }
 
 function isClientReady() {
+  if (twilioWhatsApp.isApiModeEnabled()) {
+    return !twilioWhatsApp.getConfigError();
+  }
   return clientReady;
+}
+
+function isTwilioApiMode() {
+  return twilioWhatsApp.isApiModeEnabled();
 }
 
 function getQrCode() {
@@ -281,10 +353,12 @@ module.exports = {
   startRegistration,
   waitForReady,
   sendMessage,
+  isRegisteredUser,
   destroyClient,
   getSharedClient,
   autoReconnectIfSessionSaved,
   isClientReady,
+  isTwilioApiMode,
   getQrCode,
   sessionExistsOnDisk
 };

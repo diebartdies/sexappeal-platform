@@ -161,18 +161,11 @@ async function sendOneLead(lead) {
     return;
   }
 
-  const chatId = `${cleanPhone}@c.us`;
-  // Safe: isClientReady() was verified true immediately before this call, so the
-  // shared singleton client already exists — getSharedClient() returns it without
-  // ever creating a new client.
-  const client = platformService.getSharedClient();
-
-  // Pre-validate the number is on WhatsApp. Sending to a non-existent number is
-  // what hangs/loops, so unregistered numbers are rejected before any send.
+  // Pre-validate the number is on WhatsApp (web.js only; Twilio skips).
   let registered;
   try {
     registered = await withTimeout(
-      client.isRegisteredUser(chatId),
+      platformService.isRegisteredUser(cleanPhone),
       REGISTER_CHECK_TIMEOUT_MS,
       'isRegisteredUser'
     );
@@ -195,7 +188,8 @@ async function sendOneLead(lead) {
     const messageId = await withTimeout(
       platformService.sendMessage(lead.phone, caption, {
         mediaPath: BRAND_IMAGE,
-        timeoutMs: SEND_TIMEOUT_MS
+        timeoutMs: SEND_TIMEOUT_MS,
+        alias
       }),
       SEND_TIMEOUT_MS + 5000,
       'sendMessage'
@@ -346,7 +340,9 @@ async function start() {
   if (!platformService.isClientReady()) {
     return {
       ok: false,
-      error: 'WhatsApp is not connected. Link WhatsApp first, then start the drip.',
+      error: platformService.isTwilioApiMode()
+        ? 'Twilio WhatsApp is not configured. Set Twilio creds on the server and save the sender number in Admin.'
+        : 'WhatsApp is not connected. Link WhatsApp first, then start the drip.',
       notConnected: true
     };
   }

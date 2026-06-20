@@ -118,5 +118,6 @@ module.exports = {
   sendSms,
   isSendingAllowed,
   isConfigured,
-  withTimeout
+  withTimeout,
+  getClient
 };

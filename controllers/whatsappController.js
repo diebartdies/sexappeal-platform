@@ -26,6 +26,8 @@ exports.getWhatsAppConfig = async (req, res) => {
         phoneSource,
         twilioConfigured: phoneSource === 'twilio',
         twilioEnvDefault: isTwilioWhatsAppPhoneConfigured(),
+        transport: status.transport || 'webjs',
+        twilioApi: Boolean(status.twilioApi),
         registeredAt: settings.registeredAt || null,
         lastConnectedAt: settings.lastConnectedAt || null,
         sessionSaved: status.sessionSaved,
@@ -71,9 +73,12 @@ exports.updateWhatsAppPhone = async (req, res) => {
 exports.startWhatsAppRegistration = async (req, res) => {
   try {
     const status = await platformService.startRegistration();
+    const message = status.twilioApi
+      ? 'Twilio WhatsApp API is active — no QR scan required'
+      : 'WhatsApp registration started — scan the QR with the configured phone';
     res.status(202).json({
       success: true,
-      message: 'WhatsApp registration started — scan the QR with the configured phone',
+      message,
       data: status
     });
   } catch (error) {

@@ -180,6 +180,17 @@ const config = {
     // Env: TWILIO_WHATSAPP_FROM_NUMBER (falls back to TWILIO_FROM_NUMBER if unset).
     whatsappFromNumber: process.env.TWILIO_WHATSAPP_FROM_NUMBER || '',
 
+    // Twilio WhatsApp API (no QR). Set TWILIO_WHATSAPP_API=true with creds + sender,
+    // or leave unset when TWILIO_WHATSAPP_FROM_NUMBER is set. Set WHATSAPP_USE_WEBJS=true
+    // to force the legacy whatsapp-web.js QR flow instead.
+    whatsappApiEnabled: process.env.TWILIO_WHATSAPP_API === 'true'
+      || Boolean(process.env.TWILIO_WHATSAPP_FROM_NUMBER || process.env.TWILIO_FROM_NUMBER),
+    // Approved Content Template SID for business-initiated (cold) outreach.
+    // Env: TWILIO_WHATSAPP_CONTENT_SID (HX... from Twilio Console).
+    whatsappContentSid: process.env.TWILIO_WHATSAPP_CONTENT_SID || '',
+    // Public HTTPS image URL for media messages (defaults to {publicUrl}/images/outreach-logo.png).
+    whatsappMediaUrl: process.env.TWILIO_WHATSAPP_MEDIA_URL || '',
+
     // Global master switch. When false (default), every SMS path no-ops safely
     // (logs, never throws). Must be explicitly turned on to send anything.
     // Env: SMS_ENABLED ("true" enables; default disabled).

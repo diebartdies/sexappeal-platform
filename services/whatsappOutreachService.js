@@ -223,8 +223,6 @@ async function processTargets(targets, options = {}) {
   state.phase = 'sending';
   state.qr = null;
 
-  const client = platformService.getSharedClient();
-
   for (let i = 0; i < targets.length; i += 1) {
     const target = targets[i];
 
@@ -245,19 +243,16 @@ async function processTargets(targets, options = {}) {
       continue;
     }
 
-    const chatId = `${cleanPhone}@c.us`;
     const alias = (target.alias && String(target.alias).trim()) || 'hermosa';
     const messageToSend = customMessage
       ? String(customMessage).replace(/\{alias\}/gi, alias)
       : buildProfessionalInviteMessage(alias);
 
-    // --- 2. Pre-validate the number is actually on WhatsApp. Sending to a
-    // non-existent number is what hangs/loops, so we never reach sendMessage
-    // for those. Unregistered => reject (permanent, no retry, no real send).
+    // --- 2. Pre-validate the number is actually on WhatsApp (web.js only).
     let registered;
     try {
       registered = await withTimeout(
-        client.isRegisteredUser(chatId),
+        platformService.isRegisteredUser(cleanPhone),
         REGISTER_CHECK_TIMEOUT_MS,
         'isRegisteredUser'
       );
@@ -287,7 +282,7 @@ async function processTargets(targets, options = {}) {
     for (let attempt = 1; attempt <= MAX_SEND_ATTEMPTS; attempt += 1) {
       try {
         await withTimeout(
-          client.sendMessage(chatId, messageToSend),
+          platformService.sendMessage(target.phone, messageToSend, { alias }),
           SEND_TIMEOUT_MS,
           'sendMessage'
         );
