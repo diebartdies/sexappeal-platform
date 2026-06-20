@@ -6,6 +6,17 @@ const fs = require('fs');
 const ActivityLog = require('../models/ActivityLog');
 const Specialty = require('../models/Specialty');
 
+function ageFromBirthDate(dateStr) {
+  if (!dateStr) return null;
+  const dob = new Date(dateStr);
+  if (Number.isNaN(dob.getTime())) return null;
+  const today = new Date();
+  let years = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) years -= 1;
+  return years;
+}
+
 // @desc    Register user
 // @route   POST /api/v1/auth/register
 // @access  Public
@@ -15,20 +26,44 @@ exports.register = async (req, res, next) => {
     let { 
       email, password, role, alias, bio, hasOwnApartment, hasFantasyWardrobe, 
       province, city, neighborhood, measurements, height, services, verificationGesture,
-      firstName, surname, middleName, idNumber, birthDate, mobilePhone, street, number, floor, apartment, postalCode,
-      originCountry, instagram, facebook, quality, termsAccepted
+      firstName, surname, middleName, idNumber, birthDate, age: ageField, mobilePhone, street, number, floor, apartment, postalCode,
+      originCountry, instagram, facebook, quality, termsAccepted, registrationMode
     } = req.body;
+
+    const isExpressRegistration = role === 'professional'
+      && (registrationMode === 'express' || String(registrationMode || '').toLowerCase() === 'express');
 
     // Normalize email to prevent case-sensitive duplicate accounts
     if (email) email = email.toLowerCase().trim();
 
     let age;
     if (birthDate) {
-        const dob = new Date(birthDate);
-        age = Math.abs(new Date(Date.now() - dob.getTime()).getUTCFullYear() - 1970);
+        age = ageFromBirthDate(birthDate);
+    } else if (ageField !== undefined && ageField !== null && String(ageField).trim() !== '') {
+        age = parseInt(String(ageField).trim(), 10);
+        if (!Number.isFinite(age) || age < 18 || age > 99) {
+          return res.status(400).json({ success: false, error: 'Please enter a valid age (18–99).' });
+        }
+        birthDate = new Date(new Date().getFullYear() - age, 0, 1).toISOString().slice(0, 10);
     }
 
-    if (role === 'professional') {
+    if (role === 'professional' && isExpressRegistration) {
+      if (!email || !String(email).trim()) {
+        return res.status(400).json({ success: false, error: 'Email is required.' });
+      }
+      if (!password || String(password).length < 6) {
+        return res.status(400).json({ success: false, error: 'Password must be at least 6 characters.' });
+      }
+      if (!mobilePhone || !String(mobilePhone).trim()) {
+        return res.status(400).json({ success: false, error: 'Mobile phone is required.' });
+      }
+      if (!birthDate || !String(birthDate).trim()) {
+        return res.status(400).json({ success: false, error: 'Birth date is required.' });
+      }
+      if (age === undefined || age === null || !Number.isFinite(age) || age < 18 || age > 99) {
+        return res.status(400).json({ success: false, error: 'You must be at least 18 years old to register.' });
+      }
+    } else if (role === 'professional') {
       const required = [
         ['firstName', firstName], ['surname', surname], ['alias', alias], ['idNumber', idNumber],
         ['street', street], ['number', number], ['province', province], ['city', city],
@@ -46,6 +81,28 @@ exports.register = async (req, res, next) => {
       if (!req.files || req.files.length < 3) {
         return res.status(400).json({ success: false, error: 'All three verification photos are required.' });
       }
+    }
+
+    async function generateExpressAlias(phone, mail) {
+      const digits = String(phone || '').replace(/\D/g, '').slice(-4);
+      const mailLocal = String(mail || '').split('@')[0].replace(/\W/g, '').slice(0, 12);
+      const base = (mailLocal || `treasure${digits || 'new'}`).toLowerCase();
+      let candidate = base;
+      let suffix = 0;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const taken = await User.findOne({
+          role: 'professional',
+          'professionalProfile.alias': { $regex: new RegExp(`^${candidate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+        });
+        if (!taken) return candidate;
+        suffix += 1;
+        candidate = `${base}${suffix}`;
+      }
+    }
+
+    if (role === 'professional' && isExpressRegistration && !alias) {
+      alias = await generateExpressAlias(mobilePhone, email);
     }
 
     const allowedQualities = ['Standard', 'Silver', 'Gold', 'Premium', 'Elite'];
@@ -69,7 +126,8 @@ exports.register = async (req, res, next) => {
       services: services ? services.split(',').map(s => s.trim()).filter(Boolean) : [],
       ...(selectedQuality ? { desiredQuality: selectedQuality } : {}),
       quality: evaluationQuality,
-      isEvaluationPeriod: true
+      isEvaluationPeriod: true,
+      expressRegistration: isExpressRegistration
     } : undefined;
 
     // Check if user already exists
@@ -175,7 +233,9 @@ exports.register = async (req, res, next) => {
         await sendEmail({
           email: adminEmail,
           subject: 'SexAppeal - New Professional Registration',
-          message: `A new professional has registered: ${email}\nRole: ${role}\nVerification Status: ${user.verificationStatus}`
+          message: isExpressRegistration
+            ? `Express registration (minimal signup): ${email}\nPhone: ${mobilePhone}\nBirth date: ${birthDate} (age ${age})\nAlias (temp): ${alias}\n\nComplete profile and upload gallery photos in Admin before approving.`
+            : `A new professional has registered: ${email}\nRole: ${role}\nVerification Status: ${user.verificationStatus}`
         });
       } catch (err) { console.error('Failed to notify admin:', err.message); }
     }
@@ -185,8 +245,24 @@ exports.register = async (req, res, next) => {
     let emailMessage = `Welcome to the SexAppeal Platform!\n\nYour verification code is: ${verificationCode}\n\nThis code will expire in ${config.verificationCodeExpireMinutes} minutes.`;
 
     if (role === 'professional') {
-      emailSubject = 'Bienvenida a SexAppeal — Tu mes de evaluación comienza';
-      emailMessage = `Hola,
+      if (isExpressRegistration) {
+        emailSubject = 'Bienvenida a SexAppeal — confirmá tu email';
+        emailMessage = `Hola,
+
+Bienvenida a SexAppeal.
+
+Tu código de verificación es: ${verificationCode}
+(Este código vence en ${config.verificationCodeExpireMinutes} minutos)
+
+Registraste solo lo esencial. Nuestro equipo te contactará por WhatsApp para completar tu perfil y subir tus fotos — no hace falta que lo hagas sola.
+
+Cuando verifiques tu email podés entrar a tu panel con la contraseña que elegiste.
+
+Saludos,
+Equipo SexAppeal`;
+      } else {
+        emailSubject = 'Bienvenida a SexAppeal — Tu mes de evaluación comienza';
+        emailMessage = `Hola,
 
 Bienvenida a SexAppeal, el santuario donde tu presencia se convierte en una Living Treasure.
 
@@ -213,6 +289,7 @@ Revisaremos tus documentos con absoluta discreción. El proceso puede demorar al
 Gracias por confiar en la Arquitectura de la Intimidad.
 
 — Equipo SexAppeal`;
+      }
     }
 
     try {

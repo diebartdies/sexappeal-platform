@@ -905,20 +905,6 @@ function refreshCoverHighlight() {
                 const badge = document.createElement('span');
                 badge.className = 'cover-badge';
                 badge.textContent = `⭐ ${coverLabel}`;
-                Object.assign(badge.style, {
-                    position: 'absolute',
-                    top: '5px',
-                    left: '5px',
-                    background: 'var(--primary-gold)',
-                    color: '#111',
-                    fontSize: '0.7rem',
-                    fontWeight: 'bold',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    zIndex: '2',
-                    pointerEvents: 'none',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.6)'
-                });
                 item.appendChild(badge);
             }
         } else {
@@ -964,12 +950,6 @@ export function addPhotoToGrid(fileOrUrl) {
     img.src = imageUrl;
     if (typeof fileOrUrl === 'string') img.setAttribute('data-original-url', imageUrl); // Save the sanitized relative URL
     img.alt = 'User Photo';
-    Object.assign(img.style, {
-        width: '100%',
-        height: '100%',
-        objectFit: 'cover',
-        cursor: 'zoom-in'
-    });
     img.title = t('Click to enlarge');
     img.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -994,22 +974,6 @@ export function addPhotoToGrid(fileOrUrl) {
     removeBtn.className = 'remove-overlay';
     removeBtn.setAttribute('aria-label', t('Remove photo'));
     removeBtn.innerHTML = '&times;';
-    Object.assign(removeBtn.style, {
-        position: 'absolute',
-        top: '5px',
-        right: '5px',
-        background: 'rgba(200, 0, 0, 0.8)',
-        color: 'white',
-        width: '24px',
-        height: '24px',
-        borderRadius: '50%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        fontWeight: 'bold',
-        fontSize: '16px'
-    });
 
     item.appendChild(img);
     item.appendChild(removeBtn);

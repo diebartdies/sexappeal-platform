@@ -458,20 +458,25 @@ textarea:focus:not(:focus-visible) {
         0 2px 10px rgba(0, 0, 0, 0.45),
         inset 0 0 16px rgba(var(--gold-rgb), 0.05);
     overflow: hidden;
+    isolation: isolate;
 }
 
 .treasure-img {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     max-width: 100%;
+    max-height: 100%;
     display: block;
     object-fit: cover;
+    object-position: center;
     border-radius: 8px;
     transition: transform 0.35s ease;
 }
 
 .treasure-card:hover .treasure-img {
-    transform: scale(1.04);
+    transform: none;
 }
 
 .treasure-caption {
@@ -583,6 +588,9 @@ textarea:focus:not(:focus-visible) {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
     display: block;
     justify-self: start;
+    box-sizing: border-box;
+    isolation: isolate;
+    container-type: inline-size;
 }
 
 #photoGrid .photo-item.is-cover-photo {
@@ -592,10 +600,186 @@ textarea:focus:not(:focus-visible) {
 }
 
 #photoGrid .photo-item img {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
+    max-width: 100%;
+    max-height: 100%;
     object-fit: cover;
+    object-position: center;
+    display: block;
     cursor: zoom-in;
+}
+
+#photoGrid .cover-badge {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    z-index: 2;
+    max-width: calc(100% - 36px);
+    white-space: nowrap;
+    line-height: 1.1;
+    padding: 2px 4px;
+    border-radius: 4px;
+    pointer-events: none;
+    box-sizing: border-box;
+    background: var(--primary-gold);
+    color: #111;
+    font-weight: bold;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    font-size: clamp(0.45rem, 8cqi, 0.58rem);
+}
+
+/* Leads / invitations table — status badges scale down to stay on one line */
+.lead-status-cell {
+    container-type: inline-size;
+    min-width: 88px;
+    max-width: 140px;
+}
+
+.lead-status-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.admin-status-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 10px;
+    color: #fff;
+    font-weight: bold;
+    line-height: 1.1;
+    white-space: nowrap;
+    font-size: clamp(0.52rem, 11cqi, 0.72rem);
+    max-width: 100%;
+    box-sizing: border-box;
+    text-transform: capitalize;
+}
+
+.admin-leads-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.admin-leads-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: clamp(0.72rem, 1.6vw, 0.9rem);
+    min-width: 480px;
+}
+
+.admin-leads-table th,
+.admin-leads-table td {
+    padding: clamp(6px, 1.5vw, 10px);
+}
+
+.lead-whatsapp-btn {
+    display: inline-block;
+    padding: clamp(4px, 1vw, 6px) clamp(6px, 1.5vw, 12px);
+    background: #25D366;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: clamp(0.68rem, 1.4vw, 0.85rem);
+    white-space: nowrap;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.admin-shell,
+.admin-grid-layout,
+#adminGridContainer,
+#adminGridContent,
+.admin-grid-main {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+#adminGridContent {
+    overflow-x: clip;
+}
+
+.admin-pending-table-wrap,
+.admin-pending-table {
+    width: 100%;
+}
+
+.admin-pending-table {
+    border-collapse: collapse;
+    text-align: left;
+    font-size: clamp(0.72rem, 1.6vw, 0.9rem);
+    min-width: 520px;
+}
+
+.admin-pending-table th,
+.admin-pending-table td {
+    padding: clamp(6px, 1.5vw, 10px);
+    vertical-align: top;
+}
+
+.admin-pending-actions {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.admin-verification-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    min-height: 36px;
+    width: 36px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    font-weight: bold;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.admin-verification-btn.approve-btn {
+    background: green;
+}
+
+.admin-verification-btn.reject-btn {
+    background: red;
+}
+
+#photoGrid .remove-overlay {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    z-index: 3;
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    min-height: 22px;
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    box-sizing: border-box;
+    background: rgba(200, 0, 0, 0.85);
+    color: #fff;
 }
 
 #photoGrid .add-photo-frame {
@@ -669,6 +853,9 @@ textarea:focus:not(:focus-visible) {
         0 2px 10px rgba(0, 0, 0, 0.45),
         inset 0 0 14px rgba(var(--gold-rgb), 0.05);
     background: #111;
+    box-sizing: border-box;
+    isolation: isolate;
+    flex-shrink: 0;
 }
 
 .photo-item-public img {
@@ -679,12 +866,28 @@ textarea:focus:not(:focus-visible) {
     max-width: 100%;
     max-height: 100%;
     object-fit: cover;
+    object-position: center;
     display: block;
     transition: transform 0.3s ease;
 }
 
 .photo-item-public:hover img {
-    transform: scale(1.03);
+    transform: none;
+}
+
+/* Profile detail carousel — keep photos clipped inside tile frame */
+#treasurePhotoGrid.photo-carousel {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+#treasurePhotoGrid .photo-item-public {
+    height: auto;
+    min-height: 0;
+}
+
+#treasurePhotoGrid .photo-item-public img {
+    transform: none !important;
 }
 
 @media (max-width: 767px) {
@@ -705,25 +908,191 @@ textarea:focus:not(:focus-visible) {
     }
 }
 
+/* Admin prof cards: grow card size with available width (auto-fit), don't keep adding columns */
+.admin-prof-category {
+    container-type: inline-size;
+}
+
 .admin-prof-grid {
-    gap: 12px;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    display: grid;
+    gap: clamp(8px, 2cqi, 16px);
+    grid-template-columns: repeat(auto-fit, minmax(clamp(120px, 42cqi, 280px), 1fr));
+    align-items: start;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.five-column-grid.admin-prof-grid {
+    grid-template-columns: repeat(auto-fit, minmax(clamp(120px, 42cqi, 280px), 1fr));
+}
+
+@container (max-width: 280px) {
+    .admin-prof-grid,
+    .five-column-grid.admin-prof-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.admin-prof-category .category-section-header {
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+}
+
+.admin-prof-category .category-section-header h4 {
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: clamp(0.82rem, 2.8vw, 1rem);
+}
+
+.admin-prof-category .category-section-header h4 span {
+    display: block;
+    margin-top: 4px;
 }
 
 .admin-prof-card {
-    padding: 8px !important;
+    padding: clamp(6px, 2cqi, 12px) !important;
     border: 1px solid #2a2a2a !important;
     min-width: 0;
+    width: 100%;
     max-width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    overflow: hidden;
+    container-type: inline-size;
+    gap: clamp(4px, 1.5cqi, 8px);
+    isolation: isolate;
+}
+
+@container (max-width: 130px) {
+    .admin-prof-email {
+        display: none;
+    }
+
+    .admin-icon-btn {
+        min-width: 30px;
+        min-height: 30px;
+        max-width: 36px;
+        padding: 4px;
+        font-size: 0.85rem;
+    }
 }
 
 .admin-prof-thumb {
     aspect-ratio: 3 / 4 !important;
     border-radius: 6px !important;
-    margin-bottom: 8px !important;
+    margin-bottom: 4px !important;
     width: 100%;
     max-width: 100%;
+    height: auto;
     overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    container-type: inline-size;
+}
+
+.admin-prof-status-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    z-index: 2;
+    padding: 2px 5px;
+    border-radius: 10px;
+    color: #fff;
+    font-weight: bold;
+    line-height: 1.1;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    font-size: clamp(0.48rem, 9cqi, 0.58rem);
+    max-width: calc(100% - 8px);
+    box-sizing: border-box;
+    text-transform: capitalize;
+}
+
+.admin-prof-thumb-img {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+}
+
+.admin-prof-alias {
+    font-weight: bold;
+    margin-bottom: 2px;
+    color: var(--primary-gold);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: clamp(0.62rem, 9cqi, 0.95rem);
+    min-width: 0;
+    flex-shrink: 1;
+}
+
+.admin-prof-email {
+    font-size: clamp(0.52rem, 7.5cqi, 0.78rem);
+    color: #aaa;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex-shrink: 1;
+}
+
+.admin-prof-actions {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: clamp(4px, 1.5cqi, 8px);
+    width: 100%;
+    margin-top: auto;
+    min-width: 0;
+    flex-shrink: 0;
+    justify-content: center;
+    padding-top: 2px;
+}
+
+.admin-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    min-height: 32px;
+    padding: clamp(4px, 1.5cqi, 8px);
+    font-size: clamp(0.85rem, 10cqi, 1.2rem);
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 4px;
+    background: transparent;
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    width: clamp(32px, 12cqi, 44px);
+    max-width: 44px;
+}
+
+.admin-prof-card .edit-btn,
+.admin-prof-card .delete-btn {
+    width: auto;
+    box-sizing: border-box;
+    white-space: nowrap;
+}
+
+.admin-prof-card .edit-btn {
+    border: 1px solid var(--primary-gold);
+    color: var(--primary-gold);
+}
+
+.admin-prof-card .delete-btn {
+    border: 1px solid var(--accent-red);
+    color: var(--accent-red);
+    margin-top: 0;
 }
 
 .treasure-alias {
@@ -833,19 +1202,19 @@ textarea:focus:not(:focus-visible) {
 }
 
 @media (max-width: 1200px) {
-    .five-column-grid {
+    .five-column-grid:not(.admin-prof-grid) {
         grid-template-columns: repeat(4, 1fr);
     }
 }
 
 @media (max-width: 992px) {
-    .five-column-grid {
+    .five-column-grid:not(.admin-prof-grid) {
         grid-template-columns: repeat(3, 1fr);
     }
 }
 
 @media (max-width: 768px) {
-    .five-column-grid {
+    .five-column-grid:not(.admin-prof-grid) {
         grid-template-columns: repeat(2, 1fr);
     }
 }

@@ -10,53 +10,19 @@
     <link rel="stylesheet" href="/css/style.css?v=8.6">
     <link rel="stylesheet" href="/css/responsive.css?v=8.6">
     <style>
-        .reg-page { max-width: 820px; margin: 0 auto; padding-bottom: 100px; }
-        .reg-block { border-top: 1px solid rgba(212,175,55,0.25); padding-top: 22px; margin-top: 22px; }
-        .reg-block h4 { margin: 0 0 16px; color: var(--primary-gold); }
-        .reg-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .reg-grid-3 { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; }
-        .reg-grid-3-equal { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-        .reg-address-row {
-            display: grid;
-            grid-template-columns: minmax(100px, 2fr) 72px 56px 52px 64px;
-            gap: 12px;
-            align-items: end;
-            margin-bottom: 16px;
-        }
-        .reg-address-row .form-group { margin-bottom: 0; }
-        .reg-field-short input { padding-left: 8px; padding-right: 8px; text-align: center; }
-        .reg-field-dept label,
-        .reg-field-post label { white-space: nowrap; font-size: 0.82rem; }
-        .reg-field-dept input,
-        .reg-field-post input { max-width: 100%; }
-        @media (max-width: 720px) {
-            .reg-address-row {
-                grid-template-columns: 1fr 1fr;
-            }
-            .reg-address-row .reg-field-street { grid-column: 1 / -1; }
-        }
-        @media (max-width: 640px) {
-            .reg-grid-2, .reg-grid-3, .reg-grid-3-equal { grid-template-columns: 1fr; }
-        }
+        .reg-page { max-width: 520px; margin: 0 auto; padding-bottom: 100px; }
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; margin-bottom: 6px; font-size: 0.9rem; color: #ccc; }
         .required-star { color: var(--accent-red); }
-        .reg-input, .reg-select, .reg-page input, .reg-page select, .reg-page textarea {
+        .reg-input, .reg-page input {
             width: 100%; box-sizing: border-box; padding: 12px;
             background: #111; border: 1px solid rgba(212,175,55,0.45); color: #fff; border-radius: 4px;
         }
+        .reg-page .password-wrapper { margin-bottom: 0; }
+        .reg-page .password-wrapper input { padding-right: 44px; }
         .reg-field-error { border-color: var(--accent-red) !important; box-shadow: 0 0 0 2px rgba(139,0,0,0.35); }
-        .date-wrap { position: relative; }
-        .date-wrap input[type="date"] { padding-right: 42px; }
-        .date-wrap .cal-icon {
-            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-            pointer-events: none; color: var(--primary-gold); font-size: 1.1rem;
-        }
-        .reg-check-label { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: pointer; color: #ddd; }
-        .reg-check-label input { width: auto; }
-        .file-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-        .file-row input[type="file"] { max-width: 100%; }
-        .file-name { color: #888; font-size: 0.85rem; }
+        .reg-check-label { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; cursor: pointer; color: #ddd; }
+        .reg-check-label input { width: auto; margin-top: 4px; }
         #regInstructions { background: rgba(212,175,55,0.08); border: 1px solid rgba(212,175,55,0.35); border-radius: 8px; padding: 18px; margin-bottom: 24px; }
         body.register-page .reg-page { padding-top: 8px; }
         .reg-back-btn {
@@ -73,6 +39,9 @@
         }
         .reg-inline-link.muted { color: #888; }
         .reg-inline-link:hover { text-decoration: underline; }
+        .reg-hint { color: #888; font-size: 0.82rem; margin: 4px 0 0; line-height: 1.4; }
+        .date-wrap { position: relative; }
+        .date-wrap input[type="date"] { padding-right: 42px; }
     </style>
     <meta name="robots" content="noindex, nofollow">
     <meta name="theme-color" content="#B8922E">
@@ -81,153 +50,56 @@
 <body class="register-page">
     <main id="registerMain" class="container reg-page">
         <h1 class="gold-text" style="text-align:center;font-size:1.6rem;margin:0 0 8px;">Professional Registration</h1>
-        <p style="text-align:center;color:#aaa;font-size:0.95rem;margin:0 0 20px;max-width:640px;margin-left:auto;margin-right:auto;">
-            Join SexAppeal as a Living Treasure. Complete every required field and upload your verification photos. Admin review typically takes up to 48 hours.
+        <p style="text-align:center;color:#aaa;font-size:0.95rem;margin:0 0 20px;line-height:1.5;">
+            Quick signup — only what you need to get started. We will help you complete your profile and photos.
         </p>
 
         <section>
             <div class="card">
-                <div id="regInstructions">
-                    <h3 class="gold-text" style="margin-top:0;">Professional registration</h3>
-                    <p style="font-size:0.95rem;line-height:1.5;">To ensure the safety and authenticity of our community, please complete every mandatory field and upload the three verification photos.</p>
-                </div>
+                <div id="regInstructions"></div>
 
                 <div style="text-align: center; margin-bottom: 25px;">
-        <img src="/SexAppeal_logo_black.png" alt="SexAppeal Logo" style="height: 70px; width: auto; background-color: #000; border-radius: 8px; padding: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.5);">
-    </div>
+                    <img src="/SexAppeal_logo_black.png" alt="SexAppeal Logo" style="height: 70px; width: auto; background-color: #000; border-radius: 8px; padding: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.5);">
+                </div>
+
                 <form id="registerForm" novalidate>
                     <input type="hidden" id="regRole" value="professional">
+                    <input type="hidden" id="regRegistrationMode" value="express">
                     <button type="button" id="regBackToEntrance" class="reg-back-btn">&#8592; Back</button>
                     <div id="registerAlert" class="alert hidden"></div>
 
-                    <div class="reg-block">
-                        <h4>Identity</h4>
-                        <div class="reg-grid-2">
-                            <div class="form-group">
-                                <label for="regFirstName">Name <span class="required-star">*</span></label>
-                                <input type="text" id="regFirstName" class="reg-input" required autocomplete="given-name">
-                            </div>
-                            <div class="form-group">
-                                <label for="regMiddleName">Middle Name</label>
-                                <input type="text" id="regMiddleName" class="reg-input" autocomplete="additional-name">
-                            </div>
-                        </div>
-                        <div class="reg-grid-2">
-                            <div class="form-group">
-                                <label for="regSurname">Surname <span class="required-star">*</span></label>
-                                <input type="text" id="regSurname" class="reg-input" required autocomplete="family-name">
-                            </div>
-                            <div class="form-group">
-                                <label for="regAlias">Alias <span class="required-star">*</span></label>
-                                <input type="text" id="regAlias" class="reg-input" required maxlength="50">
-                            </div>
-                        </div>
-                        <div class="reg-grid-2">
-                            <div class="form-group">
-                                <label for="regIdNumber">ID Number <span class="required-star">*</span></label>
-                                <input type="text" id="regIdNumber" class="reg-input" required autocomplete="off">
-                            </div>
-                            <div class="form-group">
-                                <label for="regBirthDate">Birth date <span class="required-star">*</span></label>
-                                <div class="date-wrap">
-                                    <input type="date" id="regBirthDate" class="reg-input" required>
-                                    <span class="cal-icon" aria-hidden="true">📅</span>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="form-group">
+                        <label for="regEmail">Email <span class="required-star">*</span></label>
+                        <input type="email" id="regEmail" class="reg-input" required autocomplete="email">
                     </div>
 
-                    <div class="reg-block">
-                        <h4>Address</h4>
-                        <div class="reg-address-row">
-                            <div class="form-group reg-field-street">
-                                <label for="regStreet">Street <span class="required-star">*</span></label>
-                                <input type="text" id="regStreet" class="reg-input" required>
-                            </div>
-                            <div class="form-group reg-field-short">
-                                <label for="regStreetNumber">Number <span class="required-star">*</span></label>
-                                <input type="text" id="regStreetNumber" class="reg-input" required inputmode="numeric">
-                            </div>
-                            <div class="form-group reg-field-short">
-                                <label for="regFloor">Floor</label>
-                                <input type="text" id="regFloor" class="reg-input" inputmode="numeric" maxlength="4">
-                            </div>
-                            <div class="form-group reg-field-short reg-field-dept">
-                                <label for="regApartment">Dep.</label>
-                                <input type="text" id="regApartment" class="reg-input" maxlength="4">
-                            </div>
-                            <div class="form-group reg-field-short reg-field-post">
-                                <label for="regPostCode">CP</label>
-                                <input type="text" id="regPostCode" class="reg-input" maxlength="8" inputmode="numeric">
-                            </div>
-                        </div>
-                        <div class="reg-grid-2">
-                            <div class="form-group">
-                                <label for="regProvince">Province <span class="required-star">*</span></label>
-                                <select id="regProvince" class="reg-select" required><option value="">Loading...</option></select>
-                            </div>
-                            <div class="form-group">
-                                <label for="regCity">City / Neighborhood <span class="required-star">*</span></label>
-                                <select id="regCity" class="reg-select" required><option value="">Loading...</option></select>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="regOriginCountry">Country <span class="required-star">*</span></label>
-                            <select id="regOriginCountry" class="reg-select" required>
-                                <option value="">Select country...</option>
-                            </select>
-                        </div>
+                    <div class="form-group">
+                        <label for="regMobilePhone">Mobile phone <span class="required-star">*</span></label>
+                        <input type="tel" id="regMobilePhone" class="reg-input" required autocomplete="tel" placeholder="11 2345 6789">
+                        <p class="reg-hint">WhatsApp number — we will contact you here to finish your profile.</p>
                     </div>
 
-                    <div class="reg-block">
-                        <h4>Connection Info</h4>
-                        <div class="reg-grid-2">
-                            <div class="form-group">
-                                <label for="regEmail">Email <span class="required-star">*</span></label>
-                                <input type="email" id="regEmail" class="reg-input" required autocomplete="email">
-                            </div>
-                            <div class="form-group">
-                                <label for="regPassword">Password (min 6) <span class="required-star">*</span></label>
-                                <input type="password" id="regPassword" class="reg-input" required minlength="6" autocomplete="new-password">
-                            </div>
+                    <div class="form-group">
+                        <label for="regBirthDate">Birth date <span class="required-star">*</span></label>
+                        <div class="date-wrap">
+                            <input type="date" id="regBirthDate" class="reg-input" required>
                         </div>
-                        <div class="reg-grid-3-equal">
-                            <div class="form-group">
-                                <label for="regMobilePhone">Mobile phone <span class="required-star">*</span></label>
-                                <input type="tel" id="regMobilePhone" class="reg-input" required autocomplete="tel">
-                            </div>
-                            <div class="form-group">
-                                <label for="regInstagram">Instagram</label>
-                                <input type="text" id="regInstagram" class="reg-input">
-                            </div>
-                            <div class="form-group">
-                                <label for="regFacebook">Facebook</label>
-                                <input type="text" id="regFacebook" class="reg-input">
-                            </div>
-                        </div>
+                        <p class="reg-hint">We calculate your age automatically — you must be 18 or older.</p>
                     </div>
 
-                    <div class="reg-block">
-                        <h4>Required registration photos</h4>
-                        <div class="form-group file-row">
-                            <label for="regIdPhotoFront">Photo of your ID (Front) <span class="required-star">*</span></label>
-                            <input type="file" id="regIdPhotoFront" accept="image/*" required>
-                            <span class="file-name" id="regIdPhotoFrontLabel">No file chosen</span>
-                        </div>
-                        <div class="form-group file-row">
-                            <label for="regIdPhotoBack">Photo of your ID (Back) <span class="required-star">*</span></label>
-                            <input type="file" id="regIdPhotoBack" accept="image/*" required>
-                            <span class="file-name" id="regIdPhotoBackLabel">No file chosen</span>
-                        </div>
-                        <div class="form-group file-row">
-                            <label for="regSelfiePhoto">Selfie holding your ID <span class="required-star">*</span></label>
-                            <input type="file" id="regSelfiePhoto" accept="image/*" required>
-                            <span class="file-name" id="regSelfiePhotoLabel">No file chosen</span>
-                        </div>
+                    <div class="form-group">
+                        <label for="regPassword">Password (min 6) <span class="required-star">*</span></label>
+                        <input type="password" id="regPassword" class="reg-input" required minlength="6" autocomplete="new-password">
+                        <p class="reg-hint">To sign in to your panel after email verification.</p>
                     </div>
 
-                    <div class="reg-block" id="regTermsBlock">
-                        <label class="reg-check-label" for="regTermsAccept" style="align-items:flex-start;">
+                    <div class="form-group">
+                        <label for="regPasswordConfirm">Confirm password <span class="required-star">*</span></label>
+                        <input type="password" id="regPasswordConfirm" class="reg-input" required minlength="6" autocomplete="new-password">
+                    </div>
+
+                    <div id="regTermsBlock" style="margin-top: 8px;">
+                        <label class="reg-check-label" for="regTermsAccept">
                             <input type="checkbox" id="regTermsAccept" required>
                             <span>I have read and accept the
                                 <button type="button" id="regTermsLink" class="reg-inline-link" style="font-weight:bold;text-decoration:underline;">terms and conditions</button>.

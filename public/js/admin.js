@@ -108,11 +108,6 @@ function renderAdminCategorySection(content, cat, items, eagerImages = false) {
     items.forEach(p => {
         const card = document.createElement('div');
         card.className = 'admin-prof-card';
-        card.style.background = '#222';
-        card.style.padding = '10px';
-        card.style.borderRadius = '8px';
-        card.style.textAlign = 'center';
-        card.style.border = '1px solid #333';
 
         const alias = p.professionalProfile?.alias || 'No Alias';
         const photo = (p.professionalProfile?.photos && p.professionalProfile.photos.length > 0) ? p.professionalProfile.photos[0] : '/images/no-photo.svg';
@@ -120,39 +115,45 @@ function renderAdminCategorySection(content, cat, items, eagerImages = false) {
         const statusColor = vStatus === 'approved' ? 'green' : (vStatus === 'rejected' ? 'red' : 'orange');
         const thumbWrap = document.createElement('div');
         thumbWrap.className = 'admin-prof-thumb';
-        thumbWrap.style.cssText = 'width: 100%; aspect-ratio: 3/4; overflow: hidden; border-radius: 6px; margin-bottom: 8px; position: relative;';
         const thumbImg = document.createElement('img');
         thumbImg.src = photo;
         thumbImg.className = 'admin-prof-thumb-img';
-        thumbImg.style.cssText = 'width: 100%; height: 100%; object-fit: cover; display: block;';
         if (!eagerImages) thumbImg.loading = 'lazy';
         const statusBadge = document.createElement('div');
-        statusBadge.style.cssText = `position: absolute; top: 5px; right: 5px; font-size: 0.55rem; padding: 2px 6px; border-radius: 10px; background: ${statusColor}; color: white; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.5);`;
-        statusBadge.textContent = vStatus.toUpperCase();
+        statusBadge.className = 'admin-prof-status-badge';
+        statusBadge.style.background = statusColor;
+        statusBadge.textContent = t(vStatus) || vStatus.toUpperCase();
         thumbWrap.appendChild(thumbImg);
         thumbWrap.appendChild(statusBadge);
 
         const aliasEl = document.createElement('div');
-        aliasEl.style.cssText = 'font-weight: bold; margin-bottom: 5px; color: var(--primary-gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.8rem;';
+        aliasEl.className = 'admin-prof-alias';
         aliasEl.textContent = alias;
         const emailEl = document.createElement('div');
-        emailEl.style.cssText = 'font-size: 0.65rem; color: #aaa; margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
+        emailEl.className = 'admin-prof-email';
         emailEl.textContent = p.email;
-        const editBtn = document.createElement('button');
-        editBtn.className = 'edit-btn';
-        editBtn.style.cssText = 'width: 100%; padding: 6px; font-size: 0.7rem; cursor: pointer; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold);';
-        editBtn.textContent = '✏️ Edit';
 
+        const actions = document.createElement('div');
+        actions.className = 'admin-prof-actions';
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'edit-btn admin-icon-btn';
+        editBtn.setAttribute('aria-label', t('Edit'));
+        editBtn.title = t('Edit');
+        editBtn.textContent = '✏️';
         const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'delete-btn';
-        deleteBtn.style.cssText = 'width: 100%; padding: 6px; font-size: 0.7rem; cursor: pointer; background: transparent; border: 1px solid var(--accent-red); color: var(--accent-red); margin-top: 6px;';
-        deleteBtn.textContent = `🗑️ ${t('Delete')}`;
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'delete-btn admin-icon-btn';
+        deleteBtn.setAttribute('aria-label', t('Delete professional'));
+        deleteBtn.title = t('Delete');
+        deleteBtn.textContent = '🗑️';
+        actions.appendChild(editBtn);
+        actions.appendChild(deleteBtn);
 
         card.appendChild(thumbWrap);
         card.appendChild(aliasEl);
         card.appendChild(emailEl);
-        card.appendChild(editBtn);
-        card.appendChild(deleteBtn);
+        card.appendChild(actions);
 
         editBtn.onclick = () => {
             openEditProfessionalModal(p);
@@ -230,7 +231,7 @@ export async function renderAdminGrid(container) {
                 </select>
                 <button id="adminFilterBtn" style="padding: 8px 20px; width: 100%;">${t('Filter')}</button>
             </div>
-            <div id="adminGridContent" class="admin-grid-main" style="flex-grow: 1; min-width: 300px;">Loading...</div>
+            <div id="adminGridContent" class="admin-grid-main">Loading...</div>
         </div>
     `;
 
@@ -1351,10 +1352,11 @@ export async function openViewLeadsModal() {
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'leadsModal';
+        modal.className = 'admin-overlay-modal admin-leads-modal';
         Object.assign(modal.style, {
             position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
             backgroundColor: 'rgba(0,0,0,0.9)', zIndex: '3000', display: 'flex',
-            flexDirection: 'column', padding: '20px', overflowY: 'auto'
+            flexDirection: 'column', overflowY: 'auto', boxSizing: 'border-box'
         });
 
         const closeBtn = document.createElement('button');
@@ -1364,9 +1366,10 @@ export async function openViewLeadsModal() {
         closeBtn.onclick = () => closeAdminOverlay(modal);
 
         const container = document.createElement('div');
+        container.className = 'admin-leads-panel admin-modal-panel';
         Object.assign(container.style, {
             backgroundColor: 'var(--dark-bg, #1a1a1a)', padding: '20px',
-            borderRadius: '8px', color: 'white', maxWidth: '1000px', margin: '0 auto', width: '100%'
+            borderRadius: '8px', color: 'white', margin: '0 auto'
         });
 
         container.innerHTML = `
@@ -1382,7 +1385,7 @@ export async function openViewLeadsModal() {
                     <input type="radio" name="inviteChannel" value="sms" style="width:auto;"> ${t('SMS')}
                 </label>
             </div>
-            <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
+            <div class="admin-leads-toolbar" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
                 <button id="refreshLeadsBtn">${t('Refresh List')}</button>
                 <button id="previewInviteBtn" type="button" style="background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold);">${t('Preview invite message')}</button>
                 <button id="selectPendingLeadsBtn" type="button" style="background: #333; color: white; border: 1px solid #555; padding: 8px 12px; border-radius: 4px; cursor: pointer;">${t('Select pending')}</button>
@@ -1402,16 +1405,16 @@ export async function openViewLeadsModal() {
                 </div>
                 <p id="bulkWhatsappCounts" style="color: #888; font-size: 0.85rem; margin: 0;">0 / 0</p>
             </div>
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+            <div class="admin-leads-table-wrap">
+                <table class="admin-leads-table">
                     <thead>
                         <tr style="border-bottom: 1px solid var(--primary-gold);">
                             <th style="padding: 10px;">${t('Select')}</th>
-                            <th style="padding: 10px;">${t('Date Added')}</th>
+                            <th class="col-date-added" style="padding: 10px;">${t('Date Added')}</th>
                             <th style="padding: 10px;">${t('Alias')}</th>
                             <th style="padding: 10px;">${t('Phone Number')}</th>
-                            <th style="padding: 10px;">${t('Source')}</th>
-                            <th style="padding: 10px;">${t('Status')}</th>
+                            <th class="col-source" style="padding: 10px;">${t('Source')}</th>
+                            <th class="col-status" style="padding: 10px; min-width: 88px;">${t('Status')}</th>
                             <th style="padding: 10px;">${t('Invitation')}</th>
                         </tr>
                     </thead>
@@ -1474,10 +1477,12 @@ export async function loadLeads() {
                 const statusColor = lead.status === 'contacted' ? 'green' : (lead.status === 'rejected' ? 'red' : 'orange');
                 const smsState = lead.smsStatus || 'pending';
                 const smsColor = smsState === 'sent' ? 'green' : (smsState === 'failed' ? 'red' : 'orange');
-                const smsBadge = `<div style="margin-top: 4px;"><span style="padding: 2px 7px; border-radius: 12px; background: ${smsColor}; color: white; font-size: 0.72rem;">${t('SMS')}: ${t(smsState)}</span></div>`;
                 const waLink = lead.whatsappLink || '#';
                 const waDisabled = !lead.whatsappLink;
                 const isPending = (lead.status || 'pending') === 'pending';
+
+                const statusLabel = t(lead.status || 'pending');
+                const smsLabel = `${t('SMS')}: ${t(smsState)}`;
 
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid #333';
@@ -1485,18 +1490,18 @@ export async function loadLeads() {
                     <td style="padding: 10px;">
                         <input type="checkbox" class="lead-invite-cb" value="${lead._id}" ${isPending ? '' : 'disabled'} style="width:auto;">
                     </td>
-                    <td style="padding: 10px;">${dateAdded}</td>
+                    <td class="col-date-added" style="padding: 10px;">${dateAdded}</td>
                     <td style="padding: 10px;">${lead.alias || '—'}</td>
                     <td style="padding: 10px;">${lead.phone}</td>
-                    <td style="padding: 10px;"><a href="${lead.sourceUrl}" target="_blank" style="color: var(--primary-gold);">${sourceHost || '—'}</a></td>
-                    <td style="padding: 10px;">
-                        <span style="padding: 3px 8px; border-radius: 12px; background: ${statusColor}; color: white; font-size: 0.8rem; text-transform: capitalize;">
-                            ${lead.status || 'pending'}
-                        </span>
-                        ${smsBadge}
+                    <td class="col-source" style="padding: 10px;"><a href="${lead.sourceUrl}" target="_blank" style="color: var(--primary-gold);">${sourceHost || '—'}</a></td>
+                    <td style="padding: 10px;" class="lead-status-cell">
+                        <div class="lead-status-stack">
+                            <span class="admin-status-badge admin-status-badge--${lead.status || 'pending'}" style="background: ${statusColor};">${statusLabel}</span>
+                            <span class="admin-status-badge admin-status-badge--sms" style="background: ${smsColor};">${smsLabel}</span>
+                        </div>
                     </td>
                     <td style="padding: 10px;">
-                        <a href="${waLink}" target="_blank" rel="noopener noreferrer" data-lead-id="${lead._id}" class="lead-whatsapp-btn" style="display:inline-block;padding:6px 12px;background:#25D366;color:#fff;text-decoration:none;border-radius:4px;font-weight:bold;${waDisabled ? 'opacity:0.4;pointer-events:none;' : ''}">${t('Send invite')}</a>
+                        <a href="${waLink}" target="_blank" rel="noopener noreferrer" data-lead-id="${lead._id}" class="lead-whatsapp-btn"${waDisabled ? ' aria-disabled="true" style="opacity:0.4;pointer-events:none;"' : ''}>${t('Send invite')}</a>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -2135,31 +2140,33 @@ export async function openPendingVerificationsModal() {
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'pendingModal';
+        modal.className = 'admin-overlay-modal admin-pending-modal';
         Object.assign(modal.style, {
             position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
             backgroundColor: 'rgba(0,0,0,0.9)', zIndex: '3000', display: 'none',
-            alignItems: 'center', justifyContent: 'center', padding: '20px',
+            alignItems: 'center', justifyContent: 'center',
             overflowY: 'auto', boxSizing: 'border-box'
         });
 
         const container = document.createElement('div');
+        container.className = 'admin-pending-panel admin-modal-panel';
         Object.assign(container.style, {
             backgroundColor: 'var(--dark-bg, #1a1a1a)', padding: '20px',
-            borderRadius: '8px', color: 'white', maxWidth: '1000px', width: '100%',
+            borderRadius: '8px', color: 'white',
             border: '1px solid rgba(212, 175, 55, 0.3)', boxShadow: '0 8px 32px rgba(0,0,0,0.8)'
         });
 
         container.innerHTML = `
             <h2 class="gold-text" style="margin-bottom: 20px;">Pending Verifications</h2>
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+            <div class="admin-pending-table-wrap table-scroll-wrap">
+                <table class="admin-pending-table">
                     <thead>
                         <tr style="border-bottom: 1px solid var(--primary-gold);">
-                            <th style="padding: 10px;">Email</th>
-                            <th style="padding: 10px;">Alias</th>
-                            <th style="padding: 10px;">Documents</th>
-                            <th style="padding: 10px;">Submitted On</th>
-                            <th style="padding: 10px;">Actions</th>
+                            <th class="col-email">${t('Email')}</th>
+                            <th class="col-alias">${t('Alias')}</th>
+                            <th class="col-docs">${t('Documents')}</th>
+                            <th class="col-submitted">${t('Submitted On')}</th>
+                            <th class="col-actions">${t('Actions')}</th>
                         </tr>
                     </thead>
                     <tbody id="pendingTableBody">
@@ -2210,8 +2217,11 @@ export async function loadPendingVerifications() {
             
             data.data.forEach(prof => {
                 const alias = prof.professionalProfile?.alias || 'Unknown';
+                const isExpress = Boolean(prof.professionalProfile?.expressRegistration);
                 const docLabels = ['ID Front', 'ID Back', 'Selfie'];
-                const docs = prof.verificationDocuments && prof.verificationDocuments.length > 0
+                const docs = isExpress
+                    ? `<span style="color:#25D366;font-size:0.85rem;">${t('Express registration — complete profile in Admin')}</span><br><span style="color:#888;font-size:0.8rem;">${t('No ID photos yet — request gallery photos on WhatsApp, then upload in Edit Professional.')}</span>`
+                    : (prof.verificationDocuments && prof.verificationDocuments.length > 0
                     ? `<div style="display: flex; gap: 8px; flex-wrap: wrap;">` + prof.verificationDocuments.map((doc, idx) => {
                         const label = docLabels[idx] || `Doc ${idx + 1}`;
                         return `<button type="button" class="view-doc-btn" data-prof-id="${prof._id}" data-doc-index="${idx}" title="${t('View {label}').replace('{label}', t(label))}" aria-label="${t('View {label}').replace('{label}', t(label))}" style="padding: 0; background: #222; border: 1px solid var(--primary-gold); border-radius: 4px; cursor: pointer; overflow: hidden; width: 64px; text-align: center;">
@@ -2219,29 +2229,33 @@ export async function loadPendingVerifications() {
                             <span style="display: block; font-size: 0.65rem; color: var(--primary-gold); padding: 2px;">${t(label)}</span>
                         </button>`;
                     }).join('') + `</div>`
-                    : '<span style="color: #888;">No documents on file (registered before document storage was enabled)</span>';
+                    : '<span style="color: #888;">No documents on file (registered before document storage was enabled)</span>');
                 const gesture = prof.verificationGesture || 'N/A';
                 const gestureInfo = getVerificationGesture(gesture);
-                const gestureDisplay = gestureInfo
+                const gestureDisplay = isExpress
+                    ? `<span style="color:#888;font-size:0.8rem;">—</span>`
+                    : (gestureInfo
                     ? `<span style="display: inline-flex; align-items: center; gap: 8px; margin-top: 6px;">
                             <span style="font-size: 2rem; line-height: 1;" title="${gestureInfo ? t(gestureInfo.labelKey) : t(gesture)}">${gestureInfo.emoji}</span>
                             <strong style="color: white;">${t(gestureInfo.labelKey)}</strong>
                        </span>`
-                    : `<strong style="color: white;">${gesture}</strong>`;
+                    : `<strong style="color: white;">${gesture}</strong>`);
 
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid #333';
                 tr.innerHTML = `
-                    <td style="padding: 10px;">${prof.email}</td>
-                    <td style="padding: 10px;">${alias}</td>
-                    <td style="padding: 10px;">
+                    <td class="col-email" style="padding: 10px;">${prof.email}${isExpress ? `<br><span style="color:#25D366;font-size:0.75rem;">${t('Express registration — complete profile in Admin')}</span>` : ''}</td>
+                    <td class="col-alias" style="padding: 10px;">${alias}</td>
+                    <td class="col-docs" style="padding: 10px;">
                         ${docs}<br>
                         <span style="font-size: 0.8rem; color: #aaa; display: block; margin-top: 6px;">Gesture: ${gestureDisplay}</span>
                     </td>
-                    <td style="padding: 10px;">${new Date(prof.createdAt).toLocaleString()}</td>
-                    <td style="padding: 10px; display: flex; gap: 5px;">
-                        <button class="approve-btn" data-id="${prof._id}" style="padding: 5px 10px; background: green; color: white; border: none; border-radius: 4px; cursor: pointer;">Approve</button>
-                        <button class="reject-btn" data-id="${prof._id}" style="padding: 5px 10px; background: red; color: white; border: none; border-radius: 4px; cursor: pointer;">Reject</button>
+                    <td class="col-submitted" style="padding: 10px;">${new Date(prof.createdAt).toLocaleString()}</td>
+                    <td class="col-actions admin-pending-actions-cell" style="padding: 10px;">
+                        <div class="admin-pending-actions">
+                            <button type="button" class="approve-btn admin-verification-btn" data-id="${prof._id}" title="${t('Approve')}" aria-label="${t('Approve')}">✓</button>
+                            <button type="button" class="reject-btn admin-verification-btn" data-id="${prof._id}" title="${t('Reject')}" aria-label="${t('Reject')}">✕</button>
+                        </div>
                     </td>
                 `;
                 tbody.appendChild(tr);

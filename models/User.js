@@ -115,6 +115,11 @@ const UserSchema = new mongoose.Schema({
       type: Boolean,
       default: true
     },
+    /** Quick signup (email + phone + age); admin completes profile and photos. */
+    expressRegistration: {
+      type: Boolean,
+      default: false
+    },
     firstName: String,
     surname: String,
     middleName: String,
