@@ -34,6 +34,19 @@ function getConfigError() {
   return '';
 }
 
+function isColdOutreachTemplateConfigured() {
+  return Boolean(config.sms.whatsappContentSid);
+}
+
+/** Blocks cold drip/bulk on Twilio until Meta approves TWILIO_WHATSAPP_CONTENT_SID. */
+function getColdOutreachBlockReason() {
+  if (!isApiModeEnabled()) return '';
+  if (isColdOutreachTemplateConfigured()) return '';
+  return 'WhatsApp cold outreach is waiting for Meta template approval. '
+    + 'Add TWILIO_WHATSAPP_CONTENT_SID to server .env after Twilio approves the template. '
+    + 'Until then you can use SMS outreach, or reply manually in Admin when someone writes first.';
+}
+
 function formatWhatsAppAddress(digits) {
   const clean = normalizeE164Digits(digits) || normalizeWhatsAppPhone(digits);
   return clean ? `whatsapp:+${clean}` : '';
@@ -97,8 +110,11 @@ async function sendWhatsAppMessage(toPhone, body, options = {}) {
     throw new Error('Twilio client unavailable (missing creds or twilio package not installed)');
   }
 
-  const contentSid = options.contentSid || config.sms.whatsappContentSid || '';
   const payload = { from, to };
+
+  const contentSid = !options.sessionReply
+    && options.useTemplate !== false
+    && (options.contentSid || config.sms.whatsappContentSid || '');
 
   if (contentSid) {
     payload.contentSid = contentSid;
@@ -107,8 +123,10 @@ async function sendWhatsAppMessage(toPhone, body, options = {}) {
     const text = String(body || '').trim();
     if (!text) throw new Error('Empty WhatsApp message body');
     payload.body = text;
-    const mediaUrl = options.mediaPath ? resolveMediaUrl(options) : (options.includeMedia === false ? '' : resolveMediaUrl(options));
-    if (mediaUrl) payload.mediaUrl = [mediaUrl];
+    if (options.includeMedia) {
+      const mediaUrl = options.mediaUrl || resolveMediaUrl(options);
+      if (mediaUrl) payload.mediaUrl = [mediaUrl];
+    }
   }
 
   const message = await smsService.withTimeout(
@@ -124,6 +142,8 @@ module.exports = {
   isApiModeEnabled,
   isReadySync,
   getConfigError,
+  isColdOutreachTemplateConfigured,
+  getColdOutreachBlockReason,
   sendWhatsAppMessage,
   formatWhatsAppAddress,
   resolveFromAddress

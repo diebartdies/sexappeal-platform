@@ -37,7 +37,7 @@ export function injectGlobalStyles() {
                 transition: box-shadow 0.4s ease;
             }
             .fileteado-section:hover {
-                box-shadow: 0 0 25px rgba(212, 175, 55, 0.25), inset 0 0 15px rgba(212, 175, 55, 0.15);
+                box-shadow: 0 0 25px rgba(184, 146, 46, 0.25), inset 0 0 15px rgba(184, 146, 46, 0.15);
             }
         `;
         document.head.appendChild(style);

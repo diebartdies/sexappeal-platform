@@ -107,7 +107,7 @@ html.page-pending #pageLoader {
 #pageLoader {
     text-align: center;
     padding: 50px;
-    color: var(--primary-gold, #D4AF37);
+    color: var(--primary-gold, #B8922E);
 }
 
 #pageLoader.hidden,
@@ -219,14 +219,7 @@ html.page-pending #pageLoader {
 }
 
 #photoGrid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-}
-
-.add-photo-frame {
-    width: 120px;
-    height: 160px;
+    width: 100%;
 }
 
 .table-scroll-wrap,
@@ -386,16 +379,6 @@ body.has-global-topbar {
 
     .prof-dash-header button {
         width: 100%;
-    }
-
-    #photoGrid {
-        justify-content: center;
-    }
-
-    #photoGrid .add-photo-frame,
-    #photoGrid label.add-photo-frame {
-        width: 100px !important;
-        height: 133px !important;
     }
 
     .admin-modal-panel {

@@ -24,6 +24,14 @@ function authHeaders(extra = {}) {
     return headers;
 }
 
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
 function openAdminOverlay(modal) {
     if (!modal) return;
     beginModalSession();
@@ -51,12 +59,8 @@ function renderAdminCategorySection(content, cat, items, eagerImages = false) {
 
     const catSection = document.createElement('div');
     catSection.className = 'fileteado-section admin-prof-category';
-    catSection.style.marginBottom = '25px';
-    catSection.style.border = '14px solid transparent';
-    catSection.style.borderImage = 'url("data:image/svg+xml;utf8,<svg width=\'40\' height=\'40\' viewBox=\'0 0 40 40\' xmlns=\'http://www.w3.org/2000/svg\'><rect x=\'1\' y=\'1\' width=\'38\' height=\'38\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1\'/><path d=\'M1 12 Q 12 12 12 1\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M28 1 Q 28 12 39 12\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M39 28 Q 28 28 28 39\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M12 39 Q 12 28 1 28\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M4 6 Q 6 4 8 6 Q 6 8 4 6\' fill=\'%232e7d32\'/><path d=\'M36 6 Q 34 4 32 6 Q 34 8 36 6\' fill=\'%232e7d32\'/><path d=\'M36 34 Q 34 36 32 34 Q 34 32 36 34\' fill=\'%232e7d32\'/><path d=\'M4 34 Q 6 36 8 34 Q 6 32 4 34\' fill=\'%232e7d32\'/><circle cx=\'6\' cy=\'6\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'34\' cy=\'6\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'34\' cy=\'34\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'6\' cy=\'34\' r=\'1.5\' fill=\'%23b81d1d\'/></svg>") 12 stretch';
-    catSection.style.padding = '22px 26px';
     catSection.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 1px solid rgba(212, 175, 55, 0.3); padding-bottom: 10px;">
+        <div class="category-section-header">
             <div style="display: flex; align-items: center; gap: 15px;">
                 <div style="color: var(--primary-gold); width: 24px; text-align: center;">${meta.logo}</div>
                 <div>
@@ -86,7 +90,7 @@ function renderAdminCategorySection(content, cat, items, eagerImages = false) {
         const statusColor = vStatus === 'approved' ? 'green' : (vStatus === 'rejected' ? 'red' : 'orange');
         const thumbWrap = document.createElement('div');
         thumbWrap.className = 'admin-prof-thumb';
-        thumbWrap.style.cssText = 'width: 100%; aspect-ratio: 1/1; overflow: hidden; border-radius: 4px; margin-bottom: 10px; position: relative;';
+        thumbWrap.style.cssText = 'width: 100%; aspect-ratio: 3/4; overflow: hidden; border-radius: 6px; margin-bottom: 8px; position: relative;';
         const thumbImg = document.createElement('img');
         thumbImg.src = photo;
         thumbImg.className = 'admin-prof-thumb-img';
@@ -1006,13 +1010,9 @@ export async function loadDashboard() {
             const newPhotoInput = document.getElementById('newPhotoInput');
             if (photoGrid) {
                 photoGrid.innerHTML = '';
-                photoGrid.style.display = 'flex';
-                photoGrid.style.flexWrap = 'wrap';
-                photoGrid.style.gap = '15px';
                 
                 const frameLabel = document.createElement('label');
                 frameLabel.className = 'add-photo-frame';
-                frameLabel.style.cssText = 'width: 120px; height: 160px; border: 2px dashed var(--primary-gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--primary-gold); font-size: 2rem; background: rgba(212, 175, 55, 0.05); transition: background 0.3s ease; flex-shrink: 0;';
                 frameLabel.innerHTML = '<span>+</span>';
                 
                 if (newPhotoInput) {
@@ -1034,7 +1034,6 @@ export async function loadDashboard() {
                     photoWrapper.style.display = 'flex';
                     photoWrapper.style.justifyContent = 'space-between';
                     photoWrapper.style.alignItems = 'center';
-                    photoWrapper.style.border = '1px solid var(--primary-gold)';
                     photoWrapper.style.position = 'relative';
                     photoWrapper.style.marginTop = '20px';
                     
@@ -3112,18 +3111,16 @@ export function renderEditForm(prof) {
             <label>Height</label>
             <input type="text" id="adminEditHeight" value="${profile.height || ''}" style="padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
 
-            <div class="card fileteado-section" style="margin-bottom: 15px; border: 1px solid var(--primary-gold);">
+            <div class="card fileteado-section" style="margin-bottom: 15px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <h3 class="gold-text" style="margin: 0;">${t('Manage Photos')}</h3>
                     <button type="button" id="adminBtnUploadPhoto" style="padding: 8px 16px; background: var(--primary-gold); color: #111; font-weight: bold; border: none; border-radius: 4px; cursor: pointer;">Upload</button>
                 </div>
                 <p style="font-size: 0.85rem; color: #ccc; margin-bottom: 15px;">${t('Admin upload, update, remove actions. Drag photos to reorder.')} ${t('Click a photo to enlarge and review its content.')}</p>
                 <input type="file" id="newPhotoInput" accept="image/png, image/jpeg, image/jpg, image/webp" multiple style="display: none;">
-                <div id="photoGrid" style="display: flex; flex-wrap: wrap; gap: 15px;">
-                    <label class="add-photo-frame" style="width: 120px; height: 160px; border: 2px dashed var(--primary-gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--primary-gold); font-size: 2rem; background: rgba(212, 175, 55, 0.05); transition: background 0.3s ease; flex-shrink: 0;">
-                        <span>+</span>
-                    </label>
-                </div>
+                    <div id="photoGrid">
+                        <label class="add-photo-frame"><span>+</span></label>
+                    </div>
             </div>
 
             <button type="submit" style="margin-top: 10px;">Save Changes</button>
@@ -3581,6 +3578,7 @@ async function loadLaunchCurtainConfigPanel() {
 
 let waConfigPollTimer = null;
 let waDripPollTimer = null;
+let waInboundPollTimer = null;
 
 function renderWhatsAppDripStatus(data) {
     if (!data) return;
@@ -3702,6 +3700,21 @@ function syncWhatsAppPhoneEditor(data) {
     if (saveBtn) saveBtn.disabled = false;
 }
 
+function syncWhatsAppColdOutreachGate(data) {
+    if (!data) data = {};
+    const note = document.getElementById('waTemplatePendingNote');
+    const startBtn = document.getElementById('waDripStartBtn');
+    const blocked = Boolean(data.coldOutreachBlocked);
+
+    if (note) {
+        note.classList.toggle('hidden', !blocked);
+        if (blocked && data.coldOutreachBlockReason) {
+            note.textContent = data.coldOutreachBlockReason;
+        }
+    }
+    if (startBtn) startBtn.disabled = blocked;
+}
+
 function renderWhatsAppConfigStatus(data) {
     if (!data) data = {};
     const statusEl = document.getElementById('waConfigStatusText');
@@ -3777,6 +3790,8 @@ function renderWhatsAppConfigStatus(data) {
 
     const twilioApiNote = document.getElementById('waConfigTwilioApiNote');
     if (twilioApiNote) twilioApiNote.classList.toggle('hidden', !twilioApi);
+
+    syncWhatsAppColdOutreachGate(data);
 
     if (!twilioApi && (data.phase === 'ready' || data.phase === 'error')) {
         if (waConfigPollTimer) {
@@ -3889,6 +3904,161 @@ function showWhatsAppDisconnectedWarning() {
     });
 }
 
+async function loadWhatsAppInboundReplies() {
+    const listEl = document.getElementById('waInboundList');
+    const metaEl = document.getElementById('waInboundMeta');
+    const webhookEl = document.getElementById('waInboundWebhookUrl');
+    if (!listEl) return;
+
+    try {
+        const res = await fetch(`${API_URL}/admin/whatsapp/inbound?limit=50`, {
+            headers: authHeaders(),
+            credentials: 'include'
+        });
+        const data = await res.json();
+        if (!data.success) {
+            listEl.innerHTML = `<p style="color:#cc6666;">${data.error || t('Could not load replies')}</p>`;
+            return;
+        }
+
+        if (webhookEl && data.data.webhookUrl) {
+            webhookEl.textContent = data.data.webhookUrl;
+        }
+
+        const messages = data.data.messages || [];
+        if (metaEl) {
+            metaEl.textContent = messages.length
+                ? `${messages.length} ${t('recent replies')}`
+                : t('No replies yet — configure the Twilio webhook URL below.');
+        }
+
+        if (!messages.length) {
+            listEl.innerHTML = `<p style="color:#888;font-size:0.9rem;">${t('When someone answers your WhatsApp invite, their message will appear here.')}</p>`;
+            return;
+        }
+
+        listEl.innerHTML = messages.map((msg) => {
+            const when = msg.at ? new Date(msg.at).toLocaleString() : '—';
+            const isOutbound = msg.direction === 'outbound';
+
+            if (isOutbound) {
+                const body = escapeHtml(msg.body || '').replace(/\n/g, '<br>');
+                return `<div style="padding:12px;margin-bottom:10px;background:#0a1a12;border:1px solid #1a4030;border-radius:6px;margin-left:24px;">
+                    <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px;">
+                        <strong style="color:#25D366;">${t('You')} → +${escapeHtml(msg.toPhone || msg.phone || '')}</strong>
+                        <span style="color:#666;font-size:0.8rem;">${when}</span>
+                    </div>
+                    <div style="color:#ddd;font-size:0.95rem;line-height:1.5;">${body || '—'}</div>
+                </div>`;
+            }
+
+            const who = msg.fromName
+                ? `${escapeHtml(msg.fromName)} <span style="color:#888;">(+${escapeHtml(msg.fromPhone)})</span>`
+                : `+${escapeHtml(msg.fromPhone)}`;
+            const leadAlias = msg.lead && msg.lead.alias ? escapeHtml(msg.lead.alias) : '';
+            const lead = msg.lead && msg.lead.alias
+                ? `<div style="color:#888;font-size:0.8rem;margin-top:4px;">${t('Lead')}: ${leadAlias} (${escapeHtml(msg.lead.status || '')})</div>`
+                : '';
+            const body = escapeHtml(msg.body || '').replace(/\n/g, '<br>');
+            const replyId = escapeHtml(msg.id);
+            const replyPhone = escapeHtml(msg.fromPhone);
+            return `<div class="wa-inbound-card" data-inbound-id="${replyId}" data-phone="${replyPhone}" data-alias="${leadAlias}" style="padding:12px;margin-bottom:10px;background:#111;border:1px solid #333;border-radius:6px;">
+                <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px;">
+                    <strong style="color:var(--primary-gold);">${who}</strong>
+                    <span style="color:#666;font-size:0.8rem;">${when}</span>
+                </div>
+                <div style="color:#ddd;font-size:0.95rem;line-height:1.5;margin-bottom:10px;">${body || '—'}</div>
+                ${lead}
+                <textarea class="wa-reply-input" rows="3" placeholder="${t('Write your reply…')}" style="width:100%;margin-top:10px;padding:10px;background:#222;color:#fff;border:1px solid #444;border-radius:4px;resize:vertical;"></textarea>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                    <button type="button" class="wa-reply-send-btn" style="padding:8px 14px;background:#25D366;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Send reply')}</button>
+                    <button type="button" class="wa-reply-step2-btn" style="padding:8px 14px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer;">${t('Send registration link')}</button>
+                </div>
+            </div>`;
+        }).join('');
+    } catch {
+        if (listEl) listEl.innerHTML = `<p style="color:#cc6666;">${t('Server connection error')}</p>`;
+    }
+}
+
+function ensureWhatsAppInboundPolling() {
+    if (waInboundPollTimer) clearInterval(waInboundPollTimer);
+    waInboundPollTimer = setInterval(loadWhatsAppInboundReplies, 10000);
+}
+
+function stopWhatsAppInboundPolling() {
+    if (waInboundPollTimer) {
+        clearInterval(waInboundPollTimer);
+        waInboundPollTimer = null;
+    }
+}
+
+async function sendWhatsAppManualReply(cardEl, { template } = {}) {
+    const alertEl = document.getElementById('waConfigAlert');
+    if (!cardEl) return;
+
+    const phone = cardEl.dataset.phone;
+    const alias = cardEl.dataset.alias || '';
+    const inboundId = cardEl.dataset.inboundId || '';
+    const input = cardEl.querySelector('.wa-reply-input');
+    const body = input ? input.value.trim() : '';
+
+    if (template !== 'step2' && !body) {
+        showAlert(alertEl, t('Write a reply first'));
+        return;
+    }
+
+    const sendBtn = cardEl.querySelector('.wa-reply-send-btn');
+    const step2Btn = cardEl.querySelector('.wa-reply-step2-btn');
+    if (sendBtn) sendBtn.disabled = true;
+    if (step2Btn) step2Btn.disabled = true;
+
+    try {
+        const res = await fetch(`${API_URL}/admin/whatsapp/reply`, {
+            method: 'POST',
+            headers: {
+                ...authHeaders(),
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                toPhone: phone,
+                body: template === 'step2' ? '' : body,
+                template: template === 'step2' ? 'step2' : undefined,
+                alias,
+                inboundId
+            })
+        });
+        const data = await res.json();
+        if (!data.success) {
+            showAlert(alertEl, data.error || t('Could not send reply'));
+            return;
+        }
+        if (input && template !== 'step2') input.value = '';
+        showAlert(alertEl, t('WhatsApp reply sent.'), false);
+        await loadWhatsAppInboundReplies();
+    } catch {
+        showAlert(alertEl, t('Server connection error'));
+    } finally {
+        if (sendBtn) sendBtn.disabled = false;
+        if (step2Btn) step2Btn.disabled = false;
+    }
+}
+
+function bindWhatsAppInboundReplyHandlers() {
+    const listEl = document.getElementById('waInboundList');
+    if (!listEl || listEl.dataset.replyBound === '1') return;
+    listEl.dataset.replyBound = '1';
+    listEl.addEventListener('click', (event) => {
+        const sendBtn = event.target.closest('.wa-reply-send-btn');
+        const step2Btn = event.target.closest('.wa-reply-step2-btn');
+        const card = event.target.closest('.wa-inbound-card');
+        if (!card) return;
+        if (sendBtn) sendWhatsAppManualReply(card);
+        if (step2Btn) sendWhatsAppManualReply(card, { template: 'step2' });
+    });
+}
+
 async function loadWhatsAppConfigPanel() {
     const alertEl = document.getElementById('waConfigAlert');
     const phoneInput = document.getElementById('waConfigPhoneInput');
@@ -3910,6 +4080,9 @@ async function loadWhatsAppConfigPanel() {
 
         // Keep the in-app drip status live while the panel is open.
         ensureWhatsAppDripPolling();
+        await loadWhatsAppInboundReplies();
+        ensureWhatsAppInboundPolling();
+        bindWhatsAppInboundReplyHandlers();
 
         // Keep status/QR live while the panel is open and not yet linked, so a
         // background reconnect that is mid-flight (or a periodically-refreshing QR)
@@ -4040,11 +4213,21 @@ export async function openDashboardConfigModal() {
                 <div style="margin-top:24px;padding-top:16px;border-top:1px solid #333;">
                     <h4 style="margin:0 0 10px 0;color:#ccc;">3) ${t('Automatic sending (WhatsApp)')}</h4>
                     <p style="color:#888;font-size:0.85rem;margin:0 0 12px 0;">${t('Sends the welcome invitation to pending leads at a slow, human-like pace of 4 messages per hour (one per 15-minute quarter, at a random minute). It runs inside the app using the linked WhatsApp and stops automatically when no pending leads remain.')}</p>
+                    <p id="waTemplatePendingNote" class="hidden" style="color:#f0ad4e;font-size:0.85rem;margin:0 0 12px 0;padding:10px;background:#2a2210;border:1px solid #665520;border-radius:6px;">—</p>
                     <p id="waDripStatusText" style="color:#ccc;margin:0 0 12px 0;font-size:0.9rem;line-height:1.6;">—</p>
                     <div style="display:flex;gap:10px;flex-wrap:wrap;">
                         <button type="button" id="waDripStartBtn" style="padding:10px 18px;background:#25D366;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Start sending 4/h')}</button>
                         <button type="button" id="waDripStopBtn" style="padding:10px 18px;background:transparent;color:#cc6666;border:1px solid #cc6666;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Stop sending')}</button>
                     </div>
+                </div>
+
+                <div id="waInboundSection" style="margin-top:24px;padding-top:16px;border-top:1px solid #333;">
+                    <h4 style="margin:0 0 10px 0;color:#ccc;">4) ${t('Incoming replies (WhatsApp)')}</h4>
+                    <p style="color:#888;font-size:0.85rem;margin:0 0 8px 0;">${t('Read what leads answer before you reply manually. Requires Twilio webhook on your WhatsApp sender.')}</p>
+                    <p style="color:#666;font-size:0.8rem;margin:0 0 12px 0;word-break:break-all;">${t('Webhook URL')}: <code id="waInboundWebhookUrl" style="color:#9cf;">—</code></p>
+                    <p id="waInboundMeta" style="color:#aaa;font-size:0.85rem;margin:0 0 10px 0;">—</p>
+                    <div id="waInboundList" style="max-height:320px;overflow-y:auto;padding-right:4px;">—</div>
+                    <button type="button" id="waInboundRefreshBtn" style="margin-top:12px;padding:8px 14px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer;">${t('Refresh replies')}</button>
                 </div>
             </section>
         `;
@@ -4126,6 +4309,9 @@ export async function openDashboardConfigModal() {
         if (waDripStartBtn) waDripStartBtn.onclick = startWhatsAppDrip;
         const waDripStopBtn = document.getElementById('waDripStopBtn');
         if (waDripStopBtn) waDripStopBtn.onclick = stopWhatsAppDrip;
+        const waInboundRefreshBtn = document.getElementById('waInboundRefreshBtn');
+        if (waInboundRefreshBtn) waInboundRefreshBtn.onclick = loadWhatsAppInboundReplies;
+        bindWhatsAppInboundReplyHandlers();
 
         wireLaunchCurtainToggle(document.getElementById('launchCurtainConfigToggle'));
         const launchCurtainSaveOpeningBtn = document.getElementById('launchCurtainSaveOpeningBtn');

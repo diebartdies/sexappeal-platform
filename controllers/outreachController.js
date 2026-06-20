@@ -7,6 +7,12 @@ const smsOutreachService = require('../services/smsOutreachService');
 // @access  Private/Admin
 exports.startBulkWhatsApp = async (req, res, next) => {
   try {
+    const twilioWa = require('../services/twilioWhatsAppService');
+    const templateBlock = twilioWa.getColdOutreachBlockReason();
+    if (templateBlock) {
+      return res.status(503).json({ success: false, error: templateBlock });
+    }
+
     const status = outreachService.startBulkOutreachBackground();
     res.status(202).json({
       success: true,

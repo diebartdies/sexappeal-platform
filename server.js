@@ -120,8 +120,13 @@ function isHighVolumePublicRead(req) {
   return false;
 }
 
+function isTwilioWebhook(req) {
+  return req.method === 'POST' && req.path === '/api/v1/webhooks/twilio/whatsapp';
+}
+
 app.use((req, res, next) => {
   if (!req.path.startsWith('/api')) return next();
+  if (isTwilioWebhook(req)) return next();
   return isHighVolumePublicRead(req)
     ? readLimiter(req, res, next)
     : strictLimiter(req, res, next);
@@ -329,6 +334,7 @@ app.post('/api/v1/admin/notifications/mail/broadcast', protect, authorize('admin
 app.post('/api/v1/admin/notifications/mail/targeted', protect, authorize('admin'), adminController.sendTargetedEmail);
 
 const whatsappController = require('./controllers/whatsappController');
+const twilioWebhookController = require('./controllers/twilioWebhookController');
 const launchCurtainController = require('./controllers/launchCurtainController');
 const supportController = require('./controllers/supportController');
 
@@ -349,6 +355,11 @@ app.get('/api/v1/admin/whatsapp/register/status', protect, authorize('admin'), w
 app.post('/api/v1/admin/whatsapp/drip/start', protect, authorize('admin'), whatsappController.startWhatsAppDrip);
 app.post('/api/v1/admin/whatsapp/drip/stop', protect, authorize('admin'), whatsappController.stopWhatsAppDrip);
 app.get('/api/v1/admin/whatsapp/drip/status', protect, authorize('admin'), whatsappController.getWhatsAppDripStatus);
+app.get('/api/v1/admin/whatsapp/inbound', protect, authorize('admin'), whatsappController.listWhatsAppInbound);
+app.post('/api/v1/admin/whatsapp/reply', protect, authorize('admin'), whatsappController.sendWhatsAppReply);
+
+// Twilio WhatsApp inbound — configure this URL on the Twilio WhatsApp sender.
+app.post('/api/v1/webhooks/twilio/whatsapp', twilioWebhookController.handleWhatsAppInbound);
 app.get('/api/v1/admin/launch-curtain', protect, authorize('admin'), launchCurtainController.getAdminLaunchCurtainConfig);
 app.put('/api/v1/admin/launch-curtain', protect, authorize('admin'), launchCurtainController.updateLaunchCurtainConfig);
 

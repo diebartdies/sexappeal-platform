@@ -120,16 +120,16 @@ function buildSanitizedWhatsAppCaption(alias) {
   // link is sent only in STEP 2, once she replies and there is context/trust.
   return `Hola ${name} ✨
 
-Te invito a nuestra plataforma para profesionales — un directorio distinto a los demás:
+Te invito a un directorio para publicar tu perfil y servicios — como los portales de anuncios personales que ya conocés, pero con reglas más justas:
 
-✅ Posición rotativa: todas aparecen por igual, nadie paga para estar arriba.
-✅ Verificación de identidad y edad: perfiles reales, ambiente serio.
-✅ Tu contacto es tuyo: no lo vendemos ni lo compartimos con terceros.
-✅ No pagás los días que marcás como vacaciones.
+✅ Rotación igualitaria: nadie paga extra para quedar primera.
+✅ Perfiles verificados: identidad y edad, ambiente serio.
+✅ Tu WhatsApp es tuyo: no lo vendemos ni lo compartimos con terceros.
+✅ Vacaciones descontables: no pagás los días que marcás ausente.
 
-El costo depende de tu categoría, y tu primer mes es de prueba sin costo.
+Primer mes de prueba sin costo; después según tu categoría.
 
-¿Te interesa? Respondé a este mismo chat y te cuento todo. 😊`;
+¿Te interesa sumarte? Respondé a este mismo chat y te cuento todo. 😊`;
 }
 
 function buildWhatsAppUrl(phone, alias) {

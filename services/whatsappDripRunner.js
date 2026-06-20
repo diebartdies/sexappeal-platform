@@ -337,6 +337,12 @@ async function start() {
     return { ok: false, error: 'Drip is already running.' };
   }
 
+  const twilioWa = require('./twilioWhatsAppService');
+  const templateBlock = twilioWa.getColdOutreachBlockReason();
+  if (templateBlock) {
+    return { ok: false, error: templateBlock, templatePending: true };
+  }
+
   if (!platformService.isClientReady()) {
     return {
       ok: false,

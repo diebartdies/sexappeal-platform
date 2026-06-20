@@ -343,6 +343,15 @@ async function startBulkOutreach() {
     return getStatus();
   }
 
+  const twilioWa = require('./twilioWhatsAppService');
+  const templateBlock = twilioWa.getColdOutreachBlockReason();
+  if (templateBlock) {
+    state.phase = 'error';
+    state.lastError = templateBlock;
+    state.finishedAt = new Date();
+    return getStatus();
+  }
+
   const pendingLeads = await PotentialProfessional.find({ status: 'pending' }).sort({ createdAt: 1 });
 
   if (pendingLeads.length === 0) {
@@ -412,6 +421,15 @@ async function resolveTargetedRecipients({ leadIds = [], professionalIds = [] })
 
 async function startTargetedOutreach({ leadIds = [], professionalIds = [], message = '' } = {}) {
   if (BUSY_PHASES.has(state.phase)) {
+    return getStatus();
+  }
+
+  const twilioWa = require('./twilioWhatsAppService');
+  const templateBlock = twilioWa.getColdOutreachBlockReason();
+  if (templateBlock) {
+    state.phase = 'error';
+    state.lastError = templateBlock;
+    state.finishedAt = new Date();
     return getStatus();
   }
 

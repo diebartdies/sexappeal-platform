@@ -52,13 +52,9 @@ function renderTreasureCategorySection(grid, cat, items, eagerImages = false) {
         const meta = CATEGORY_META[cat];
         catSection = document.createElement('div');
         catSection.id = `cat-section-${cat}`;
-        catSection.className = 'fileteado-section';
-        catSection.style.marginBottom = '30px';
-        catSection.style.border = '14px solid transparent';
-        catSection.style.borderImage = 'url("data:image/svg+xml;utf8,<svg width=\'40\' height=\'40\' viewBox=\'0 0 40 40\' xmlns=\'http://www.w3.org/2000/svg\'><rect x=\'1\' y=\'1\' width=\'38\' height=\'38\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1\'/><path d=\'M1 12 Q 12 12 12 1\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M28 1 Q 28 12 39 12\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M39 28 Q 28 28 28 39\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M12 39 Q 12 28 1 28\' fill=\'none\' stroke=\'%23D4AF37\' stroke-width=\'1.5\'/><path d=\'M4 6 Q 6 4 8 6 Q 6 8 4 6\' fill=\'%232e7d32\'/><path d=\'M36 6 Q 34 4 32 6 Q 34 8 36 6\' fill=\'%232e7d32\'/><path d=\'M36 34 Q 34 36 32 34 Q 34 32 36 34\' fill=\'%232e7d32\'/><path d=\'M4 34 Q 6 36 8 34 Q 6 32 4 34\' fill=\'%232e7d32\'/><circle cx=\'6\' cy=\'6\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'34\' cy=\'6\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'34\' cy=\'34\' r=\'1.5\' fill=\'%23b81d1d\'/><circle cx=\'6\' cy=\'34\' r=\'1.5\' fill=\'%23b81d1d\'/></svg>") 12 stretch';
-        catSection.style.padding = '15px';
+        catSection.className = 'fileteado-section discovery-cat-section';
         catSection.innerHTML = `
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 1px solid rgba(212, 175, 55, 0.3); padding-bottom: 10px;">
+            <div class="category-section-header">
                 <div style="display: flex; align-items: center; gap: 15px;">
                     <div style="color: var(--primary-gold); width: 40px; text-align: center;">${meta.logo}</div>
                     <div>
@@ -194,59 +190,7 @@ export async function loadTreasures(page = 1, append = false, options = {}) {
         beginPageLoad('treasureGrid', 'pageLoader', { clearContent: true });
     }
     
-    // Inject hover styles for the profile thumbnails if not already present
-    if (!document.getElementById('treasureHoverStyles')) {
-        const style = document.createElement('style');
-        style.id = 'treasureHoverStyles';
-        style.textContent = `
-            /* Rectangular portrait photo (taller than wide) with rounded corners
-               and a thin metallic-gray "iPhone" gradient frame. The frame is the
-               container padding; the inner photo gets its own rounded corners. */
-            .treasure-img-container {
-                margin: 0 0 10px 0;
-                position: relative;
-                aspect-ratio: 3 / 4;
-                padding: 4px;
-                border-radius: 18px;
-                background: linear-gradient(150deg, #d7d7da 0%, #8a8a8f 22%, #4a4a4e 50%, #8a8a8f 78%, #e2e2e6 100%);
-                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.18);
-                overflow: hidden;
-            }
-            .treasure-img {
-                width: 100%;
-                height: 100%;
-                display: block;
-                object-fit: cover;
-                border-radius: 14px;
-                transition: transform 0.5s ease;
-            }
-            /* Foot caption: white italic, left-aligned with small left padding,
-               on a dark bottom gradient scrim so it reads over any photo. */
-            .treasure-caption {
-                position: absolute;
-                left: 4px;
-                right: 4px;
-                bottom: 4px;
-                display: flex;
-                flex-direction: column;
-                gap: 1px;
-                padding: 18px 10px 8px 12px;
-                border-radius: 0 0 14px 14px;
-                background: linear-gradient(to top, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.55) 45%, rgba(0, 0, 0, 0) 100%);
-                text-align: left;
-                font-style: italic;
-                color: #fff;
-                pointer-events: none;
-            }
-            .treasure-caption-alias { font-weight: 700; font-size: 0.95rem; line-height: 1.2; color: #fff; }
-            .treasure-caption-location { font-size: 0.78rem; line-height: 1.2; color: #fff; opacity: 0.92; }
-            .treasure-caption-specialty { font-size: 0.78rem; line-height: 1.2; color: #fff; opacity: 0.92; }
-            .treasure-card { transition: box-shadow 0.3s ease, transform 0.3s ease; }
-            .treasure-card:hover { box-shadow: 0 15px 30px rgba(0, 0, 0, 0.8), 0 0 15px rgba(212, 175, 55, 0.1); transform: translateY(-4px); }
-            .treasure-card:hover .treasure-img { transform: scale(1.08); }
-        `;
-        document.head.appendChild(style);
-    }
+    // Treasure grid photo styles live in public/css/style.css (.treasure-img-container, etc.)
 
     const urlParams = new URLSearchParams(window.location.search);
     const specialty = urlParams.get('specialty');
@@ -464,7 +408,7 @@ export async function loadTreasureDetails() {
                     </div>
 
                     <!-- Photo Carousel/Grid for Guests -->
-                    <div id="treasurePhotoGrid" class="photo-carousel" style="display: flex; overflow-x: auto; gap: 15px; padding-bottom: 15px; margin-bottom: 30px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;">
+                    <div id="treasurePhotoGrid" class="photo-carousel">
                         <!-- Photos will be injected here -->
                     </div>
 
@@ -503,53 +447,13 @@ export async function loadTreasureDetails() {
 
             const photoGrid = document.getElementById('treasurePhotoGrid');
             if (galleryPhotos.length > 0) {
-                // Inject scrollbar styling so it looks like a distinct carousel
-                if (!document.getElementById('carouselStyles')) {
-                    const style = document.createElement('style');
-                    style.id = 'carouselStyles';
-                    style.textContent = `
-                        .photo-carousel::-webkit-scrollbar { height: 8px; }
-                        .photo-carousel::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 4px; margin: 0 10px; }
-                        .photo-carousel::-webkit-scrollbar-thumb { background: var(--primary-gold); border-radius: 4px; }
-                        .photo-carousel::-webkit-scrollbar-thumb:hover { background: #b08d29; }
-                        /* Responsive adjustments for smaller screens */
-                        @media (max-width: 768px) {
-                            .photo-item-public { width: 180px !important; height: 250px !important; }
-                        }
-                        @media (max-width: 480px) {
-                            .photo-item-public { width: 150px !important; height: 210px !important; }
-                        }
-                    `;
-                    document.head.appendChild(style);
-                }
-
                 galleryPhotos.forEach((url) => {
                     const item = document.createElement('div');
                     item.className = 'photo-item-public';
-                    Object.assign(item.style, {
-                        flex: '0 0 auto',
-                        width: '260px',
-                        height: '360px',
-                        scrollSnapAlign: 'center',
-                        borderRadius: '12px',
-                        overflow: 'hidden',
-                        cursor: 'pointer',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-                        position: 'relative'
-                    });
 
                     const img = document.createElement('img');
                     img.src = resolvePhotoSrc(url);
                     img.alt = `${prof.alias}'s photo`;
-                    Object.assign(img.style, {
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        transition: 'transform 0.3s ease'
-                    });
-
-                    item.addEventListener('mouseenter', () => img.style.transform = 'scale(1.05)');
-                    item.addEventListener('mouseleave', () => img.style.transform = 'scale(1)');
 
                     item.appendChild(img);
                     photoGrid.appendChild(item);
@@ -592,8 +496,10 @@ export async function loadTreasureDetails() {
                         if (photoGrid.scrollLeft >= maxScroll - 10) {
                             photoGrid.scrollTo({ left: 0, behavior: 'smooth' }); // Rewind to start
                         } else {
-                            const itemWidth = photoGrid.querySelector('.photo-item-public')?.offsetWidth || 260;
-                            photoGrid.scrollBy({ left: itemWidth + 15, behavior: 'smooth' }); // Dynamically scroll by item width + gap
+                            const firstItem = photoGrid.querySelector('.photo-item-public');
+                            const itemWidth = firstItem?.offsetWidth || 200;
+                            const gap = parseFloat(getComputedStyle(photoGrid).gap) || 12;
+                            photoGrid.scrollBy({ left: itemWidth + gap, behavior: 'smooth' });
                         }
                     }, 3000); // Scrolls every 3 seconds
                 };

@@ -965,15 +965,6 @@ export function addPhotoToGrid(fileOrUrl) {
 
     const item = document.createElement('div');
     item.className = 'photo-item';
-    Object.assign(item.style, {
-        position: 'relative',
-        width: '120px',
-            height: '160px',
-        borderRadius: '8px',
-        overflow: 'hidden',
-        boxShadow: '0 2px 5px rgba(0,0,0,0.5)',
-        display: 'inline-block'
-    });
     
     const img = document.createElement('img');
     img.src = imageUrl;
@@ -1435,17 +1426,15 @@ export async function loadProfDashboard() {
                 </div>
 
                 <!-- 5. Photos -->
-                <div class="card fileteado-section" style="margin-bottom: 20px; border: 1px solid var(--primary-gold);">
+                <div class="card fileteado-section" style="margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <h3 class="gold-text" style="margin: 0;">Photos</h3>
                         <button type="button" id="btnUploadPhoto" style="padding: 8px 16px; background: var(--primary-gold); color: #111; font-weight: bold; border: none; border-radius: 4px; cursor: pointer;">Upload</button>
                     </div>
                     <p style="font-size: 0.85rem; color: #ccc; margin-bottom: 15px;">Admin upload, update, remove actions. Drag photos to reorder. ${t('Click a photo to enlarge and review its content.')}</p>
                     <input type="file" id="newPhotoInput" accept="image/png, image/jpeg, image/jpg, image/webp" multiple style="display: none;">
-                    <div id="photoGrid" style="display: flex; flex-wrap: wrap; gap: 15px;">
-                        <label class="add-photo-frame" style="width: 120px; height: 160px; border: 2px dashed var(--primary-gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--primary-gold); font-size: 2rem; background: rgba(212, 175, 55, 0.05); transition: background 0.3s ease; flex-shrink: 0;">
-                            <span>+</span>
-                        </label>
+                    <div id="photoGrid">
+                        <label class="add-photo-frame"><span>+</span></label>
                     </div>
                     <p id="photoApprovalMsg" style="color: var(--accent-red); font-size: 0.85rem; margin-top: 10px; display: ${isApproved ? 'none' : 'block'};">Profile photos can only be uploaded after your account is approved.</p>
                 </div>

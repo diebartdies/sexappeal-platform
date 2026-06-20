@@ -17,7 +17,16 @@ async function main() {
   }
 
   if (!twilioWa.isApiModeEnabled()) {
-    console.error('[WA] Twilio WhatsApp API mode is off. Set TWILIO_WHATSAPP_FROM_NUMBER + creds on the server .env.');
+    const cfg = require('../config/appConfig');
+    console.error('[WA] Twilio WhatsApp API mode is off.');
+    console.error('[WA] Checks:');
+    console.error('  WHATSAPP_USE_WEBJS =', process.env.WHATSAPP_USE_WEBJS || '(unset)');
+    console.error('  TWILIO_WHATSAPP_API =', process.env.TWILIO_WHATSAPP_API || '(unset)');
+    console.error('  TWILIO_WHATSAPP_FROM_NUMBER =', process.env.TWILIO_WHATSAPP_FROM_NUMBER ? 'set' : 'MISSING');
+    console.error('  TWILIO_ACCOUNT_SID =', cfg.sms.accountSid ? 'set' : 'MISSING');
+    console.error('  TWILIO_AUTH_TOKEN =', cfg.sms.authToken ? 'set' : 'MISSING');
+    console.error('[WA] On prod: add TWILIO_WHATSAPP_FROM_NUMBER=15559340276 to /root/SexAppeal-platform/.env');
+    console.error('[WA] Then: docker compose up -d --force-recreate app');
     process.exit(1);
   }
 
