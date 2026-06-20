@@ -288,6 +288,17 @@ body.has-global-topbar {
     #treasureContent .card {
         padding: 16px !important;
     }
+
+    #treasurePhotoGrid.photo-carousel {
+        gap: 10px;
+    }
+
+    #treasurePhotoGrid .photo-item-public {
+        flex-basis: 132px;
+        width: 132px;
+        min-width: 132px;
+        max-width: 132px;
+    }
 }
 
 .admin-modal-panel {
@@ -420,7 +431,7 @@ body.has-global-topbar {
 
 @media (max-width: 400px) {
     .five-column-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 

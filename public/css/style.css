@@ -382,12 +382,38 @@ textarea:focus:not(:focus-visible) {
     font-style: italic;
 }
 
-/* Discovery Feed — 4 columns desktop, 2 on mobile */
+/* Discovery Feed — 4 columns desktop, 2 on mobile (inner category grids only) */
 .grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
     margin-top: 50px;
+}
+
+/* Category mount — sections stack full width; photos live in inner .grid rows */
+#treasureGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+    margin-top: 0;
+}
+
+#treasureGrid.grid {
+    display: grid;
+    margin-top: 50px;
+}
+
+.discovery-cat-section > .grid,
+.fileteado-section.discovery-cat-section .grid {
+    margin-top: 10px;
+    width: 100%;
+}
+
+.discovery-cat-section .treasure-card {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
 }
 
 .treasure-card {
@@ -421,17 +447,23 @@ textarea:focus:not(:focus-visible) {
 .treasure-img-container {
     margin: 0;
     position: relative;
+    width: 100%;
+    max-width: 100%;
     aspect-ratio: 3 / 4;
     padding: 0;
     border-radius: 8px;
     background: #111;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(var(--gold-rgb), 0.28);
+    box-shadow:
+        0 2px 10px rgba(0, 0, 0, 0.45),
+        inset 0 0 16px rgba(var(--gold-rgb), 0.05);
     overflow: hidden;
 }
 
 .treasure-img {
     width: 100%;
     height: 100%;
+    max-width: 100%;
     display: block;
     object-fit: cover;
     border-radius: 8px;
@@ -517,24 +549,26 @@ textarea:focus:not(:focus-visible) {
     border-bottom: 1px solid rgba(var(--gold-rgb), 0.35);
 }
 
-/* Dashboard / admin photo upload grids — 4 columns desktop, scales down on narrow screens */
+/* Dashboard / admin photo upload grids — fixed tile columns; one photo = one cell */
 #photoGrid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 132px));
     gap: 10px;
     align-items: start;
+    justify-content: start;
+    width: 100%;
 }
 
 @media (max-width: 768px) {
     #photoGrid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 118px));
         gap: 8px;
     }
 }
 
 @media (max-width: 480px) {
     #photoGrid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 108px));
     }
 }
 
@@ -542,11 +576,19 @@ textarea:focus:not(:focus-visible) {
     position: relative;
     width: 100% !important;
     height: auto !important;
+    max-width: 100%;
     aspect-ratio: 3 / 4;
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
     display: block;
+    justify-self: start;
+}
+
+#photoGrid .photo-item.is-cover-photo {
+    outline: 3px solid var(--primary-gold);
+    outline-offset: -3px;
+    box-shadow: 0 0 12px rgba(var(--gold-rgb), 0.45);
 }
 
 #photoGrid .photo-item img {
@@ -559,6 +601,7 @@ textarea:focus:not(:focus-visible) {
 #photoGrid .add-photo-frame {
     width: 100% !important;
     height: auto !important;
+    max-width: 100%;
     min-height: 0;
     aspect-ratio: 3 / 4;
     border: 1px dashed rgba(255, 255, 255, 0.22) !important;
@@ -571,11 +614,15 @@ textarea:focus:not(:focus-visible) {
     justify-content: center;
     cursor: pointer;
     flex-shrink: 0;
+    justify-self: start;
 }
 
-/* Profile detail photo carousel */
+/* Profile detail photo carousel — fixed tile size; images cannot blow up to natural resolution */
 .photo-carousel {
     display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: flex-start;
     overflow-x: auto;
     gap: 12px;
     padding-bottom: 15px;
@@ -583,6 +630,8 @@ textarea:focus:not(:focus-visible) {
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
     cursor: grab;
+    width: 100%;
+    max-width: 100%;
 }
 
 .photo-carousel::-webkit-scrollbar {
@@ -605,22 +654,32 @@ textarea:focus:not(:focus-visible) {
 }
 
 .photo-item-public {
-    flex: 0 0 auto;
-    width: clamp(132px, 22vw, 240px);
+    flex: 0 0 176px;
+    width: 176px;
+    min-width: 176px;
+    max-width: 176px;
     aspect-ratio: 3 / 4;
-    height: auto !important;
     border-radius: 8px;
     overflow: hidden;
     cursor: pointer;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
     position: relative;
     scroll-snap-align: center;
+    border: 1px solid rgba(var(--gold-rgb), 0.28);
+    box-shadow:
+        0 2px 10px rgba(0, 0, 0, 0.45),
+        inset 0 0 14px rgba(var(--gold-rgb), 0.05);
+    background: #111;
 }
 
 .photo-item-public img {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
+    max-width: 100%;
+    max-height: 100%;
     object-fit: cover;
+    display: block;
     transition: transform 0.3s ease;
 }
 
@@ -628,19 +687,43 @@ textarea:focus:not(:focus-visible) {
     transform: scale(1.03);
 }
 
+@media (max-width: 767px) {
+    .photo-item-public {
+        flex-basis: 140px;
+        width: 140px;
+        min-width: 140px;
+        max-width: 140px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .photo-item-public {
+        flex-basis: 200px;
+        width: 200px;
+        min-width: 200px;
+        max-width: 200px;
+    }
+}
+
 .admin-prof-grid {
     gap: 12px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .admin-prof-card {
     padding: 8px !important;
     border: 1px solid #2a2a2a !important;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .admin-prof-thumb {
     aspect-ratio: 3 / 4 !important;
     border-radius: 6px !important;
     margin-bottom: 8px !important;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .treasure-alias {
@@ -789,7 +872,7 @@ textarea:focus:not(:focus-visible) {
     }
 
     .five-column-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .hero h1 {

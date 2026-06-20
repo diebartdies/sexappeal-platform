@@ -30,6 +30,9 @@ const config = {
   // Env: RATE_LIMIT_WINDOW (ms), RATE_LIMIT_MAX. Defaults preserve prior behavior.
   rateLimitWindow: parseInt(process.env.RATE_LIMIT_WINDOW, 10) || 10 * 60 * 1000, // 10 minutes
   rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX, 10) || 100,
+  // Admin panel polls WhatsApp/outreach status every few seconds — needs a separate cap.
+  adminRateLimitWindow: parseInt(process.env.ADMIN_RATE_LIMIT_WINDOW, 10) || 10 * 60 * 1000,
+  adminRateLimitMax: parseInt(process.env.ADMIN_RATE_LIMIT_MAX, 10) || 2000,
   // Generous limiter — high-volume public discovery/vault reads (professionals
   // listing, profile/reviews, specialties, locations, public status, plus the
   // photo-click tracking that fans out during normal browsing). Sized so a

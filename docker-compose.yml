@@ -27,7 +27,7 @@ services:
     # lock looks like it belongs to "another computer", blocking the WhatsApp
     # client from launching ("profile appears to be in use ... on another computer").
     hostname: sexappeal_app
-    restart: on-failure
+    restart: unless-stopped
     env_file: .env
     environment:
       - NODE_ENV=production
@@ -35,6 +35,9 @@ services:
     volumes:
       - ./public:/app/public
       - ./controllers:/app/controllers
+      - ./services:/app/services
+      - ./models:/app/models
+      - ./middleware:/app/middleware
       - ./utils:/app/utils
       - ./config:/app/config
       - ./server.js:/app/server.js

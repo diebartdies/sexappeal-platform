@@ -91,7 +91,26 @@ const strictLimiter = rateLimit({
   windowMs: config.rateLimitWindow,
   max: config.rateLimitMax,
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  handler: (req, res, next, options) => {
+    res.status(options.statusCode).json({
+      success: false,
+      error: 'Too many requests — wait a moment and try again.'
+    });
+  }
+});
+// Admin limiter: panel polls outreach/WhatsApp status every few seconds.
+const adminLimiter = rateLimit({
+  windowMs: config.adminRateLimitWindow,
+  max: config.adminRateLimitMax,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res, next, options) => {
+    res.status(options.statusCode).json({
+      success: false,
+      error: 'Too many admin requests — wait a moment and try again.'
+    });
+  }
 });
 // Generous limiter: high-volume public discovery/vault reads.
 const readLimiter = rateLimit({
@@ -124,9 +143,18 @@ function isTwilioWebhook(req) {
   return req.method === 'POST' && req.path === '/api/v1/webhooks/twilio/whatsapp';
 }
 
+function isHealthCheck(req) {
+  return req.method === 'GET' && req.path === '/api/v1/health';
+}
+
+function isAdminApi(req) {
+  return req.path.startsWith('/api/v1/admin');
+}
+
 app.use((req, res, next) => {
   if (!req.path.startsWith('/api')) return next();
-  if (isTwilioWebhook(req)) return next();
+  if (isTwilioWebhook(req) || isHealthCheck(req)) return next();
+  if (isAdminApi(req)) return adminLimiter(req, res, next);
   return isHighVolumePublicRead(req)
     ? readLimiter(req, res, next)
     : strictLimiter(req, res, next);
@@ -241,6 +269,15 @@ app.get('/api/v1/public/category-pricing', async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
+});
+
+app.get('/api/v1/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    status: 'UP',
+    env: config.env,
+    time: new Date().toISOString()
+  });
 });
 
 // Professional Dashboard Routes (Private) - Must be declared before /:alias
@@ -372,6 +409,16 @@ app.get('/', (req, res) => {
   res.redirect('/index.html');
 });
 
+// Always return JSON for API errors (prevents admin UI "Network Error" on HTML 502 pages).
+app.use('/api', (err, req, res, next) => {
+  console.error('[API Error]', err.message || err);
+  if (res.headersSent) return next(err);
+  res.status(err.status || 500).json({
+    success: false,
+    error: err.message || 'Server error'
+  });
+});
+
 const PORT = config.port;
 
 const server = app.listen(PORT, '0.0.0.0', () => {
@@ -394,11 +441,10 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   }
 });
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err, promise) => {
-  console.log(`Error: ${err.message}`);
-  // Close server & exit process
-  server.close(() => process.exit(1));
+// Log unhandled rejections without killing the process (admin/WhatsApp background tasks
+// must not take down the whole API and cause nginx 502 for every route).
+process.on('unhandledRejection', (err) => {
+  console.error('[Unhandled Rejection]', err && err.message ? err.message : err);
 });
 
 // Background Task: Clean up expired guest accounts every hour

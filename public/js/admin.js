@@ -24,6 +24,36 @@ function authHeaders(extra = {}) {
     return headers;
 }
 
+/** Parse admin API responses; surfaces nginx 502/HTML as readable errors instead of a generic network error. */
+async function parseAdminApiResponse(res) {
+    const text = await res.text();
+    let data = {};
+    if (text) {
+        try {
+            data = JSON.parse(text);
+        } catch {
+            const hint = res.status === 502 || res.status === 504
+                ? 'Gateway error — the app container may be down or restarting. Check: docker logs sexappeal_app --tail 50'
+                : res.status === 429
+                    ? 'Too many requests — wait a minute and refresh the page.'
+                    : res.status === 401
+                        ? 'Session expired — log out and log in again.'
+                        : `Non-JSON response (HTTP ${res.status})`;
+            throw new Error(hint);
+        }
+    }
+    if (!res.ok && data.success !== false) {
+        data.success = false;
+        data.error = data.error || data.message || `HTTP ${res.status}`;
+    }
+    return data;
+}
+
+function adminConnectionErrorMessage(err) {
+    const msg = err && typeof err.message === 'string' ? err.message.trim() : '';
+    return msg || t('Server connection error');
+}
+
 function escapeHtml(value) {
     return String(value ?? '')
         .replace(/&/g, '&amp;')
@@ -159,7 +189,7 @@ async function handleDeleteProfessional(p, card) {
             headers: authHeaders(),
             credentials: 'include'
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
 
         if (!res.ok || !data.success) {
             announceMessage(data.error || t('Failed to delete professional'));
@@ -169,7 +199,7 @@ async function handleDeleteProfessional(p, card) {
         if (card && card.parentNode) card.parentNode.removeChild(card);
         announceMessage(t('Professional deleted successfully.'), { isError: false });
     } catch (err) {
-        announceMessage(t('Server connection error'));
+        announceMessage(adminConnectionErrorMessage(err));
     }
 }
 
@@ -233,7 +263,7 @@ export async function loadAdminGridData() {
             url.searchParams.set('limit', '0');
             res = await fetch(url, { headers: authHeaders(), credentials: 'include' });
         }
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
 
         if (!data.success) {
             content.innerHTML = `<p style="color: var(--accent-red);">Error: ${data.error}</p>`;
@@ -336,7 +366,7 @@ export async function loadDashboard() {
             headers: authHeaders(),
             credentials: 'include'
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
 
         if (data.success) {
             const user = data.data;
@@ -1284,7 +1314,7 @@ export async function loadActivityLogs() {
             headers: authHeaders(),
             credentials: 'include'
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
 
         if (data.success) {
             tbody.innerHTML = '';
@@ -1311,7 +1341,7 @@ export async function loadActivityLogs() {
             tbody.innerHTML = `<tr><td colspan="5" style="padding: 10px; color: var(--accent-red);">Error: ${data.error}</td></tr>`;
         }
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="5" style="padding: 10px; color: var(--accent-red);">Network Error</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="padding: 10px; color: var(--accent-red);">${err.message || t('Network Error')}</td></tr>`;
     }
 }
 
@@ -1427,7 +1457,7 @@ export async function loadLeads() {
             headers: authHeaders(),
             credentials: 'include'
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
 
         if (data.success) {
             tbody.innerHTML = '';
@@ -1506,7 +1536,7 @@ async function applyInvitationToSelectedLeads() {
             credentials: 'include',
             body: JSON.stringify({ leadIds, professionalIds: [], message: '' })
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
         if (!data.success) {
             announceMessage(data.error || t('Could not start invitation outreach'));
             if (btn) btn.disabled = false;
@@ -1548,7 +1578,7 @@ async function previewInviteMessage() {
             headers: authHeaders(),
             credentials: 'include'
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
         if (data.success) {
             announceMessage(data.data.message, { isError: false });
         }
@@ -1664,7 +1694,7 @@ async function pollBulkWhatsappStatus() {
             headers: authHeaders(),
             credentials: 'include'
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
         if (data.success) renderBulkWhatsappStatus(data.data);
     } catch (err) {
         console.error('Bulk outreach status poll failed', err);
@@ -1687,7 +1717,7 @@ async function startBulkWhatsappOutreach() {
             },
             credentials: 'include'
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
         if (!data.success) {
             announceMessage(data.error || t('Could not start bulk outreach'));
             if (btn) btn.disabled = false;
@@ -1769,7 +1799,7 @@ export async function loadPaymentVerifications() {
             headers: authHeaders(),
             credentials: 'include'
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
 
         if (data.success) {
             tbody.innerHTML = '';
@@ -1817,7 +1847,7 @@ export async function loadPaymentVerifications() {
             tbody.innerHTML = `<tr><td colspan="5" style="padding: 10px; color: var(--accent-red);">Error: ${data.error}</td></tr>`;
         }
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="5" style="padding: 10px; color: var(--accent-red);">Network Error</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="padding: 10px; color: var(--accent-red);">${err.message || t('Network Error')}</td></tr>`;
     }
 }
 
@@ -1832,14 +1862,14 @@ export async function acknowledgePayment(id) {
             },
             credentials: 'include'
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
         if (data.success) {
             loadPaymentVerifications(); 
         } else {
             announceMessage(data.error || 'Failed to acknowledge payment');
         }
     } catch (err) {
-        announceMessage('Server connection error');
+        announceMessage(adminConnectionErrorMessage(err));
     }
 }
 
@@ -1894,7 +1924,7 @@ export async function loadSupportMessages() {
             headers: authHeaders(),
             credentials: 'include'
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
 
         if (!data.success) {
             list.innerHTML = `<div style="padding: 10px; color: var(--accent-red);">Error: ${data.error}</div>`;
@@ -1912,7 +1942,7 @@ export async function loadSupportMessages() {
         messages.forEach(msg => list.appendChild(buildSupportMessageCard(msg)));
         updateSupportBadge(data.openCount || 0);
     } catch (err) {
-        list.innerHTML = `<div style="padding: 10px; color: var(--accent-red);">${t('Network Error')}</div>`;
+        list.innerHTML = `<div style="padding: 10px; color: var(--accent-red);">${err.message || t('Network Error')}</div>`;
     }
 }
 
@@ -2059,7 +2089,7 @@ export async function resolveSupportMessage(id, btn) {
             credentials: 'include',
             body: JSON.stringify({ status: 'resolved' })
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
         if (data.success) {
             loadSupportMessages();
         } else {
@@ -2068,7 +2098,7 @@ export async function resolveSupportMessage(id, btn) {
         }
     } catch (err) {
         if (btn) btn.disabled = false;
-        announceMessage('Server connection error');
+        announceMessage(adminConnectionErrorMessage(err));
     }
 }
 
@@ -2081,7 +2111,7 @@ export async function saveSupportReply(id, reply, btn) {
             credentials: 'include',
             body: JSON.stringify({ adminReply: reply })
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
         if (data.success) {
             announceMessage('Reply saved');
             loadSupportMessages();
@@ -2091,7 +2121,7 @@ export async function saveSupportReply(id, reply, btn) {
         }
     } catch (err) {
         if (btn) btn.disabled = false;
-        announceMessage('Server connection error');
+        announceMessage(adminConnectionErrorMessage(err));
     }
 }
 
@@ -2167,7 +2197,7 @@ export async function loadPendingVerifications() {
             headers: authHeaders(),
             credentials: 'include'
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
 
         if (data.success) {
             tbody.innerHTML = '';
@@ -2239,7 +2269,7 @@ export async function loadPendingVerifications() {
             tbody.innerHTML = `<tr><td colspan="5" style="padding: 10px; color: var(--accent-red);">Error: ${data.error}</td></tr>`;
         }
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="5" style="padding: 10px; color: var(--accent-red);">Network Error</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="padding: 10px; color: var(--accent-red);">${err.message || t('Network Error')}</td></tr>`;
     }
 }
 
@@ -2338,7 +2368,7 @@ export async function updateVerificationStatus(id, status, extra = {}) {
             credentials: 'include',
             body: JSON.stringify({ status, ...extra })
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
         if (data.success) {
             announceMessage(status === 'rejected' ? t('Rejection email sent successfully.') : `Professional ${status} successfully.`, { isError: false });
             loadPendingVerifications(); 
@@ -2349,7 +2379,7 @@ export async function updateVerificationStatus(id, status, extra = {}) {
             announceMessage(data.error || 'Failed to update status');
         }
     } catch (err) {
-        announceMessage('Server connection error');
+        announceMessage(adminConnectionErrorMessage(err));
     }
 }
 
@@ -2490,7 +2520,7 @@ export async function openMailBroadcastModal() {
                     credentials: 'include',
                     body: JSON.stringify(payload)
                 });
-                const data = await res.json();
+                const data = await parseAdminApiResponse(res);
 
                 if (data.success) {
                     showAlert(alertEl, data.message || 'Emails successfully queued for sending.', false);
@@ -2499,7 +2529,7 @@ export async function openMailBroadcastModal() {
                     showAlert(alertEl, data.error || 'Failed to send broadcast');
                 }
             } catch (err) {
-                showAlert(alertEl, 'Server connection error');
+                showAlert(alertEl, adminConnectionErrorMessage(err));
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Send Broadcast';
@@ -2516,7 +2546,7 @@ async function fetchAdminProfessionalsForPicker() {
         headers: authHeaders(),
         credentials: 'include'
     });
-    const data = await res.json();
+    const data = await parseAdminApiResponse(res);
     return data.success ? data.data : [];
 }
 
@@ -2526,7 +2556,7 @@ async function fetchAdminLeadsForPicker() {
         headers: authHeaders(),
         credentials: 'include'
     });
-    const data = await res.json();
+    const data = await parseAdminApiResponse(res);
     return data.success ? data.data : [];
 }
 
@@ -2632,7 +2662,7 @@ export async function openMailSpecialModal() {
                         message: document.getElementById('mailSpecialMessage').value
                     })
                 });
-                const data = await res.json();
+                const data = await parseAdminApiResponse(res);
                 if (data.success) {
                     showAlert(alertEl, data.message || t('Emails successfully queued for sending.'), false);
                     document.getElementById('mailSpecialForm').reset();
@@ -2640,8 +2670,8 @@ export async function openMailSpecialModal() {
                 } else {
                     showAlert(alertEl, data.error || t('Failed to send messages'));
                 }
-            } catch {
-                showAlert(alertEl, t('Server connection error'));
+            } catch (err) {
+                showAlert(alertEl, adminConnectionErrorMessage(err));
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.textContent = t('Send to selected');
@@ -2762,7 +2792,7 @@ export async function openWaSpecialModal() {
                         message: document.getElementById('waSpecialMessage').value.trim()
                     })
                 });
-                const data = await res.json();
+                const data = await parseAdminApiResponse(res);
                 if (!data.success) {
                     showAlert(alertEl, data.error || t('Could not start WhatsApp outreach'));
                     btn.disabled = false;
@@ -2773,8 +2803,8 @@ export async function openWaSpecialModal() {
                 if (waSpecialPollTimer) clearInterval(waSpecialPollTimer);
                 waSpecialPollTimer = setInterval(pollWaSpecialStatus, 2500);
                 pollWaSpecialStatus();
-            } catch {
-                showAlert(alertEl, t('Server connection error'));
+            } catch (err) {
+                showAlert(alertEl, adminConnectionErrorMessage(err));
                 btn.disabled = false;
             }
         };
@@ -2880,7 +2910,7 @@ async function pollWaSpecialStatus() {
             headers: authHeaders(),
             credentials: 'include'
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
         if (data.success) renderWaSpecialStatus(data.data);
     } catch (err) {
         console.error('WA special status poll failed', err);
@@ -2975,7 +3005,7 @@ export async function renderProfessionalList(aliasSearch = '') {
             headers: authHeaders(),
             credentials: 'include'
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
 
         const tbody = document.getElementById('profTableBody');
         tbody.innerHTML = '';
@@ -3012,7 +3042,7 @@ export async function renderProfessionalList(aliasSearch = '') {
             tbody.innerHTML = `<tr><td colspan="4" style="padding: 10px; color: var(--accent-red);">Error: ${data.error}</td></tr>`;
         }
     } catch (err) {
-        document.getElementById('profTableBody').innerHTML = `<tr><td colspan="4" style="padding: 10px; color: var(--accent-red);">Network Error</td></tr>`;
+        document.getElementById('profTableBody').innerHTML = `<tr><td colspan="4" style="padding: 10px; color: var(--accent-red);">${err.message || t('Network Error')}</td></tr>`;
     }
 }
 
@@ -3169,7 +3199,7 @@ export function renderEditForm(prof) {
                     headers: authHeaders(),
                     credentials: 'include'
                 });
-                const data = await res.json();
+                const data = await parseAdminApiResponse(res);
                 if (data.success && data.data?.professionalProfile?.photos) {
                     seedAdminPhotos(data.data.professionalProfile.photos);
                 } else {
@@ -3284,7 +3314,7 @@ export function renderEditForm(prof) {
                 credentials: 'include',
                 body: JSON.stringify(payload)
             });
-            const data = await res.json();
+            const data = await parseAdminApiResponse(res);
 
             submitBtn.disabled = false;
             submitBtn.textContent = 'Save Changes';
@@ -3300,7 +3330,7 @@ export function renderEditForm(prof) {
         } catch (err) {
             submitBtn.disabled = false;
             submitBtn.textContent = 'Save Changes';
-            showAlert(alertEl, 'Server connection error');
+            showAlert(alertEl, adminConnectionErrorMessage(err));
         }
     };
 }
@@ -3390,7 +3420,7 @@ export async function openEditPricingModal(currentPricing) {
                     credentials: 'include',
                     body: formData
                 });
-                const data = await res.json();
+                const data = await parseAdminApiResponse(res);
 
                 if (data.success) {
                     showAlert(alertEl, t('Pricing updated successfully!'), false);
@@ -3406,7 +3436,7 @@ export async function openEditPricingModal(currentPricing) {
                     showAlert(alertEl, data.error || 'Failed to update pricing');
                 }
             } catch (err) {
-                showAlert(alertEl, 'Server connection error');
+                showAlert(alertEl, adminConnectionErrorMessage(err));
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Save Pricing';
@@ -3622,7 +3652,7 @@ async function pollWhatsAppDripStatus() {
             headers: authHeaders(),
             credentials: 'include'
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
         if (data.success) renderWhatsAppDripStatus(data.data);
     } catch (err) {
         console.error('WhatsApp drip poll failed', err);
@@ -3645,15 +3675,15 @@ async function startWhatsAppDrip() {
             headers: { ...authHeaders(), 'Content-Type': 'application/json' },
             credentials: 'include'
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
         if (!data.success) {
             showAlert(alertEl, data.error || t('Could not start automatic sending'));
         } else {
             showAlert(alertEl, t('Automatic sending started.'), false);
         }
         if (data.data) renderWhatsAppDripStatus(data.data);
-    } catch {
-        showAlert(alertEl, t('Server connection error'));
+    } catch (err) {
+        showAlert(alertEl, adminConnectionErrorMessage(err));
     } finally {
         ensureWhatsAppDripPolling();
     }
@@ -3669,15 +3699,15 @@ async function stopWhatsAppDrip() {
             headers: { ...authHeaders(), 'Content-Type': 'application/json' },
             credentials: 'include'
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
         if (!data.success) {
             showAlert(alertEl, data.error || t('Could not stop automatic sending'));
         } else {
             showAlert(alertEl, t('Automatic sending stopped.'), false);
         }
         if (data.data) renderWhatsAppDripStatus(data.data);
-    } catch {
-        showAlert(alertEl, t('Server connection error'));
+    } catch (err) {
+        showAlert(alertEl, adminConnectionErrorMessage(err));
     } finally {
         ensureWhatsAppDripPolling();
     }
@@ -3815,7 +3845,7 @@ async function pollWhatsAppConfigStatus() {
             headers: authHeaders(),
             credentials: 'include'
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
         if (data.success) renderWhatsAppConfigStatus(data.data);
     } catch (err) {
         console.error('WhatsApp config poll failed', err);
@@ -3836,7 +3866,7 @@ async function maybeWarnWhatsAppDisconnected() {
             credentials: 'include'
         });
         if (!res.ok) return;
-        body = await res.json();
+        body = await parseAdminApiResponse(res);
     } catch (_) {
         return;
     }
@@ -3915,7 +3945,7 @@ async function loadWhatsAppInboundReplies() {
             headers: authHeaders(),
             credentials: 'include'
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
         if (!data.success) {
             listEl.innerHTML = `<p style="color:#cc6666;">${data.error || t('Could not load replies')}</p>`;
             return;
@@ -3976,8 +4006,8 @@ async function loadWhatsAppInboundReplies() {
                 </div>
             </div>`;
         }).join('');
-    } catch {
-        if (listEl) listEl.innerHTML = `<p style="color:#cc6666;">${t('Server connection error')}</p>`;
+    } catch (err) {
+        if (listEl) listEl.innerHTML = `<p style="color:#cc6666;">${escapeHtml(adminConnectionErrorMessage(err))}</p>`;
     }
 }
 
@@ -4029,7 +4059,7 @@ async function sendWhatsAppManualReply(cardEl, { template } = {}) {
                 inboundId
             })
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
         if (!data.success) {
             showAlert(alertEl, data.error || t('Could not send reply'));
             return;
@@ -4037,8 +4067,8 @@ async function sendWhatsAppManualReply(cardEl, { template } = {}) {
         if (input && template !== 'step2') input.value = '';
         showAlert(alertEl, t('WhatsApp reply sent.'), false);
         await loadWhatsAppInboundReplies();
-    } catch {
-        showAlert(alertEl, t('Server connection error'));
+    } catch (err) {
+        showAlert(alertEl, adminConnectionErrorMessage(err));
     } finally {
         if (sendBtn) sendBtn.disabled = false;
         if (step2Btn) step2Btn.disabled = false;
@@ -4069,7 +4099,7 @@ async function loadWhatsAppConfigPanel() {
             headers: authHeaders(),
             credentials: 'include'
         });
-        const data = await res.json();
+        const data = await parseAdminApiResponse(res);
         if (!data.success) {
             showAlert(alertEl, data.error || t('Could not load WhatsApp configuration'));
             return;
@@ -4092,8 +4122,8 @@ async function loadWhatsAppConfigPanel() {
             if (waConfigPollTimer) clearInterval(waConfigPollTimer);
             waConfigPollTimer = setInterval(pollWhatsAppConfigStatus, 2500);
         }
-    } catch {
-        showAlert(alertEl, t('Server connection error'));
+    } catch (err) {
+        showAlert(alertEl, adminConnectionErrorMessage(err));
     }
 }
 
@@ -4208,7 +4238,7 @@ export async function openDashboardConfigModal() {
                     <button type="button" id="waConfigRegisterBtn" style="padding:10px 18px;background:#25D366;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Register number on WhatsApp')}</button>
                 </div>
 
-                <p id="waConfigTwilioApiNote" class="hidden" style="color:#25D366;font-size:0.85rem;margin:16px 0 0 0;padding:12px;background:#0a1a0f;border:1px solid #1a3a24;border-radius:6px;">${t('Twilio WhatsApp API mode: no QR or phone scan needed. Save your Twilio sender above, set TWILIO_WHATSAPP_CONTENT_SID on the server for cold outreach templates, then start sending below.')}</p>
+                <p id="waConfigTwilioApiNote" class="hidden" style="color:#25D366;font-size:0.85rem;margin:16px 0 0 0;padding:12px;background:#0a1a0f;border:1px solid #1a3a24;border-radius:6px;">${t('Twilio WhatsApp API mode: set TWILIO_WHATSAPP_CONTENT_SID on the server (template watext) for cold invitations, or run bash scripts/set-twilio-whatsapp-template.sh on prod. Then start Invitations below.')}</p>
 
                 <div style="margin-top:24px;padding-top:16px;border-top:1px solid #333;">
                     <h4 style="margin:0 0 10px 0;color:#ccc;">3) ${t('Automatic sending (WhatsApp)')}</h4>
@@ -4258,15 +4288,15 @@ export async function openDashboardConfigModal() {
                     credentials: 'include',
                     body: JSON.stringify({ phoneNumber: phone })
                 });
-                const data = await res.json();
+                const data = await parseAdminApiResponse(res);
                 if (!data.success) {
                     showAlert(alertEl, data.error || t('Could not save phone number'));
                     return;
                 }
                 showAlert(alertEl, t('WhatsApp phone number updated. Re-link WhatsApp if you changed the origin number.'), false);
                 await loadWhatsAppConfigPanel();
-            } catch {
-                showAlert(alertEl, t('Server connection error'));
+            } catch (err) {
+                showAlert(alertEl, adminConnectionErrorMessage(err));
             } finally {
                 btn.disabled = false;
             }
@@ -4287,7 +4317,7 @@ export async function openDashboardConfigModal() {
                     },
                     credentials: 'include'
                 });
-                const data = await res.json();
+                const data = await parseAdminApiResponse(res);
                 if (!data.success) {
                     showAlert(alertEl, data.error || t('Could not start WhatsApp registration'));
                     btn.disabled = false;
@@ -4299,8 +4329,8 @@ export async function openDashboardConfigModal() {
                 if (waConfigPollTimer) clearInterval(waConfigPollTimer);
                 waConfigPollTimer = setInterval(pollWhatsAppConfigStatus, 2500);
                 pollWhatsAppConfigStatus();
-            } catch {
-                showAlert(alertEl, t('Server connection error'));
+            } catch (err) {
+                showAlert(alertEl, adminConnectionErrorMessage(err));
                 btn.disabled = false;
             }
         };

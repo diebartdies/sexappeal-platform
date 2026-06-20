@@ -899,9 +899,6 @@ function refreshCoverHighlight() {
         const existingBadge = item.querySelector('.cover-badge');
         if (idx === 0) {
             item.classList.add('is-cover-photo');
-            item.style.outline = '3px solid var(--primary-gold)';
-            item.style.outlineOffset = '-3px';
-            item.style.boxShadow = '0 0 12px rgba(212, 175, 55, 0.7)';
             item.setAttribute('aria-label', coverLabel);
             item.title = coverLabel;
             if (!existingBadge) {
@@ -926,9 +923,6 @@ function refreshCoverHighlight() {
             }
         } else {
             item.classList.remove('is-cover-photo');
-            item.style.outline = '';
-            item.style.outlineOffset = '';
-            item.style.boxShadow = '0 2px 5px rgba(0,0,0,0.5)';
             item.removeAttribute('aria-label');
             if (item.title === coverLabel) item.removeAttribute('title');
             if (existingBadge) existingBadge.remove();

@@ -42,9 +42,10 @@ function isColdOutreachTemplateConfigured() {
 function getColdOutreachBlockReason() {
   if (!isApiModeEnabled()) return '';
   if (isColdOutreachTemplateConfigured()) return '';
-  return 'WhatsApp cold outreach is waiting for Meta template approval. '
-    + 'Add TWILIO_WHATSAPP_CONTENT_SID to server .env after Twilio approves the template. '
-    + 'Until then you can use SMS outreach, or reply manually in Admin when someone writes first.';
+  return 'WhatsApp cold outreach is blocked until Meta approves template "watext" '
+    + '(then set TWILIO_WHATSAPP_CONTENT_SID=HX92a57f64dfa083cb94b884da55a85cde on the server). '
+    + 'Do not set that SID before approval — Twilio will reject sends. '
+    + 'To send invitations now: set WHATSAPP_USE_WEBJS=true, recreate the app, Admin → WhatsApp → Register (QR) → Invitations.';
 }
 
 function formatWhatsAppAddress(digits) {
