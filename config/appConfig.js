@@ -175,6 +175,11 @@ const config = {
     messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID || '',
     fromNumber: process.env.TWILIO_FROM_NUMBER || '',
 
+    // Official WhatsApp Business sender on Twilio (E.164). When set, this is the
+    // platform origin number in admin UI and wa.me links (overrides admin DB phone).
+    // Env: TWILIO_WHATSAPP_FROM_NUMBER (falls back to TWILIO_FROM_NUMBER if unset).
+    whatsappFromNumber: process.env.TWILIO_WHATSAPP_FROM_NUMBER || '',
+
     // Global master switch. When false (default), every SMS path no-ops safely
     // (logs, never throws). Must be explicitly turned on to send anything.
     // Env: SMS_ENABLED ("true" enables; default disabled).

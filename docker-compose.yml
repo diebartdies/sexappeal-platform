@@ -19,7 +19,7 @@ services:
     build:
       context: .
       args:
-        INSTALL_TWILIO: "0"
+        INSTALL_TWILIO: "${INSTALL_TWILIO:-1}"
     container_name: sexappeal_app
     # Stable hostname so the persisted Chromium profile lock (SingletonLock in
     # .wwebjs_auth) is always seen as "this machine" across recreates. Without a

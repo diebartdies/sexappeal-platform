@@ -109,8 +109,17 @@ function attachClientEvents(activeClient) {
 function createClient() {
   if (client || initializing) return client;
 
-  initializing = true;
   const executablePath = resolveBrowserExecutable();
+  if (!executablePath) {
+    regState.phase = 'error';
+    regState.lastError = 'Chromium not found in the server container. Rebuild the app image (Dockerfile installs chromium).';
+    initializing = false;
+    console.error('[whatsapp]', regState.lastError);
+    return null;
+  }
+
+  initializing = true;
+  console.log('[whatsapp] Launching client with', executablePath);
 
   client = new Client({
     authStrategy: new LocalAuth({ clientId: CLIENT_ID }),

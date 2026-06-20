@@ -69,7 +69,7 @@ exports.startBulkSms = async (req, res, next) => {
     if (config.sms.senderBypass) {
       return res.status(503).json({
         success: false,
-        error: 'SMS/Twilio sender bypass is active (TWILIO_SENDER_BYPASS). Configure WhatsApp Business / Twilio sender, then set TWILIO_SENDER_BYPASS=false and rebuild with INSTALL_TWILIO=1.'
+        error: 'SMS/Twilio sender bypass is active (TWILIO_SENDER_BYPASS). Configure Twilio creds on the server .env, then set TWILIO_SENDER_BYPASS=false.'
       });
     }
     const status = smsOutreachService.startBulkOutreachBackground();

@@ -3685,7 +3685,25 @@ async function stopWhatsAppDrip() {
     }
 }
 
+function syncWhatsAppPhoneEditor(data) {
+    const phoneInput = document.getElementById('waConfigPhoneInput');
+    const saveBtn = document.getElementById('waConfigSavePhoneBtn');
+    const twilioNote = document.getElementById('waConfigTwilioNote');
+    const twilioEnvDefault = Boolean(data && data.twilioEnvDefault);
+
+    if (twilioNote) {
+        twilioNote.classList.toggle('hidden', !twilioEnvDefault || data.phoneSource === 'admin');
+    }
+
+    if (phoneInput) {
+        phoneInput.disabled = false;
+        if (data && data.phoneNumber) phoneInput.value = data.phoneNumber;
+    }
+    if (saveBtn) saveBtn.disabled = false;
+}
+
 function renderWhatsAppConfigStatus(data) {
+    if (!data) data = {};
     const statusEl = document.getElementById('waConfigStatusText');
     const qrWrap = document.getElementById('waConfigQrWrap');
     const qrImg = document.getElementById('waConfigQrImg');
@@ -3693,9 +3711,14 @@ function renderWhatsAppConfigStatus(data) {
     const sessionEl = document.getElementById('waConfigSessionState');
     const registerBtn = document.getElementById('waConfigRegisterBtn');
 
-    if (phoneDisplay && data.displayPhone) {
-        phoneDisplay.textContent = data.displayPhone;
+    if (phoneDisplay) {
+        phoneDisplay.textContent = data.displayPhone || data.phoneNumber || '+5491178280156';
+        phoneDisplay.title = data.phoneSource === 'admin'
+            ? t('Configured in admin panel')
+            : (data.twilioEnvDefault ? t('Default from Twilio .env until you save a number here') : '');
     }
+
+    syncWhatsAppPhoneEditor(data);
 
     if (sessionEl) {
         if (data.connected) {
@@ -3974,12 +3997,15 @@ export async function openDashboardConfigModal() {
                     </div>
                 </div>
 
-                <div style="margin-bottom:24px;padding-top:16px;border-top:1px solid #333;">
-                    <h4 style="margin:0 0 10px 0;color:#ccc;">1) ${t('Change WhatsApp phone number')}</h4>
-                    <p style="color:#888;font-size:0.85rem;margin:0 0 10px 0;">${t('Set the mobile number that owns the platform WhatsApp account (country code included, no +).')}</p>
-                    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-                        <input type="text" id="waConfigPhoneInput" placeholder="5491178280156" style="flex:1;min-width:220px;padding:10px;background:#222;color:white;border:1px solid #444;border-radius:4px;">
-                        <button type="button" id="waConfigSavePhoneBtn" style="padding:10px 16px;background:var(--primary-gold);color:var(--dark-bg);border:none;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Save number')}</button>
+                <div id="waConfigPhoneSection" style="margin-bottom:24px;padding-top:16px;border-top:1px solid #333;">
+                    <h4 style="margin:0 0 10px 0;color:#ccc;">1) ${t('Platform WhatsApp number')}</h4>
+                    <p id="waConfigTwilioNote" class="hidden" style="color:#888;font-size:0.85rem;margin:0 0 10px 0;">${t('No number saved here yet — using Twilio default from server .env. Save below to override.')}</p>
+                    <div id="waConfigPhoneManualBlock">
+                        <p style="color:#888;font-size:0.85rem;margin:0 0 10px 0;">${t('Set the platform WhatsApp number (E.164, with or without +). Example: +15559340276 or 5491178280156.')}</p>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                            <input type="text" id="waConfigPhoneInput" placeholder="+15559340276 or 5491178280156" style="flex:1;min-width:220px;padding:10px;background:#222;color:white;border:1px solid #444;border-radius:4px;">
+                            <button type="button" id="waConfigSavePhoneBtn" style="padding:10px 16px;background:var(--primary-gold);color:var(--dark-bg);border:none;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Save number')}</button>
+                        </div>
                     </div>
                 </div>
 

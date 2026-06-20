@@ -2,7 +2,9 @@ const {
   getPlatformWhatsAppPhone,
   updatePlatformWhatsAppPhone,
   formatWhatsAppPhoneDisplay,
-  getAdminWhatsAppSettings
+  getAdminWhatsAppSettings,
+  getPlatformWhatsAppPhoneSource,
+  isTwilioWhatsAppPhoneConfigured
 } = require('../utils/whatsappConfig');
 const platformService = require('../services/whatsappPlatformService');
 const dripRunner = require('../services/whatsappDripRunner');
@@ -14,17 +16,22 @@ exports.getWhatsAppConfig = async (req, res) => {
   try {
     const settings = await getAdminWhatsAppSettings();
     const status = await platformService.getRegistrationStatus();
+    const phoneSource = await getPlatformWhatsAppPhoneSource();
 
     res.status(200).json({
       success: true,
       data: {
         phoneNumber: status.phoneNumber,
         displayPhone: status.displayPhone,
+        phoneSource,
+        twilioConfigured: phoneSource === 'twilio',
+        twilioEnvDefault: isTwilioWhatsAppPhoneConfigured(),
         registeredAt: settings.registeredAt || null,
         lastConnectedAt: settings.lastConnectedAt || null,
         sessionSaved: status.sessionSaved,
         connected: status.connected,
         phase: status.phase,
+        qr: status.qr || null,
         lastError: status.lastError || null
       }
     });

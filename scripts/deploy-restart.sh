@@ -103,7 +103,7 @@ echo "Using: $DC"
 echo "Ensuring mongo 4.4 is running (no recreate, no pull)..."
 $DC up -d --no-recreate --pull never mongo
 
-echo "Building app image (Twilio optional — INSTALL_TWILIO=0 by default)..."
+echo "Building app image (Twilio npm installed when INSTALL_TWILIO=1, default on deploy)..."
 mkdir -p "$DEPLOY_DIR/.cache"
 BUILD_LOG="$DEPLOY_DIR/.cache/docker-build.log"
 if ! $DC build app 2>&1 | tee "$BUILD_LOG"; then

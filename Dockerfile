@@ -24,8 +24,8 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 # Skip Twilio npm package in production images until WhatsApp Business / SMS sender
-# is configured (set INSTALL_TWILIO=1 on docker compose build when ready).
-ARG INSTALL_TWILIO=0
+# is configured. Override at build time: INSTALL_TWILIO=0 docker compose build app
+ARG INSTALL_TWILIO=1
 
 # Copy package.json and install dependencies
 COPY package*.json ./

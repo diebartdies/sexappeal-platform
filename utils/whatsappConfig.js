@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const User = require('../models/User');
-const { normalizeWhatsAppPhone } = require('./professionalInviteMessage');
+const config = require('../config/appConfig');
+const { normalizeE164Digits, normalizeWhatsAppPhone } = require('./professionalInviteMessage');
 
 const DEFAULT_WHATSAPP_PHONE = '5491178280156';
 
@@ -8,6 +9,25 @@ function envFallbackPhone() {
   const envRaw = process.env.WATCH_ALERT_WHATSAPP;
   const raw = (envRaw && envRaw !== 'off' ? envRaw : '') || DEFAULT_WHATSAPP_PHONE;
   return normalizeWhatsAppPhone(raw) || DEFAULT_WHATSAPP_PHONE;
+}
+
+/** Strip to digits; US/CA NANP kept as-is; otherwise Argentina mobile normalization. */
+function normalizePlatformOriginPhone(phone) {
+  const digits = normalizeE164Digits(phone);
+  if (!digits) return '';
+  if (digits.startsWith('1') && digits.length === 11) return digits;
+  return normalizeWhatsAppPhone(phone) || '';
+}
+
+/** Twilio WhatsApp sender default from server .env (sync). */
+function getTwilioWhatsAppPhone() {
+  const raw = config.sms?.whatsappFromNumber || config.sms?.fromNumber || '';
+  if (!raw) return '';
+  return normalizeE164Digits(raw) || '';
+}
+
+function isTwilioWhatsAppPhoneConfigured() {
+  return Boolean(getTwilioWhatsAppPhone());
 }
 
 async function getAdminWhatsAppSettings() {
@@ -22,16 +42,31 @@ async function getPlatformWhatsAppPhone() {
   try {
     const settings = await getAdminWhatsAppSettings();
     if (settings.phoneNumber) {
-      return normalizeWhatsAppPhone(settings.phoneNumber) || DEFAULT_WHATSAPP_PHONE;
+      return normalizePlatformOriginPhone(settings.phoneNumber) || DEFAULT_WHATSAPP_PHONE;
     }
   } catch {
-    /* fall through to env/default */
+    /* fall through */
   }
+
+  const twilioPhone = getTwilioWhatsAppPhone();
+  if (twilioPhone) return twilioPhone;
+
   return envFallbackPhone();
 }
 
+async function getPlatformWhatsAppPhoneSource() {
+  try {
+    const settings = await getAdminWhatsAppSettings();
+    if (settings.phoneNumber) return 'admin';
+  } catch {
+    /* ignore */
+  }
+  if (getTwilioWhatsAppPhone()) return 'twilio';
+  return 'env';
+}
+
 async function updatePlatformWhatsAppPhone(phone) {
-  const clean = normalizeWhatsAppPhone(phone);
+  const clean = normalizePlatformOriginPhone(phone);
   if (!clean) {
     throw new Error('Invalid WhatsApp phone number');
   }
@@ -67,15 +102,26 @@ async function markWhatsAppRegistered() {
 }
 
 function formatWhatsAppPhoneDisplay(phone) {
-  const clean = normalizeWhatsAppPhone(phone) || DEFAULT_WHATSAPP_PHONE;
-  return `+${clean}`;
+  const clean = normalizePlatformOriginPhone(phone)
+    || getTwilioWhatsAppPhone()
+    || DEFAULT_WHATSAPP_PHONE;
+  return clean ? `+${clean}` : '';
+}
+
+async function buildPlatformWhatsAppContactUrl() {
+  const phone = await getPlatformWhatsAppPhone();
+  return `https://wa.me/${phone}`;
 }
 
 module.exports = {
   DEFAULT_WHATSAPP_PHONE,
+  getTwilioWhatsAppPhone,
+  isTwilioWhatsAppPhoneConfigured,
   getAdminWhatsAppSettings,
   getPlatformWhatsAppPhone,
+  getPlatformWhatsAppPhoneSource,
   updatePlatformWhatsAppPhone,
   markWhatsAppRegistered,
-  formatWhatsAppPhoneDisplay
+  formatWhatsAppPhoneDisplay,
+  buildPlatformWhatsAppContactUrl
 };

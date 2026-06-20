@@ -43,9 +43,14 @@ ${url}
 Cualquier duda, respondeme por acá. 😊`;
 }
 
+function normalizeE164Digits(phone) {
+  if (!phone) return '';
+  return String(phone).replace(/\D/g, '');
+}
+
 function normalizeWhatsAppPhone(phone) {
   if (!phone) return '';
-  let cleanPhone = String(phone).replace(/\D/g, '');
+  let cleanPhone = normalizeE164Digits(phone);
   if (!cleanPhone) return '';
 
   if (!cleanPhone.startsWith('54')) {
@@ -142,6 +147,7 @@ module.exports = {
   getOutreachAliasDomain,
   buildOutreachRegisterUrl,
   buildStep2OutreachReply,
+  normalizeE164Digits,
   normalizeWhatsAppPhone,
   buildProfessionalInviteMessage,
   buildSanitizedWhatsAppCaption,
