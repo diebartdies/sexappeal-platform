@@ -368,14 +368,8 @@ body.has-global-topbar {
     }
 
     #treasurePhotoGrid.photo-carousel {
-        gap: 10px;
-    }
-
-    #treasurePhotoGrid .photo-item-public {
-        flex-basis: 132px;
-        width: 132px;
-        min-width: 132px;
-        max-width: 132px;
+        gap: clamp(8px, 2.5vw, 12px);
+        margin-bottom: 24px;
     }
 }
 

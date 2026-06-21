@@ -447,6 +447,15 @@ export async function loadTreasureDetails() {
 
             const photoGrid = document.getElementById('treasurePhotoGrid');
             if (galleryPhotos.length > 0) {
+                photoGrid.classList.remove('photo-carousel--solo', 'photo-carousel--expand', 'photo-carousel--scroll');
+                if (galleryPhotos.length === 1) {
+                    photoGrid.classList.add('photo-carousel--solo');
+                } else if (galleryPhotos.length <= 3) {
+                    photoGrid.classList.add('photo-carousel--expand', `photo-carousel--count-${galleryPhotos.length}`);
+                } else {
+                    photoGrid.classList.add('photo-carousel--scroll');
+                }
+
                 galleryPhotos.forEach((url) => {
                     const item = document.createElement('div');
                     item.className = 'photo-item-public';

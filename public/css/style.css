@@ -801,14 +801,14 @@ textarea:focus:not(:focus-visible) {
     justify-self: start;
 }
 
-/* Profile detail photo carousel — fixed tile size; images cannot blow up to natural resolution */
+/* Profile detail photo carousel — fluid tiles; 3:4 ratio; clipped inside frame */
 .photo-carousel {
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
     align-items: flex-start;
     overflow-x: auto;
-    gap: 12px;
+    gap: clamp(8px, 2cqi, 16px);
     padding-bottom: 15px;
     margin-bottom: 30px;
     scroll-snap-type: x mandatory;
@@ -816,6 +816,7 @@ textarea:focus:not(:focus-visible) {
     cursor: grab;
     width: 100%;
     max-width: 100%;
+    box-sizing: border-box;
 }
 
 .photo-carousel::-webkit-scrollbar {
@@ -838,10 +839,6 @@ textarea:focus:not(:focus-visible) {
 }
 
 .photo-item-public {
-    flex: 0 0 176px;
-    width: 176px;
-    min-width: 176px;
-    max-width: 176px;
     aspect-ratio: 3 / 4;
     border-radius: 8px;
     overflow: hidden;
@@ -856,6 +853,8 @@ textarea:focus:not(:focus-visible) {
     box-sizing: border-box;
     isolation: isolate;
     flex-shrink: 0;
+    height: auto;
+    min-height: 0;
 }
 
 .photo-item-public img {
@@ -875,36 +874,65 @@ textarea:focus:not(:focus-visible) {
     transform: none;
 }
 
-/* Profile detail carousel — keep photos clipped inside tile frame */
-#treasurePhotoGrid.photo-carousel {
-    max-width: 100%;
-    box-sizing: border-box;
+#treasureContent .card {
+    container-type: inline-size;
 }
 
-#treasurePhotoGrid .photo-item-public {
-    height: auto;
-    min-height: 0;
+#treasurePhotoGrid.photo-carousel {
+    --photo-tile-min: clamp(112px, 26cqi, 140px);
+    --photo-tile-fluid: clamp(120px, 32cqi, 300px);
+    --photo-tile-solo: min(100%, clamp(180px, 62cqi, 380px));
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+#treasurePhotoGrid.photo-carousel--solo {
+    justify-content: center;
+    overflow-x: hidden;
+}
+
+#treasurePhotoGrid.photo-carousel--solo .photo-item-public {
+    flex: 0 1 var(--photo-tile-solo);
+    width: var(--photo-tile-solo);
+    min-width: var(--photo-tile-min);
+    max-width: var(--photo-tile-solo);
+}
+
+#treasurePhotoGrid.photo-carousel--expand {
+    justify-content: center;
+}
+
+#treasurePhotoGrid.photo-carousel--expand .photo-item-public {
+    flex: 1 1 0;
+    min-width: var(--photo-tile-min);
+    max-width: min(380px, 46%);
+    width: auto;
+}
+
+#treasurePhotoGrid.photo-carousel--expand.photo-carousel--count-3 .photo-item-public {
+    max-width: min(320px, 31%);
+}
+
+#treasurePhotoGrid.photo-carousel--scroll .photo-item-public {
+    flex: 0 0 var(--photo-tile-fluid);
+    width: var(--photo-tile-fluid);
+    min-width: var(--photo-tile-min);
+    max-width: var(--photo-tile-fluid);
 }
 
 #treasurePhotoGrid .photo-item-public img {
     transform: none !important;
 }
 
-@media (max-width: 767px) {
-    .photo-item-public {
-        flex-basis: 140px;
-        width: 140px;
-        min-width: 140px;
-        max-width: 140px;
+@container (max-width: 360px) {
+    #treasurePhotoGrid.photo-carousel--expand .photo-item-public {
+        max-width: min(280px, 46%);
     }
-}
 
-@media (min-width: 1200px) {
-    .photo-item-public {
-        flex-basis: 200px;
-        width: 200px;
-        min-width: 200px;
-        max-width: 200px;
+    #treasurePhotoGrid.photo-carousel--expand.photo-carousel--count-3 .photo-item-public {
+        max-width: min(220px, 31%);
     }
 }
 
