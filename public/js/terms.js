@@ -183,12 +183,10 @@ export function openFullTermsModal(returnFocusEl = null) {
 
   fullTermsOverlay.innerHTML = `
     <div class="card payment-modal-panel" data-modal-panel style="max-width:760px;width:100%;max-height:86vh;display:flex;flex-direction:column;border:1px solid var(--primary-gold);border-radius:12px;">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-bottom:1px solid rgba(212,175,55,0.3);padding-bottom:12px;">
-        <div>
-          <h2 id="fullTermsTitle" class="gold-text" style="margin:0;font-size:1.3rem;">${t('Terms & Conditions')}</h2>
-          <p style="margin:4px 0 0;color:#888;font-size:0.82rem;">${t('Date Modified:')} ${escapeHtml(TERMS_VERSION)}</p>
-        </div>
-        <button type="button" id="fullTermsClose" data-modal-close aria-label="${t('Close')}" style="background:transparent;border:1px solid var(--primary-gold);color:var(--primary-gold);width:36px;height:36px;border-radius:8px;cursor:pointer;font-size:1.1rem;line-height:1;flex:0 0 auto;">&times;</button>
+      <button type="button" id="fullTermsClose" class="payment-modal-close" data-modal-close aria-label="${t('Close')}">&times;</button>
+      <div style="border-bottom:1px solid rgba(212,175,55,0.3);padding-bottom:12px;padding-right:52px;">
+        <h2 id="fullTermsTitle" class="gold-text" style="margin:0;font-size:1.3rem;">${t('Terms & Conditions')}</h2>
+        <p style="margin:4px 0 0;color:#888;font-size:0.82rem;">${t('Date Modified:')} ${escapeHtml(TERMS_VERSION)}</p>
       </div>
       <div id="fullTermsBody" tabindex="0" style="overflow-y:auto;padding:16px 4px 4px;margin-top:4px;">
         ${sectionsHtml}

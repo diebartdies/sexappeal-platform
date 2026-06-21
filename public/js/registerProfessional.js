@@ -4,6 +4,68 @@ import { t, applyStaticTranslations } from './i18n.js';
 import { confirmDialog, wireFormLabel, setFieldInvalid } from './a11y.js';
 import { navigateWithReturn, returnToOrigin } from './navReturn.js';
 import { openFullTermsModal } from './terms.js';
+import { PHONE_COUNTRIES, defaultPhoneCountry } from './phoneCountryCodes.js';
+
+function getRegistrationLocale() {
+    return (localStorage.getItem('platform_lang') || 'es') === 'es' ? 'es-AR' : 'en-US';
+}
+
+function isSpanishLocale() {
+    return getRegistrationLocale() === 'es-AR';
+}
+
+function birthDatePlaceholder() {
+    return isSpanishLocale() ? 'dd/mm/aaaa' : 'mm/dd/yyyy';
+}
+
+function pad2(n) {
+    return String(n).padStart(2, '0');
+}
+
+function isoFromParts(year, month, day) {
+    if (!year || !month || !day) return '';
+    if (month < 1 || month > 12 || day < 1 || day > 31) return '';
+    const iso = `${year}-${pad2(month)}-${pad2(day)}`;
+    const d = new Date(`${iso}T12:00:00`);
+    if (Number.isNaN(d.getTime())) return '';
+    if (d.getFullYear() !== year || d.getMonth() + 1 !== month || d.getDate() !== day) return '';
+    return iso;
+}
+
+function parseDisplayBirthDate(str) {
+    const raw = String(str || '').trim();
+    if (!raw) return '';
+    const parts = raw.split(/[/.\\-]/).map((p) => p.trim()).filter(Boolean);
+    if (parts.length !== 3) return '';
+    let day;
+    let month;
+    let year = Number(parts[2]);
+    if (parts[2].length === 2) year += year >= 50 ? 1900 : 2000;
+    if (isSpanishLocale()) {
+        day = Number(parts[0]);
+        month = Number(parts[1]);
+    } else {
+        month = Number(parts[0]);
+        day = Number(parts[1]);
+    }
+    return isoFromParts(year, month, day);
+}
+
+function formatDisplayBirthDate(iso) {
+    if (!iso) return '';
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+    if (!m) return '';
+    const [, y, mo, d] = m;
+    return isSpanishLocale() ? `${d}/${mo}/${y}` : `${mo}/${d}/${y}`;
+}
+
+function getBirthDateIsoValue() {
+    const textEl = document.getElementById('regBirthDate');
+    const nativeEl = document.getElementById('regBirthDateNative');
+    const fromText = parseDisplayBirthDate(textEl?.value);
+    if (fromText) return fromText;
+    return nativeEl?.value || '';
+}
 
 function highlightField(el, on = true) {
     if (!el) return;
@@ -128,13 +190,122 @@ function applyRegistrationPageLabels() {
 }
 
 function setupBirthDateField() {
-    const input = document.getElementById('regBirthDate');
-    if (!input) return;
-    const lang = localStorage.getItem('platform_lang') || 'es';
-    document.documentElement.lang = lang === 'es' ? 'es-AR' : 'en-US';
+    const textInput = document.getElementById('regBirthDate');
+    const nativeInput = document.getElementById('regBirthDateNative');
+    const pickerBtn = document.getElementById('regBirthDatePickerBtn');
+    const hint = document.getElementById('regBirthDateHint');
+    if (!textInput || !nativeInput) return;
+
+    const lang = getRegistrationLocale();
+    document.documentElement.lang = lang;
+    textInput.lang = lang;
+    nativeInput.lang = lang;
+    textInput.placeholder = birthDatePlaceholder();
+    textInput.setAttribute('aria-describedby', 'regBirthDateHint');
+    if (hint) {
+        hint.textContent = isSpanishLocale()
+            ? t('Format: dd/mm/aaaa. We calculate your age automatically — you must be 18 or older.')
+            : t('Format: mm/dd/yyyy. We calculate your age automatically — you must be 18 or older.');
+    }
+
     const maxDate = new Date();
     maxDate.setFullYear(maxDate.getFullYear() - 18);
-    input.max = maxDate.toISOString().slice(0, 10);
+    nativeInput.max = maxDate.toISOString().slice(0, 10);
+
+    const syncTextFromNative = () => {
+        if (!nativeInput.value) return;
+        textInput.value = formatDisplayBirthDate(nativeInput.value);
+        textInput.classList.remove('reg-field-error');
+    };
+
+    const openPicker = () => {
+        if (typeof nativeInput.showPicker === 'function') {
+            nativeInput.showPicker();
+            return;
+        }
+        nativeInput.focus();
+        nativeInput.click();
+    };
+
+    pickerBtn?.addEventListener('click', openPicker);
+    nativeInput.addEventListener('change', syncTextFromNative);
+
+    textInput.addEventListener('blur', () => {
+        const iso = parseDisplayBirthDate(textInput.value);
+        if (iso) {
+            nativeInput.value = iso;
+            textInput.value = formatDisplayBirthDate(iso);
+        }
+    });
+
+    textInput.addEventListener('input', () => {
+        textInput.classList.remove('reg-field-error');
+    });
+}
+
+function setupPhoneCountrySelect() {
+    const menu = document.getElementById('regCountryMenu');
+    const btn = document.getElementById('regCountryBtn');
+    const hiddenDial = document.getElementById('regPhoneDial');
+    const flagEl = document.getElementById('regCountryFlag');
+    if (!menu || !btn || !hiddenDial) return;
+
+    let selected = defaultPhoneCountry();
+
+    const renderSelected = () => {
+        hiddenDial.value = selected.dial;
+        if (flagEl) {
+            flagEl.innerHTML = `${selected.flag}<span class="reg-country-code" id="regCountryCode">${selected.dial}</span>`;
+        }
+        btn.setAttribute('aria-label', `${t('Country code')} ${selected.name} ${selected.dial}`);
+    };
+
+    menu.innerHTML = PHONE_COUNTRIES.map((c) => `
+        <li class="reg-country-option" role="option" data-dial="${c.dial}" data-iso="${c.iso}" aria-selected="${c.iso === selected.iso ? 'true' : 'false'}">
+            <span class="reg-country-flag">${c.flag}<span class="reg-country-code">${c.dial}</span></span>
+            <span>${c.name}</span>
+        </li>`).join('');
+
+    const closeMenu = () => {
+        menu.classList.add('hidden');
+        btn.setAttribute('aria-expanded', 'false');
+    };
+
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const open = menu.classList.contains('hidden');
+        if (open) {
+            menu.classList.remove('hidden');
+            btn.setAttribute('aria-expanded', 'true');
+        } else {
+            closeMenu();
+        }
+    });
+
+    menu.querySelectorAll('.reg-country-option').forEach((opt) => {
+        opt.addEventListener('click', () => {
+            const iso = opt.getAttribute('data-iso');
+            selected = PHONE_COUNTRIES.find((c) => c.iso === iso) || selected;
+            menu.querySelectorAll('.reg-country-option').forEach((o) => {
+                o.setAttribute('aria-selected', o.getAttribute('data-iso') === selected.iso ? 'true' : 'false');
+            });
+            renderSelected();
+            closeMenu();
+        });
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!document.getElementById('regCountrySelect')?.contains(e.target)) closeMenu();
+    });
+
+    renderSelected();
+}
+
+function buildFullMobilePhone() {
+    const dial = (document.getElementById('regPhoneDial')?.value || '+54').replace(/\s/g, '');
+    let local = String(document.getElementById('regMobilePhone')?.value || '').trim().replace(/\D/g, '');
+    if (local.startsWith('0')) local = local.replace(/^0+/, '');
+    return `${dial}${local}`;
 }
 
 function computeAgeFromBirthDate(dateStr) {
@@ -169,7 +340,7 @@ function validateRegistrationForm(form) {
     }
 
     const birthEl = document.getElementById('regBirthDate');
-    const birthValue = birthEl?.value?.trim();
+    const birthValue = getBirthDateIsoValue();
     const ageYears = birthValue ? computeAgeFromBirthDate(birthValue) : null;
     if (!birthValue || ageYears === null || ageYears < 18 || ageYears > 99) {
         highlightField(birthEl, true);
@@ -199,11 +370,14 @@ function validateRegistrationForm(form) {
     }
 
     const termsCheckbox = document.getElementById('regTermsAccept');
+    const termsBlock = document.getElementById('regTermsBlock');
     if (termsCheckbox && !termsCheckbox.checked) {
+        termsBlock?.classList.add('reg-terms-error');
         showAlert(document.getElementById('registerAlert'), t('You must accept the terms and conditions to register.'), true, 'regTermsAccept');
         termsCheckbox.focus();
         return false;
     }
+    termsBlock?.classList.remove('reg-terms-error');
 
     return true;
 }
@@ -234,8 +408,14 @@ export function initProfessionalRegistration() {
     applyRegistrationPageLabels();
     setupInstructions();
     setupBirthDateField();
+    setupPhoneCountrySelect();
     setupRegistrationLeaveGuard(form);
     attachPasswordToggles(form);
+
+    const termsCheckbox = document.getElementById('regTermsAccept');
+    termsCheckbox?.addEventListener('change', () => {
+        document.getElementById('regTermsBlock')?.classList.remove('reg-terms-error');
+    });
 
     const termsLink = document.getElementById('regTermsLink');
     if (termsLink && !termsLink.dataset.bound) {
@@ -260,8 +440,8 @@ export function initProfessionalRegistration() {
         formData.append('registrationMode', 'express');
         formData.append('email', document.getElementById('regEmail').value.trim());
         formData.append('password', document.getElementById('regPassword').value);
-        formData.append('mobilePhone', document.getElementById('regMobilePhone').value.trim());
-        formData.append('birthDate', document.getElementById('regBirthDate').value);
+        formData.append('mobilePhone', buildFullMobilePhone());
+        formData.append('birthDate', getBirthDateIsoValue());
         formData.append('termsAccepted', document.getElementById('regTermsAccept')?.checked ? 'true' : 'false');
 
         try {

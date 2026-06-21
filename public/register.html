@@ -40,8 +40,55 @@
         .reg-inline-link.muted { color: #888; }
         .reg-inline-link:hover { text-decoration: underline; }
         .reg-hint { color: #888; font-size: 0.82rem; margin: 4px 0 0; line-height: 1.4; }
-        .date-wrap { position: relative; }
-        .date-wrap input[type="date"] { padding-right: 42px; }
+        .reg-phone-row { display: flex; align-items: stretch; width: 100%; }
+        .reg-country-select { position: relative; flex: 0 0 108px; min-width: 108px; }
+        .reg-country-btn {
+            width: 100%; height: 100%; min-height: 46px; box-sizing: border-box;
+            display: flex; align-items: center; justify-content: center; gap: 2px;
+            background: #111; border: 1px solid rgba(212,175,55,0.45); border-right: none;
+            border-radius: 4px 0 0 4px; cursor: pointer; padding: 0 6px;
+        }
+        .reg-country-flag { font-size: 1.45rem; line-height: 1; position: relative; }
+        .reg-country-code {
+            position: absolute; left: 50%; top: 54%; transform: translate(-50%, -50%);
+            font-size: 0.58rem; font-weight: 800; color: #111; letter-spacing: -0.02em;
+            text-shadow: 0 0 3px rgba(255,255,255,0.95), 0 0 1px #fff;
+            pointer-events: none;
+        }
+        .reg-phone-input {
+            flex: 1 1 auto; min-width: 0; border-radius: 0 4px 4px 0 !important;
+        }
+        .reg-country-menu {
+            position: absolute; top: calc(100% + 4px); left: 0; z-index: 50;
+            min-width: 100%; max-height: 240px; overflow-y: auto; margin: 0; padding: 4px 0;
+            list-style: none; background: #151515; border: 1px solid rgba(212,175,55,0.55);
+            border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.65);
+        }
+        .reg-country-menu.hidden { display: none; }
+        .reg-country-option {
+            display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+            cursor: pointer; color: #eee; font-size: 0.88rem;
+        }
+        .reg-country-option:hover, .reg-country-option[aria-selected="true"] {
+            background: rgba(212,175,55,0.15);
+        }
+        .reg-country-option .reg-country-flag { flex-shrink: 0; width: 1.8rem; text-align: center; }
+        .reg-country-option .reg-country-code-static { color: #111; font-weight: 800; font-size: 0.72rem; }
+        .reg-date-field { position: relative; display: flex; align-items: stretch; }
+        .reg-date-text { padding-right: 52px !important; border-radius: 4px 0 0 4px !important; flex: 1; }
+        .reg-date-picker-btn {
+            flex: 0 0 48px; min-width: 48px; border: 1px solid rgba(212,175,55,0.45);
+            border-left: none; border-radius: 0 4px 4px 0; background: #1a1a1a;
+            cursor: pointer; font-size: 1.35rem; line-height: 1; padding: 0;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .reg-date-native {
+            position: absolute; right: 0; top: 0; width: 48px; height: 100%;
+            opacity: 0; cursor: pointer; border: none; padding: 0; margin: 0;
+        }
+        #regTermsBlock.reg-terms-error {
+            outline: 2px solid var(--accent-red); outline-offset: 4px; border-radius: 6px; padding: 6px;
+        }
     </style>
     <meta name="robots" content="noindex, nofollow">
     <meta name="theme-color" content="#B8922E">
@@ -75,16 +122,27 @@
 
                     <div class="form-group">
                         <label for="regMobilePhone">Mobile phone <span class="required-star">*</span></label>
-                        <input type="tel" id="regMobilePhone" class="reg-input" required autocomplete="tel" placeholder="11 2345 6789">
+                        <div class="reg-phone-row">
+                            <div class="reg-country-select" id="regCountrySelect">
+                                <button type="button" class="reg-country-btn" id="regCountryBtn" aria-haspopup="listbox" aria-expanded="false" aria-label="Country code">
+                                    <span class="reg-country-flag" id="regCountryFlag" aria-hidden="true">🇦🇷<span class="reg-country-code" id="regCountryCode">+54</span></span>
+                                </button>
+                                <ul class="reg-country-menu hidden" id="regCountryMenu" role="listbox" aria-label="Country code"></ul>
+                            </div>
+                            <input type="tel" id="regMobilePhone" class="reg-input reg-phone-input" required autocomplete="tel-national" placeholder="11 2345 6789">
+                        </div>
+                        <input type="hidden" id="regPhoneDial" value="+54">
                         <p class="reg-hint">WhatsApp number — we will contact you here to finish your profile.</p>
                     </div>
 
                     <div class="form-group">
                         <label for="regBirthDate">Birth date <span class="required-star">*</span></label>
-                        <div class="date-wrap">
-                            <input type="date" id="regBirthDate" class="reg-input" required>
+                        <div class="reg-date-field date-wrap">
+                            <input type="text" id="regBirthDate" class="reg-input reg-date-text" required autocomplete="bday" inputmode="numeric" placeholder="dd/mm/aaaa">
+                            <button type="button" id="regBirthDatePickerBtn" class="reg-date-picker-btn" aria-label="Open calendar">📅</button>
+                            <input type="date" id="regBirthDateNative" class="reg-date-native" tabindex="-1" aria-hidden="true">
                         </div>
-                        <p class="reg-hint">We calculate your age automatically — you must be 18 or older.</p>
+                        <p class="reg-hint" id="regBirthDateHint">We calculate your age automatically — you must be 18 or older.</p>
                     </div>
 
                     <div class="form-group">

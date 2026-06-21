@@ -1815,11 +1815,12 @@ body.small-grid-mode #treasureGrid .treasure-card {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.85);
-    z-index: 10050;
+    z-index: 10060;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 56px 20px 20px;
+    box-sizing: border-box;
 }
 
 .payment-modal-overlay.hidden {
@@ -1831,6 +1832,45 @@ body.small-grid-mode #treasureGrid .treasure-card {
     width: 100%;
     position: relative;
     z-index: 1;
+    overflow: visible;
+}
+
+.admin-overlay-modal,
+.terms-gate-overlay,
+#fullTermsOverlay {
+    z-index: 10060 !important;
+}
+
+.admin-overlay-modal {
+    box-sizing: border-box;
+    padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+}
+
+.admin-overlay-modal > button:first-of-type,
+.modal-close-external {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 8px 16px;
+    line-height: 1.2;
+    box-sizing: border-box;
+    cursor: pointer;
+    pointer-events: auto;
+    position: relative;
+    z-index: 2;
+    flex-shrink: 0;
+}
+
+.modal-close-bar {
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto 8px;
+    display: flex;
+    justify-content: flex-end;
+    position: relative;
+    z-index: 2;
 }
 
 .how-to-pay-intro {
@@ -1991,19 +2031,26 @@ body.small-grid-mode #treasureGrid .treasure-card {
 
 .payment-modal-close {
     position: absolute;
-    top: 12px;
-    right: 12px;
-    z-index: 2;
+    top: -44px;
+    right: 0;
+    z-index: 5;
     background: rgba(0, 0, 0, 0.35);
     border: 1px solid var(--primary-gold);
     color: var(--primary-gold);
-    font-size: 1.4rem;
+    font-size: 1.5rem;
     line-height: 1;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 8px;
     cursor: pointer;
     padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    pointer-events: auto;
 }
 
 .lang-switcher {

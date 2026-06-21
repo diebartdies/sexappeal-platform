@@ -30,24 +30,18 @@ const {
 } = require('./utils/professionalInviteMessage');
 
 // ---------------------------------------------------------------------------
-// WhatsApp "quarter drip" scheduler.
+// WhatsApp batch drip scheduler.
 //
-// Sends EXACTLY `messagesPerHour` messages per hour (default 4), one per equal
-// quarter of the hour, at a RANDOM minute within each quarter (re-randomized
-// every hour). With the default of 4 the quarters are [0-14],[15-29],[30-44],
-// [45-59] and one send lands at a random minute inside each.
-//
-// Content is sanitized (Part B): the brand is conveyed as an IMAGE (BRAND_IMAGE_PATH)
-// and the caption text never contains the banned brand word nor the real site
-// domain (which contains it). See utils/professionalInviteMessage.js.
-//
-// Safe to run detached on the server (mirrors run_all_sms.js): connect to DB,
-// connect WhatsApp, log every action with ISO timestamps to stdout, mark each
-// lead sent/failed, and stop cleanly when no pending leads remain.
+// Sends up to `batchSize` messages (default 100), pauses `batchPauseMinutes`
+// (default 30), then repeats until no pending leads remain.
 // ---------------------------------------------------------------------------
 
 const cfg = config.whatsappDrip;
-const PER_HOUR = Math.max(1, Number(cfg.messagesPerHour) || 4);
+const BATCH_SIZE = Math.max(1, Number(cfg.batchSize) || 50);
+const BATCH_PAUSE_MS = Math.max(1, Number(cfg.batchPauseMinutes) || 30) * 60 * 1000;
+const BATCHES_PER_DAY = Math.max(1, Number(cfg.batchesPerDay) || 5);
+const DAILY_CAP = BATCH_SIZE * BATCHES_PER_DAY;
+const INTER_MESSAGE_DELAY_MS = Math.max(0, Number(cfg.interMessageDelayMs) || 0);
 const REGISTER_CHECK_TIMEOUT_MS = Number(cfg.registerCheckTimeoutMs) || 30000;
 const SEND_TIMEOUT_MS = Number(cfg.sendTimeoutMs) || 60000;
 const BRAND_IMAGE = cfg.brandImagePath || BRAND_IMAGE_PATH;
@@ -84,17 +78,39 @@ async function sleepUntil(date) {
   if (ms > 0) await sleep(ms);
 }
 
-// Compute the `PER_HOUR` send-times for the hour starting at `hourStart`: one
-// random instant inside each equal quarter of the hour.
-function computeQuarterTargets(hourStart) {
-  const quarterMs = (3600000 / PER_HOUR);
-  const targets = [];
-  for (let q = 0; q < PER_HOUR; q += 1) {
-    const base = hourStart.getTime() + q * quarterMs;
-    const offsetMs = Math.floor(Math.random() * quarterMs);
-    targets.push(new Date(base + offsetMs));
+async function runBatch(batchNumber) {
+  log(`Batch ${batchNumber}/${BATCHES_PER_DAY} start — up to ${BATCH_SIZE} messages`);
+
+  for (let i = 0; i < BATCH_SIZE; i += 1) {
+    let lead;
+    try {
+      lead = await nextPendingLead();
+    } catch (err) {
+      log('WARN could not query next lead:', err.message);
+      break;
+    }
+
+    if (!lead) {
+      log('ALL DONE - no pending leads left. Exiting.');
+      process.exit(0);
+    }
+
+    await sendOneLead(lead);
+
+    if (INTER_MESSAGE_DELAY_MS > 0 && i < BATCH_SIZE - 1) {
+      await sleep(INTER_MESSAGE_DELAY_MS);
+    }
   }
-  return targets;
+
+  const remaining = await countPendingLeads();
+  if (remaining === 0) {
+    log('ALL DONE - no pending leads left. Exiting.');
+    process.exit(0);
+  }
+
+  const nextBatchAt = new Date(Date.now() + BATCH_PAUSE_MS);
+  log(`Batch ${batchNumber}/${BATCHES_PER_DAY} complete. Pending=${remaining}. Sleeping until ${nextBatchAt.toISOString()}`);
+  await sleepUntil(nextBatchAt);
 }
 
 async function nextPendingLead() {
@@ -209,8 +225,10 @@ async function ensureWhatsAppReady() {
 }
 
 async function main() {
-  log('--- WhatsApp Quarter Drip starting ---');
-  log(`Rate           : ${PER_HOUR} messages/hour (one per ${(60 / PER_HOUR).toFixed(1)}-min quarter, random minute within each)`);
+  log('--- WhatsApp Batch Drip starting ---');
+  log(`Batch size     : ${BATCH_SIZE} messages`);
+  log(`Batches/day    : ${BATCHES_PER_DAY} (daily cap ${DAILY_CAP} cold sends)`);
+  log(`Batch pause    : ${cfg.batchPauseMinutes || 30} minutes`);
   log(`Brand image    : ${BRAND_IMAGE}`);
   log(`Reply contact  : ${WHATSAPP_CONTACT_URL}`);
   log(`Alias domain   : ${cfg.aliasDomain ? cfg.aliasDomain : '(none — website link omitted; replies go to WhatsApp)'}`);
@@ -230,49 +248,12 @@ async function main() {
 
   await ensureWhatsAppReady();
 
-  // Scheduler loop: one hour at a time, recomputing the quarter targets each hour.
-  for (;;) {
-    const now = new Date();
-    const hourStart = new Date(now);
-    hourStart.setMinutes(0, 0, 0);
-    const nextHourStart = new Date(hourStart.getTime() + 3600000);
-    const targets = computeQuarterTargets(hourStart);
-
-    log('Hour plan', hourStart.toISOString(), '-> targets:',
-      targets.map((t) => t.toISOString()).join(', '));
-
-    for (let i = 0; i < targets.length; i += 1) {
-      const target = targets[i];
-
-      // If a quarter's target is already in the past (script started mid-hour),
-      // that quarter is missed — skip it to keep the strict 1-per-quarter rate.
-      if (target.getTime() <= Date.now()) {
-        log('SKIP quarter', i + 1, '- target', target.toISOString(), 'already passed');
-        continue;
-      }
-
-      log('Waiting until', target.toISOString(), `(quarter ${i + 1}/${targets.length})`);
-      await sleepUntil(target);
-
-      let lead;
-      try {
-        lead = await nextPendingLead();
-      } catch (err) {
-        log('WARN could not query next lead:', err.message, '- will retry next quarter');
-        continue;
-      }
-
-      if (!lead) {
-        log('ALL DONE - no pending leads left. Exiting.');
-        process.exit(0);
-      }
-
-      await sendOneLead(lead);
-    }
-
-    log('Hour complete. Sleeping until next hour', nextHourStart.toISOString());
-    await sleepUntil(nextHourStart);
+  for (let batch = 1; batch <= BATCHES_PER_DAY; batch += 1) {
+    await runBatch(batch);
   }
+
+  log(`Daily limit reached (${DAILY_CAP} cold sends). Exiting — restart tomorrow.`);
+  process.exit(0);
 }
 
 main().catch((err) => {

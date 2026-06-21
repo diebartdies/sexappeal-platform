@@ -3,8 +3,7 @@ const smsService = require('./smsService');
 const { getPlatformWhatsAppPhone } = require('../utils/whatsappConfig');
 const {
   normalizeWhatsAppPhone,
-  normalizeE164Digits,
-  buildOutreachRegisterUrl
+  normalizeE164Digits
 } = require('../utils/professionalInviteMessage');
 
 function isApiModeEnabled() {
@@ -38,14 +37,14 @@ function isColdOutreachTemplateConfigured() {
   return Boolean(config.sms.whatsappContentSid);
 }
 
-/** Blocks cold drip/bulk on Twilio until Meta approves TWILIO_WHATSAPP_CONTENT_SID. */
+/** Shown when Twilio API is on but TWILIO_WHATSAPP_CONTENT_SID is missing from server .env */
 function getColdOutreachBlockReason() {
   if (!isApiModeEnabled()) return '';
   if (isColdOutreachTemplateConfigured()) return '';
-  return 'WhatsApp cold outreach is blocked until Meta approves template "watext" '
-    + '(then set TWILIO_WHATSAPP_CONTENT_SID=HX92a57f64dfa083cb94b884da55a85cde on the server). '
-    + 'Do not set that SID before approval — Twilio will reject sends. '
-    + 'To send invitations now: set WHATSAPP_USE_WEBJS=true, recreate the app, Admin → WhatsApp → Register (QR) → Invitations.';
+  return 'WhatsApp cold outreach needs template "watext" on the server. '
+    + 'Run: bash scripts/set-twilio-whatsapp-template.sh /root/SexAppeal-platform '
+    + '(SID HX92a57f64dfa083cb94b884da55a85cde). '
+    + 'Or set WHATSAPP_USE_WEBJS=true and use QR in Admin → Invitations.';
 }
 
 function formatWhatsAppAddress(digits) {
@@ -60,16 +59,27 @@ function resolveMediaUrl(options = {}) {
   return base ? `${base}/images/outreach-logo.png` : '';
 }
 
+/** Meta/Twilio template watext — sample value for {{1}} only (step-1 cold outreach). */
+const WATEXT_TEMPLATE_EXAMPLES = Object.freeze({
+  '1': process.env.TWILIO_WA_TEMPLATE_EXAMPLE_1 || 'María'
+});
+
 function buildContentVariables(options = {}) {
-  if (options.contentVariables) return options.contentVariables;
-  const alias = (options.alias && String(options.alias).trim()) || 'hermosa';
-  const registerUrl = buildOutreachRegisterUrl()
-    || config.platform?.registerUrl
-    || `${(config.platform?.publicUrl || '').replace(/\/$/, '')}/register.html`;
-  return JSON.stringify({
-    1: alias,
-    2: registerUrl || ''
-  });
+  if (options.contentVariables) {
+    const raw = typeof options.contentVariables === 'string'
+      ? options.contentVariables
+      : JSON.stringify(options.contentVariables);
+    const parsed = JSON.parse(raw);
+    if (!String(parsed['1'] ?? parsed[1] ?? '').trim()) {
+      throw new Error('WhatsApp template variable {{1}} (alias) is required and cannot be empty');
+    }
+    return raw;
+  }
+
+  const alias = (options.alias && String(options.alias).trim())
+    || WATEXT_TEMPLATE_EXAMPLES['1'];
+
+  return JSON.stringify({ '1': alias });
 }
 
 async function resolveFromAddress() {
@@ -120,6 +130,7 @@ async function sendWhatsAppMessage(toPhone, body, options = {}) {
   if (contentSid) {
     payload.contentSid = contentSid;
     payload.contentVariables = buildContentVariables(options);
+    console.log('[whatsapp-twilio] contentSid=%s contentVariables=%s', contentSid, payload.contentVariables);
   } else {
     const text = String(body || '').trim();
     if (!text) throw new Error('Empty WhatsApp message body');
@@ -147,5 +158,7 @@ module.exports = {
   getColdOutreachBlockReason,
   sendWhatsAppMessage,
   formatWhatsAppAddress,
-  resolveFromAddress
+  resolveFromAddress,
+  buildContentVariables,
+  WATEXT_TEMPLATE_EXAMPLES
 };

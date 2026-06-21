@@ -105,7 +105,7 @@ exports.getWhatsAppRegistrationStatus = async (req, res) => {
   }
 };
 
-// @desc    Start the in-app WhatsApp quarter-drip sender (4 msgs/hour)
+// @desc    Start the in-app WhatsApp batch drip sender (100 msgs / 30 min pause)
 // @route   POST /api/v1/admin/whatsapp/drip/start
 // @access  Private/Admin
 exports.startWhatsAppDrip = async (req, res) => {
@@ -128,7 +128,7 @@ exports.startWhatsAppDrip = async (req, res) => {
   }
 };
 
-// @desc    Stop the in-app WhatsApp quarter-drip sender
+// @desc    Stop the in-app WhatsApp batch drip sender
 // @route   POST /api/v1/admin/whatsapp/drip/stop
 // @access  Private/Admin
 exports.stopWhatsAppDrip = async (req, res) => {
@@ -145,7 +145,7 @@ exports.stopWhatsAppDrip = async (req, res) => {
   }
 };
 
-// @desc    Live status of the in-app WhatsApp quarter-drip sender
+// @desc    Live status of the in-app WhatsApp batch drip sender
 // @route   GET /api/v1/admin/whatsapp/drip/status
 // @access  Private/Admin
 exports.getWhatsAppDripStatus = async (req, res) => {

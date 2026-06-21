@@ -132,16 +132,18 @@ const config = {
     pollIntervalMs: parseInt(process.env.OUTREACH_POLL_INTERVAL_MS, 10) || 30000
   },
 
-  // WhatsApp "quarter drip" scheduler (whatsapp_drip.js). A deliberately slow,
-  // human-like cadence to carefully resume WhatsApp outreach after a restriction.
-  // The hour is split into N equal quarters; exactly ONE message is sent per
-  // quarter at a RANDOM minute within it (re-randomized every hour). All values
-  // overridable via env.
+  // WhatsApp batch drip scheduler (whatsapp_drip.js + whatsappDripRunner.js).
+  // Default: 5 batches × 50 messages, 30 min apart = 250/day (Meta cold-outreach tier).
   whatsappDrip: {
-    // Messages per hour. With the default 4, the hour splits into 15-min quarters
-    // [0-14],[15-29],[30-44],[45-59] and one send lands at a random minute in each.
-    // Env: WHATSAPP_DRIP_PER_HOUR (default 4).
-    messagesPerHour: parseInt(process.env.WHATSAPP_DRIP_PER_HOUR, 10) || 4,
+    // Messages per batch. Env: WHATSAPP_DRIP_BATCH_SIZE (default 50).
+    batchSize: parseInt(process.env.WHATSAPP_DRIP_BATCH_SIZE, 10) || 50,
+    // Minutes between batches. Env: WHATSAPP_DRIP_BATCH_PAUSE_MINUTES (default 30).
+    batchPauseMinutes: parseInt(process.env.WHATSAPP_DRIP_BATCH_PAUSE_MINUTES, 10) || 30,
+    // Batches per run before stopping (daily Meta cold cap ≈ 250 → 5×50). Env: WHATSAPP_DRIP_BATCHES_PER_DAY.
+    batchesPerDay: parseInt(process.env.WHATSAPP_DRIP_BATCHES_PER_DAY, 10) || 5,
+    // Optional delay between messages inside a batch (ms). 0 = as fast as each send completes.
+    // Env: WHATSAPP_DRIP_INTER_DELAY_MS (default 0).
+    interMessageDelayMs: parseInt(process.env.WHATSAPP_DRIP_INTER_DELAY_MS, 10) || 0,
 
     // Outreach drip image (PNG/JPG). Default is outreach-logo.png ("SelfAppeal"
     // wordmark — no "sex" substring for OCR). Site UI keeps brand-logo.png.
@@ -189,7 +191,10 @@ const config = {
     whatsappApiEnabled: process.env.TWILIO_WHATSAPP_API === 'true'
       || Boolean(process.env.TWILIO_WHATSAPP_FROM_NUMBER || process.env.TWILIO_FROM_NUMBER),
     // Approved Content Template SID for business-initiated (cold) outreach.
+    // Template watext (HX92a57f64dfa083cb94b884da55a85cde): {{1}} alias only — step 1 of 2.
+    // Register link is sent manually in step 2 (buildStep2OutreachReply), not in the template.
     // Env: TWILIO_WHATSAPP_CONTENT_SID (HX... from Twilio Console).
+    // Example: TWILIO_WA_TEMPLATE_EXAMPLE_1=María
     whatsappContentSid: process.env.TWILIO_WHATSAPP_CONTENT_SID || '',
     // Public HTTPS image URL for media messages (defaults to {publicUrl}/images/outreach-logo.png).
     whatsappMediaUrl: process.env.TWILIO_WHATSAPP_MEDIA_URL || '',

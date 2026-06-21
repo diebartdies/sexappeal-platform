@@ -70,6 +70,13 @@ input[type="submit"],
     min-height: 32px;
 }
 
+.payment-modal-close,
+.modal-close-external,
+.reg-country-btn,
+.reg-date-picker-btn {
+    min-height: unset;
+}
+
 /* Admin shell (dashboard.html + admin.js) */
 .admin-shell,
 .admin-grid-layout {

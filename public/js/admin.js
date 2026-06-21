@@ -64,6 +64,7 @@ function escapeHtml(value) {
 
 function openAdminOverlay(modal) {
     if (!modal) return;
+    modal.classList.add('admin-overlay-modal');
     beginModalSession();
     modal.style.display = 'flex';
     const titleEl = modal.querySelector('h2, h3');
@@ -425,7 +426,7 @@ export async function loadDashboard() {
                                 <button id="btnPendingApprovals" class="admin-nav-btn active-nav">✅ Pending Approvals</button>
                                 <button id="btnPaymentVerifications" class="admin-nav-btn">💳 Payment Verifications</button>
                                 <button id="btnSupportMessages" class="admin-nav-btn">📩 ${t('Support messages')}</button>
-                                <button id="btnDashboardConfig" class="admin-nav-btn">⚙️ Dashboard Config</button>
+                                <button id="btnDashboardConfig" class="admin-nav-btn">⚙️ ${t('Dashboard Config')}</button>
                             </div>
                         </div>
 
@@ -3648,7 +3649,19 @@ function renderWhatsAppDripStatus(data) {
     lines.push(`${t('Sent')}: ${data.sent || 0} · ${t('Failed')}: ${data.failed || 0} · ${t('Rejected')}: ${data.rejected || 0}`);
 
     if (running && data.nextSendAt) {
-        lines.push(`${t('Next send')}: ${new Date(data.nextSendAt).toLocaleTimeString()}`);
+        const nextLabel = data.phase === 'waiting_batch'
+            ? t('Next batch')
+            : t('Next send');
+        lines.push(`${nextLabel}: ${new Date(data.nextSendAt).toLocaleTimeString()}`);
+    }
+    if (running && data.batchSentThisCycle != null && data.phase === 'running') {
+        const batchSize = data.batchSize || 50;
+        const batchNum = (data.batchesCompletedThisRun || 0) + 1;
+        const batchesPerDay = data.batchesPerDay || 5;
+        lines.push(`${t('Current batch')}: ${batchNum}/${batchesPerDay} (${data.batchSentThisCycle}/${batchSize})`);
+    }
+    if (!running && data.phase === 'daily_limit') {
+        lines.push(`<span style="color:#f0ad4e;">${t('Daily cold cap reached')} (${data.dailyCap || 250}). ${t('Restart tomorrow.')}</span>`);
     }
     if (data.lastSendAt && data.lastResult) {
         lines.push(`${t('Last')}: ${new Date(data.lastSendAt).toLocaleTimeString()} — ${data.lastResult}`);
@@ -4152,23 +4165,18 @@ export async function openDashboardConfigModal() {
             flexDirection: 'column', padding: '20px', overflowY: 'auto'
         });
 
-        // Header row constrained to the same width as the card so the
-        // close button sits at the card's top-right (its click area matches
-        // the visible button instead of floating at the screen edge).
+        // Header row aligned with panel — close sits just above the card (top-right).
         const closeBar = document.createElement('div');
+        closeBar.className = 'modal-close-bar';
         Object.assign(closeBar.style, {
-            width: '100%', maxWidth: '720px', margin: '0 auto 10px',
+            width: '100%', maxWidth: '720px', margin: '0 auto 8px',
             display: 'flex', justifyContent: 'flex-end'
         });
 
         const closeBtn = document.createElement('button');
         closeBtn.type = 'button';
+        closeBtn.className = 'modal-close-external';
         closeBtn.textContent = t('Close');
-        Object.assign(closeBtn.style, {
-            width: 'auto',
-            maxWidth: 'max-content',
-            display: 'inline-block'
-        });
         closeBtn.onclick = () => {
             if (waConfigPollTimer) {
                 clearInterval(waConfigPollTimer);
@@ -4252,15 +4260,15 @@ export async function openDashboardConfigModal() {
                     <button type="button" id="waConfigRegisterBtn" style="padding:10px 18px;background:#25D366;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Register number on WhatsApp')}</button>
                 </div>
 
-                <p id="waConfigTwilioApiNote" class="hidden" style="color:#25D366;font-size:0.85rem;margin:16px 0 0 0;padding:12px;background:#0a1a0f;border:1px solid #1a3a24;border-radius:6px;">${t('Twilio WhatsApp API mode: set TWILIO_WHATSAPP_CONTENT_SID on the server (template watext) for cold invitations, or run bash scripts/set-twilio-whatsapp-template.sh on prod. Then start Invitations below.')}</p>
+                <p id="waConfigTwilioApiNote" class="hidden" style="color:#25D366;font-size:0.85rem;margin:16px 0 0 0;padding:12px;background:#0a1a0f;border:1px solid #1a3a24;border-radius:6px;">${t('Twilio WhatsApp API: template watext is approved. On the server run bash scripts/set-twilio-whatsapp-template.sh then use Invitations below.')}</p>
 
                 <div style="margin-top:24px;padding-top:16px;border-top:1px solid #333;">
                     <h4 style="margin:0 0 10px 0;color:#ccc;">3) ${t('Automatic sending (WhatsApp)')}</h4>
-                    <p style="color:#888;font-size:0.85rem;margin:0 0 12px 0;">${t('Sends the welcome invitation to pending leads at a slow, human-like pace of 4 messages per hour (one per 15-minute quarter, at a random minute). It runs inside the app using the linked WhatsApp and stops automatically when no pending leads remain.')}</p>
+                    <p style="color:#888;font-size:0.85rem;margin:0 0 12px 0;">${t('Sends cold template invitations in 5 batches of 50, pausing 30 minutes between batches (250/day — Meta cold-outreach limit). Stops when the daily cap is reached or no pending leads remain. Restart the next day to continue.')}</p>
                     <p id="waTemplatePendingNote" class="hidden" style="color:#f0ad4e;font-size:0.85rem;margin:0 0 12px 0;padding:10px;background:#2a2210;border:1px solid #665520;border-radius:6px;">—</p>
                     <p id="waDripStatusText" style="color:#ccc;margin:0 0 12px 0;font-size:0.9rem;line-height:1.6;">—</p>
                     <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                        <button type="button" id="waDripStartBtn" style="padding:10px 18px;background:#25D366;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Start sending 4/h')}</button>
+                        <button type="button" id="waDripStartBtn" style="padding:10px 18px;background:#25D366;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Start sending 5×50/day')}</button>
                         <button type="button" id="waDripStopBtn" style="padding:10px 18px;background:transparent;color:#cc6666;border:1px solid #cc6666;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Stop sending')}</button>
                     </div>
                 </div>
