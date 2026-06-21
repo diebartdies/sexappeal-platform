@@ -161,6 +161,11 @@ function applyRegistrationPageLabels() {
         intro.textContent = t('Quick signup — only what you need to get started. We will help you complete your profile and photos.');
     }
 
+    const noPayNote = document.getElementById('regNoPaymentNote');
+    if (noPayNote) {
+        noPayNote.textContent = t('We never ask you to register a payment method — no card, no automatic debit.');
+    }
+
     setRegLabel('regEmail', 'Email', true);
     setRegLabel('regMobilePhone', 'Mobile phone', true);
     setRegLabel('regBirthDate', 'Birth date', true);
@@ -394,6 +399,7 @@ function setupInstructions() {
             <li>${t('Confirm your email with the 6-digit code we send you.')}</li>
             <li>${t('We contact you on WhatsApp and finish the rest together.')}</li>
         </ol>
+        <p style="font-size:0.88rem;margin:12px 0 0;color:#8fdfb0;line-height:1.5;">${t('We never ask you to register a payment method — no card, no automatic debit.')}</p>
         <div id="regEmailSpamWarning" style="margin-top:14px;padding:12px;background:rgba(255,193,7,0.12);border:1px solid #ffc107;border-radius:6px;">
             <strong style="color:#ffc107;">⚠️ ${t('Important — check your email')}</strong>
             <p style="font-size:0.9rem;margin:8px 0 0;color:#eee;">${t('When you submit, we send a 6-digit verification code to your email. It may arrive in Spam or Junk.')}</p>

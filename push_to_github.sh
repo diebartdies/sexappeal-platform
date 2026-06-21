@@ -28,6 +28,13 @@ COMMIT_MSG=${COMMIT_MSG:-Platform update}
 echo "➕ Adding files (respecting .gitignore)..."
 git add . || { echo "❌ Failed to add files."; read -p "Press [Enter] to exit..."; exit 1; }
 
+if git diff --cached --name-only | grep -qx '.env'; then
+    echo "❌ .env is staged — refusing to push secrets to GitHub."
+    git reset HEAD .env 2>/dev/null || true
+    read -p "Press [Enter] to exit..."
+    exit 1
+fi
+
 echo "💾 Committing changes..."
 git commit -m "$COMMIT_MSG" || echo "No new changes to commit."
 

@@ -4029,7 +4029,8 @@ async function loadWhatsAppInboundReplies() {
                 <textarea class="wa-reply-input" rows="3" placeholder="${t('Write your reply…')}" style="width:100%;margin-top:10px;padding:10px;background:#222;color:#fff;border:1px solid #444;border-radius:4px;resize:vertical;"></textarea>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
                     <button type="button" class="wa-reply-send-btn" style="padding:8px 14px;background:#25D366;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Send reply')}</button>
-                    <button type="button" class="wa-reply-step2-btn" style="padding:8px 14px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer;">${t('Send registration link')}</button>
+                    <button type="button" class="wa-reply-step2-btn" style="padding:8px 14px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer;">${t('Send launch message')}</button>
+                    <button type="button" class="wa-reply-step2link-btn" style="padding:8px 14px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer;">${t('Send registration link')}</button>
                 </div>
             </div>`;
         }).join('');
@@ -4060,15 +4061,17 @@ async function sendWhatsAppManualReply(cardEl, { template } = {}) {
     const input = cardEl.querySelector('.wa-reply-input');
     const body = input ? input.value.trim() : '';
 
-    if (template !== 'step2' && !body) {
+    if (template !== 'step2' && template !== 'step2link' && !body) {
         showAlert(alertEl, t('Write a reply first'));
         return;
     }
 
     const sendBtn = cardEl.querySelector('.wa-reply-send-btn');
     const step2Btn = cardEl.querySelector('.wa-reply-step2-btn');
+    const step2LinkBtn = cardEl.querySelector('.wa-reply-step2link-btn');
     if (sendBtn) sendBtn.disabled = true;
     if (step2Btn) step2Btn.disabled = true;
+    if (step2LinkBtn) step2LinkBtn.disabled = true;
 
     try {
         const res = await fetch(`${API_URL}/admin/whatsapp/reply`, {
@@ -4080,8 +4083,8 @@ async function sendWhatsAppManualReply(cardEl, { template } = {}) {
             credentials: 'include',
             body: JSON.stringify({
                 toPhone: phone,
-                body: template === 'step2' ? '' : body,
-                template: template === 'step2' ? 'step2' : undefined,
+                body: (template === 'step2' || template === 'step2link') ? '' : body,
+                template: template === 'step2' || template === 'step2link' ? template : undefined,
                 alias,
                 inboundId
             })
@@ -4091,7 +4094,7 @@ async function sendWhatsAppManualReply(cardEl, { template } = {}) {
             showAlert(alertEl, data.error || t('Could not send reply'));
             return;
         }
-        if (input && template !== 'step2') input.value = '';
+        if (input && template !== 'step2' && template !== 'step2link') input.value = '';
         showAlert(alertEl, t('WhatsApp reply sent.'), false);
         await loadWhatsAppInboundReplies();
     } catch (err) {
@@ -4099,6 +4102,7 @@ async function sendWhatsAppManualReply(cardEl, { template } = {}) {
     } finally {
         if (sendBtn) sendBtn.disabled = false;
         if (step2Btn) step2Btn.disabled = false;
+        if (step2LinkBtn) step2LinkBtn.disabled = false;
     }
 }
 
@@ -4109,10 +4113,12 @@ function bindWhatsAppInboundReplyHandlers() {
     listEl.addEventListener('click', (event) => {
         const sendBtn = event.target.closest('.wa-reply-send-btn');
         const step2Btn = event.target.closest('.wa-reply-step2-btn');
+        const step2LinkBtn = event.target.closest('.wa-reply-step2link-btn');
         const card = event.target.closest('.wa-inbound-card');
         if (!card) return;
         if (sendBtn) sendWhatsAppManualReply(card);
         if (step2Btn) sendWhatsAppManualReply(card, { template: 'step2' });
+        if (step2LinkBtn) sendWhatsAppManualReply(card, { template: 'step2link' });
     });
 }
 
@@ -4186,6 +4192,7 @@ export async function openDashboardConfigModal() {
                 clearInterval(waDripPollTimer);
                 waDripPollTimer = null;
             }
+            stopWhatsAppInboundPolling();
             closeAdminOverlay(modal);
         };
         closeBar.appendChild(closeBtn);
@@ -4275,8 +4282,8 @@ export async function openDashboardConfigModal() {
 
                 <div id="waInboundSection" style="margin-top:24px;padding-top:16px;border-top:1px solid #333;">
                     <h4 style="margin:0 0 10px 0;color:#ccc;">4) ${t('Incoming replies (WhatsApp)')}</h4>
-                    <p style="color:#888;font-size:0.85rem;margin:0 0 8px 0;">${t('Read what leads answer before you reply manually. Requires Twilio webhook on your WhatsApp sender.')}</p>
-                    <p style="color:#666;font-size:0.8rem;margin:0 0 12px 0;word-break:break-all;">${t('Webhook URL')}: <code id="waInboundWebhookUrl" style="color:#9cf;">—</code></p>
+                    <p style="color:#888;font-size:0.85rem;margin:0 0 8px 0;">${t('Replies appear here — no need to open Twilio Console. Respond from this panel with custom text or the preset buttons.')}</p>
+                    <p style="color:#666;font-size:0.8rem;margin:0 0 12px 0;word-break:break-all;">${t('One-time setup — paste this webhook URL in Twilio → WhatsApp sender → Incoming message')}: <code id="waInboundWebhookUrl" style="color:#9cf;">—</code></p>
                     <p id="waInboundMeta" style="color:#aaa;font-size:0.85rem;margin:0 0 10px 0;">—</p>
                     <div id="waInboundList" style="max-height:320px;overflow-y:auto;padding-right:4px;">—</div>
                     <button type="button" id="waInboundRefreshBtn" style="margin-top:12px;padding:8px 14px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer;">${t('Refresh replies')}</button>

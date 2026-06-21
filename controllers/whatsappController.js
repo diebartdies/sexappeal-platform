@@ -10,7 +10,7 @@ const platformService = require('../services/whatsappPlatformService');
 const dripRunner = require('../services/whatsappDripRunner');
 const inboundService = require('../services/twilioWhatsAppInboundService');
 const twilioWhatsApp = require('../services/twilioWhatsAppService');
-const { buildStep2OutreachReply } = require('../utils/professionalInviteMessage');
+const { buildStep2LaunchFeedbackReply, buildStep2OutreachReply } = require('../utils/professionalInviteMessage');
 
 // @desc    Get platform WhatsApp configuration
 // @route   GET /api/v1/admin/whatsapp/config
@@ -207,6 +207,8 @@ exports.sendWhatsAppReply = async (req, res) => {
 
     let messageBody = String(body || '').trim();
     if (template === 'step2') {
+      messageBody = buildStep2LaunchFeedbackReply(alias);
+    } else if (template === 'step2link') {
       messageBody = buildStep2OutreachReply(alias);
     }
     if (!messageBody) {

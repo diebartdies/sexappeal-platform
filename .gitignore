@@ -4,6 +4,8 @@ npm-debug.log
 
 # Environment variables (NEVER PUSH THIS to GitHub)
 .env
+.env.*
+!.env.example
 
 # Uploaded user photos
 public/uploads/

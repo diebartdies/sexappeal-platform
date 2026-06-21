@@ -28,7 +28,33 @@ function buildOutreachRegisterUrl() {
   return `https://${host}/register.html`;
 }
 
-// Step 2 (manual reply after she writes back): safe link on the SelfAppeal alias.
+/** Public HTTPS URL for outreach logo (Twilio template header / media messages). */
+function getOutreachBrandImageUrl() {
+  const explicit = (process.env.TWILIO_WHATSAPP_MEDIA_URL || config.sms?.whatsappMediaUrl || '').trim();
+  if (explicit) return explicit.replace(/\/$/, '');
+
+  const host = getOutreachAliasDomain();
+  if (host) return `https://${host}/images/outreach-logo.png`;
+
+  const base = (config.platform?.publicUrl || PUBLIC_URL).replace(/\/$/, '');
+  return `${base}/images/outreach-logo.png`;
+}
+
+// Step 2a (manual reply after she answers step 1): thank + details — no link unless they ask.
+function buildStep2LaunchFeedbackReply(alias) {
+  const name = (alias && String(alias).trim()) || '';
+  const greeting = name ? `¡Gracias por escribir, ${name}!` : '¡Gracias por escribir!';
+
+  return `${greeting}
+
+Leemos todas las respuestas — nos ayuda a armar la plataforma en el lanzamiento.
+
+Si querés, contame un poco más (qué te preocupa o qué te gustaría ver). Cuando quieras probar el mes gratis, te paso el registro express por acá — sin tarjeta ni débito automático.
+
+Sin compromiso. 😊`;
+}
+
+// Step 2b (after interest or feedback): safe link on the SelfAppeal alias.
 function buildStep2OutreachReply(alias) {
   const name = (alias && String(alias).trim()) || '';
   const greeting = name ? `¡Genial ${name}!` : '¡Genial!';
@@ -36,11 +62,13 @@ function buildStep2OutreachReply(alias) {
   if (!url) {
     return `${greeting} Te cuento más por acá. ¿Querés que te explique cómo funciona el registro?`;
   }
-  return `${greeting} Acá podés registrarte en SelfAppeal (primer mes de prueba sin costo):
+  return `${greeting} Cuando quieras probar, acá tenés el registro express (2 minutos):
 
 ${url}
 
-Cualquier duda, respondeme por acá. 😊`;
+No pedimos registrar ningún medio de pago — ni tarjeta, ni Mercado Pago automático. Te ayudamos a completar fotos y perfil por acá. Después del mes gratis, solo abonás si querés seguir visible.
+
+Revisá Spam/Correo no deseado: te llega un código de 6 dígitos para activar el mail. Cualquier duda, respondeme. 😊`;
 }
 
 function normalizeE164Digits(phone) {
@@ -102,34 +130,35 @@ Gracias por confiar en la Arquitectura de la Intimidad.
 — Equipo SexAppeal`;
 }
 
-// Sanitized WhatsApp caption sent ALONGSIDE the brand image (see BRAND_IMAGE_PATH).
-//
-// Hard constraints baked in here:
-//   1. The literal brand word (which contains "sex") never appears in this text —
-//      the brand is conveyed by the attached image only. We say "nuestra
-//      plataforma" / "la app" instead.
-//   2. The site domain `sexappeal.drsrv.net.ar` literally contains "sex", so it is
-//      DELIBERATELY OMITTED from the caption. Replies are driven to the WhatsApp
-//      contact instead. Step-2 replies use buildStep2OutreachReply() with the
-//      SelfAppeal alias (selfappeal.drsrv.net.ar by default).
-function buildSanitizedWhatsAppCaption(alias) {
+// Step 1 cold outreach (Twilio template watext + web.js caption). {{1}} = alias in Meta template.
+// Register URL is static in the template body (selfappeal alias — no "sex" substring).
+function buildColdOutreachStep1Message(alias) {
   const name = (alias && String(alias).trim()) || 'hermosa';
+  const registerUrl = buildOutreachRegisterUrl() || 'https://selfappeal.drsrv.net.ar/register.html';
 
-  // STEP 1 of a 2-step flow: this cold message carries NO link (lower spam/ban
-  // risk + less "scam" feel) and drives a REPLY in the same chat. The website
-  // link is sent only in STEP 2, once she replies and there is context/trust.
   return `Hola ${name} ✨
 
-Te invito a un directorio para publicar tu perfil y servicios — como los portales de anuncios personales que ya conocés, pero con reglas más justas:
+Estamos en el lanzamiento de SelfAppeal, un directorio nuevo para publicar tu perfil y servicios — distinto a los que ya conocés. Ofrecemos:
 
-✅ Rotación igualitaria: nadie paga extra para quedar primera.
-✅ Perfiles verificados: identidad y edad, ambiente serio.
-✅ Tu WhatsApp es tuyo: no lo vendemos ni lo compartimos con terceros.
-✅ Vacaciones descontables: no pagás los días que marcás ausente.
+✅ Primer mes gratis · sin comisiones por contacto
+✅ Rotación justa: nadie paga extra para quedar primera
+✅ Perfiles verificados · contacto protegido · vacaciones descontables
+✅ No pedimos registrar ningún medio de pago
 
-Primer mes de prueba sin costo; después según tu categoría.
+¿Querés saber más? Respondé a este mensaje.
 
-¿Te interesa sumarte? Respondé a este mismo chat y te cuento todo. 😊`;
+Y para hacerlo aún más a tu medida, ¿qué te parece que no debería faltar en una plataforma de oferta de servicios?
+
+Si querés probarlo: ${registerUrl}`;
+}
+
+/** Meta/Twilio template watext body — use {{1}} as the only variable (example: María). */
+function getColdOutreachTemplateBodySample() {
+  return buildColdOutreachStep1Message('María').replace('María', '{{1}}');
+}
+
+function buildSanitizedWhatsAppCaption(alias) {
+  return buildColdOutreachStep1Message(alias);
 }
 
 function buildWhatsAppUrl(phone, alias) {
@@ -146,6 +175,10 @@ module.exports = {
   BRAND_IMAGE_PATH,
   getOutreachAliasDomain,
   buildOutreachRegisterUrl,
+  getOutreachBrandImageUrl,
+  buildColdOutreachStep1Message,
+  getColdOutreachTemplateBodySample,
+  buildStep2LaunchFeedbackReply,
   buildStep2OutreachReply,
   normalizeE164Digits,
   normalizeWhatsAppPhone,

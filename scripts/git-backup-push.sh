@@ -48,6 +48,17 @@ COMMIT_MSG="Platform backup $(date -u '+%Y-%m-%d %H:%M UTC')"
 echo "Adding files (respecting .gitignore)..."
 git add .
 
+if git diff --cached --name-only | grep -qx '.env'; then
+  echo "ERROR: .env is staged — refusing to push secrets to GitHub."
+  git reset HEAD .env 2>/dev/null || true
+  exit 1
+fi
+
+if git diff --cached --name-only | grep -E '\.(pem|key)$|privkey|fullchain'; then
+  echo "ERROR: TLS private material is staged — refusing to push."
+  exit 1
+fi
+
 if git diff --cached --quiet; then
   echo "No new changes to commit."
 else

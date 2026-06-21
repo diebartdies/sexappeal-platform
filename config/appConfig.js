@@ -191,7 +191,7 @@ const config = {
     whatsappApiEnabled: process.env.TWILIO_WHATSAPP_API === 'true'
       || Boolean(process.env.TWILIO_WHATSAPP_FROM_NUMBER || process.env.TWILIO_FROM_NUMBER),
     // Approved Content Template SID for business-initiated (cold) outreach.
-    // Template watext (HX92a57f64dfa083cb94b884da55a85cde): {{1}} alias only — step 1 of 2.
+    // Template watext: {{1}} alias only — step 1 of 2. Set via TWILIO_WHATSAPP_CONTENT_SID (Twilio Console).
     // Register link is sent manually in step 2 (buildStep2OutreachReply), not in the template.
     // Env: TWILIO_WHATSAPP_CONTENT_SID (HX... from Twilio Console).
     // Example: TWILIO_WA_TEMPLATE_EXAMPLE_1=María

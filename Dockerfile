@@ -47,5 +47,8 @@ COPY . .
 # Ensure the uploads directory exists and set correct permissions
 RUN mkdir -p public/uploads/photos
 
+# SelfAppeal outreach logo (PNG from SVG — WhatsApp media / Twilio template header)
+RUN node scripts/generate-outreach-logo.js
+
 EXPOSE 5000
 CMD ["node", "server.js"]

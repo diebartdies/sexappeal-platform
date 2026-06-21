@@ -3,7 +3,8 @@ const smsService = require('./smsService');
 const { getPlatformWhatsAppPhone } = require('../utils/whatsappConfig');
 const {
   normalizeWhatsAppPhone,
-  normalizeE164Digits
+  normalizeE164Digits,
+  getOutreachBrandImageUrl
 } = require('../utils/professionalInviteMessage');
 
 function isApiModeEnabled() {
@@ -43,7 +44,7 @@ function getColdOutreachBlockReason() {
   if (isColdOutreachTemplateConfigured()) return '';
   return 'WhatsApp cold outreach needs template "watext" on the server. '
     + 'Run: bash scripts/set-twilio-whatsapp-template.sh /root/SexAppeal-platform '
-    + '(SID HX92a57f64dfa083cb94b884da55a85cde). '
+    + '(set TWILIO_WHATSAPP_CONTENT_SID in .env from Twilio Console). '
     + 'Or set WHATSAPP_USE_WEBJS=true and use QR in Admin → Invitations.';
 }
 
@@ -54,9 +55,7 @@ function formatWhatsAppAddress(digits) {
 
 function resolveMediaUrl(options = {}) {
   if (options.mediaUrl) return options.mediaUrl;
-  if (config.sms.whatsappMediaUrl) return config.sms.whatsappMediaUrl;
-  const base = (config.platform?.publicUrl || '').replace(/\/$/, '');
-  return base ? `${base}/images/outreach-logo.png` : '';
+  return getOutreachBrandImageUrl();
 }
 
 /** Meta/Twilio template watext — sample value for {{1}} only (step-1 cold outreach). */
