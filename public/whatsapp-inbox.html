@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="alternate icon" href="/favicon.ico">
+    <title>WhatsApp Inbox — Admin</title>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#0b141a">
+    <meta name="color-scheme" content="dark">
+    <link rel="stylesheet" href="/css/whatsapp-inbox.css?v=1">
+</head>
+<body class="wa-inbox-page">
+    <header class="wa-inbox-header">
+        <div class="wa-inbox-header-main">
+            <h1 id="waInboxTitle">WhatsApp Inbox</h1>
+            <p id="waInboxSubtitle">Respuestas y respuestas manuales desde la app (no Twilio Console).</p>
+        </div>
+        <div class="wa-inbox-header-actions">
+            <label class="wa-inbox-auto">
+                <input type="checkbox" id="waAutoRefresh" checked>
+                <span id="waAutoRefreshLabel">Auto-refresh 15s</span>
+            </label>
+            <button type="button" class="wa-btn" id="waRefreshBtn">Actualizar</button>
+            <a class="wa-btn wa-btn-link" href="dashboard.html" id="waBackDashboard">Panel admin</a>
+        </div>
+    </header>
+
+    <div id="waInboxAlert" class="wa-inbox-alert hidden" role="alert"></div>
+
+    <div class="wa-inbox-meta">
+        <p id="waInboxStats">—</p>
+        <p id="waWebhookHint" class="wa-inbox-webhook">Webhook: <code id="waWebhookUrl">—</code></p>
+    </div>
+
+    <div class="wa-inbox-toolbar">
+        <input type="search" id="waSearch" class="wa-inbox-search" placeholder="Buscar teléfono, alias o texto…" autocomplete="off">
+        <select id="waDirectionFilter" class="wa-inbox-select">
+            <option value="all">Todos los mensajes</option>
+            <option value="inbound">Solo entrantes</option>
+            <option value="outbound">Solo salientes (manual)</option>
+        </select>
+    </div>
+
+    <div class="wa-inbox-layout">
+        <aside class="wa-thread-list" id="waThreadList" aria-label="Conversaciones">
+            <p class="wa-empty">Cargando…</p>
+        </aside>
+        <main class="wa-thread-view" id="waThreadView" aria-live="polite">
+            <div class="wa-thread-placeholder">
+                <p>Elegí una conversación para ver los mensajes.</p>
+                <p class="wa-muted">Los envíos automáticos del drip no aparecen acá — solo respuestas entrantes y tus respuestas manuales desde el admin.</p>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/adminHome.js?v=8.6"></script>
+    <script type="module" src="/js/whatsappInbox.js?v=1"></script>
+</body>
+</html>

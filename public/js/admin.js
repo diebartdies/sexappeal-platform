@@ -1577,19 +1577,95 @@ async function markLeadContacted(id) {
     }
 }
 
+function resolvePreviewInviteAlias() {
+    const checked = document.querySelector('.lead-invite-cb:checked');
+    const pickRow = checked || document.querySelector('.lead-invite-cb:not(:disabled)');
+    if (!pickRow) return 'María';
+    const aliasCell = pickRow.closest('tr')?.querySelector('td:nth-child(3)');
+    const alias = aliasCell?.textContent?.trim();
+    return alias && alias !== '—' ? alias : 'María';
+}
+
+function openInvitePreviewModal(payload) {
+    let modal = document.getElementById('invitePreviewModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'invitePreviewModal';
+        modal.className = 'payment-modal-overlay';
+        Object.assign(modal.style, {
+            position: 'fixed',
+            inset: '0',
+            background: 'rgba(0,0,0,0.88)',
+            zIndex: '100002',
+            display: 'none',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+        });
+        document.body.appendChild(modal);
+    }
+
+    const alias = escapeHtml(payload.alias || 'María');
+    const message = escapeHtml(payload.message || '');
+    const registerUrl = payload.registerUrl ? escapeHtml(payload.registerUrl) : '';
+    const brandImageUrl = payload.brandImageUrl ? escapeHtml(payload.brandImageUrl) : '';
+    const metaParts = [
+        `${t('Sample alias')}: <strong style="color:var(--primary-gold);">${alias}</strong>`,
+        t('Cold WhatsApp step 1 — same text as automatic drip / Twilio template watext')
+    ];
+    if (brandImageUrl) {
+        metaParts.push(`${t('Logo image')}: <code style="color:#9cf;font-size:0.8rem;word-break:break-all;">${brandImageUrl}</code>`);
+    }
+
+    modal.innerHTML = `
+        <div class="card payment-modal-panel" data-modal-panel style="max-width:640px;width:100%;max-height:90vh;overflow:auto;background:var(--dark-bg,#1a1a1a);padding:20px;border-radius:8px;color:#fff;">
+            <h3 class="gold-text" style="margin:0 0 8px 0;">${t('Invite message preview')}</h3>
+            <p style="color:#888;font-size:0.85rem;margin:0 0 12px;line-height:1.5;">${metaParts.join('<br>')}</p>
+            <pre id="invitePreviewBody" style="white-space:pre-wrap;word-break:break-word;background:#111;border:1px solid #333;border-radius:6px;padding:14px;color:#eee;font-size:0.9rem;line-height:1.55;margin:0 0 16px;max-height:50vh;overflow:auto;">${message}</pre>
+            ${registerUrl ? `<p style="color:#666;font-size:0.8rem;margin:0 0 16px;word-break:break-all;">${t('Register link')}: ${registerUrl}</p>` : ''}
+            <button type="button" id="invitePreviewCloseBtn" style="padding:10px 18px;background:var(--primary-gold);color:var(--dark-bg);border:none;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Close')}</button>
+        </div>`;
+
+    const close = () => {
+        deactivateAccessibleModal(modal);
+        modal.style.display = 'none';
+    };
+
+    modal.onclick = (event) => {
+        if (event.target === modal) close();
+    };
+    document.getElementById('invitePreviewCloseBtn').onclick = close;
+
+    modal.style.display = 'flex';
+    const titleEl = modal.querySelector('h3');
+    if (titleEl && !titleEl.id) titleEl.id = 'invitePreviewModalTitle';
+    activateAccessibleModal(modal, {
+        labelId: titleEl?.id,
+        onClose: close,
+        initialFocusSelector: '#invitePreviewCloseBtn'
+    });
+}
+
 async function previewInviteMessage() {
+    const btn = document.getElementById('previewInviteBtn');
+    const alias = resolvePreviewInviteAlias();
+    if (btn) btn.disabled = true;
+
     try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`${API_URL}/admin/outreach/invite-message?alias=hermosa`, {
+        const res = await fetch(`${API_URL}/admin/outreach/invite-message?alias=${encodeURIComponent(alias)}`, {
             headers: authHeaders(),
             credentials: 'include'
         });
         const data = await parseAdminApiResponse(res);
-        if (data.success) {
-            announceMessage(data.data.message, { isError: false });
+        if (!data.success) {
+            announceMessage(data.error || t('Could not load invite message preview.'));
+            return;
         }
+        openInvitePreviewModal(data.data);
     } catch (err) {
-        announceMessage('Could not load invite message preview.');
+        announceMessage(adminConnectionErrorMessage(err));
+    } finally {
+        if (btn) btn.disabled = false;
     }
 }
 
@@ -4283,6 +4359,7 @@ export async function openDashboardConfigModal() {
                 <div id="waInboundSection" style="margin-top:24px;padding-top:16px;border-top:1px solid #333;">
                     <h4 style="margin:0 0 10px 0;color:#ccc;">4) ${t('Incoming replies (WhatsApp)')}</h4>
                     <p style="color:#888;font-size:0.85rem;margin:0 0 8px 0;">${t('Replies appear here — no need to open Twilio Console. Respond from this panel with custom text or the preset buttons.')}</p>
+                    <p style="margin:0 0 12px 0;"><a href="/whatsapp-inbox.html" target="_blank" rel="noopener" style="color:#25D366;font-size:0.9rem;font-weight:bold;">↗ ${t('Open full WhatsApp inbox')}</a></p>
                     <p style="color:#666;font-size:0.8rem;margin:0 0 12px 0;word-break:break-all;">${t('One-time setup — paste this webhook URL in Twilio → WhatsApp sender → Incoming message')}: <code id="waInboundWebhookUrl" style="color:#9cf;">—</code></p>
                     <p id="waInboundMeta" style="color:#aaa;font-size:0.85rem;margin:0 0 10px 0;">—</p>
                     <div id="waInboundList" style="max-height:320px;overflow-y:auto;padding-right:4px;">—</div>

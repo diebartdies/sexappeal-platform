@@ -190,10 +190,10 @@ const config = {
     // to force the legacy whatsapp-web.js QR flow instead.
     whatsappApiEnabled: process.env.TWILIO_WHATSAPP_API === 'true'
       || Boolean(process.env.TWILIO_WHATSAPP_FROM_NUMBER || process.env.TWILIO_FROM_NUMBER),
-    // Approved Content Template SID for business-initiated (cold) outreach.
-    // Template watext: {{1}} alias only — step 1 of 2. Set via TWILIO_WHATSAPP_CONTENT_SID (Twilio Console).
-    // Register link is sent manually in step 2 (buildStep2OutreachReply), not in the template.
-    // Env: TWILIO_WHATSAPP_CONTENT_SID (HX... from Twilio Console).
+    // WhatsApp cold templates (Twilio Content SIDs):
+    //   watext         HX92a57f64dfa083cb94b884da55a85cde — Meta approved (use until watext_updated clears)
+    //   watext_updated HX3e76b50fc1f69871bfbc4404c7666482 — pending Meta approval
+    // Env: TWILIO_WHATSAPP_CONTENT_SID
     // Example: TWILIO_WA_TEMPLATE_EXAMPLE_1=María
     whatsappContentSid: process.env.TWILIO_WHATSAPP_CONTENT_SID || '',
     // Public HTTPS image URL for media messages (defaults to {publicUrl}/images/outreach-logo.png).

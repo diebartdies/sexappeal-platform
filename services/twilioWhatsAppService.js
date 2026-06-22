@@ -34,18 +34,34 @@ function getConfigError() {
   return '';
 }
 
+const APPROVED_WATEXT_SID = 'HX92a57f64dfa083cb94b884da55a85cde';
+const PENDING_WATEXT_UPDATED_SID = 'HX3e76b50fc1f69871bfbc4404c7666482';
+
 function isColdOutreachTemplateConfigured() {
   return Boolean(config.sms.whatsappContentSid);
 }
 
-/** Shown when Twilio API is on but TWILIO_WHATSAPP_CONTENT_SID is missing from server .env */
+/** Shown when Twilio API is on but cold outreach cannot run. */
 function getColdOutreachBlockReason() {
   if (!isApiModeEnabled()) return '';
-  if (isColdOutreachTemplateConfigured()) return '';
-  return 'WhatsApp cold outreach needs template "watext" on the server. '
-    + 'Run: bash scripts/set-twilio-whatsapp-template.sh /root/SexAppeal-platform '
-    + '(set TWILIO_WHATSAPP_CONTENT_SID in .env from Twilio Console). '
-    + 'Or set WHATSAPP_USE_WEBJS=true and use QR in Admin → Invitations.';
+
+  const sid = (config.sms.whatsappContentSid || '').trim();
+  if (!sid) {
+    return 'WhatsApp cold outreach needs TWILIO_WHATSAPP_CONTENT_SID in server .env. '
+      + `Approved template watext: ${APPROVED_WATEXT_SID}. `
+      + 'Run: bash scripts/set-twilio-whatsapp-template.sh /root/SexAppeal-platform '
+      + 'Or set WHATSAPP_USE_WEBJS=true and link WhatsApp via QR (no template).';
+  }
+
+  if (sid === PENDING_WATEXT_UPDATED_SID) {
+    return 'Template watext_updated is pending Meta approval — Twilio will reject cold sends. '
+      + `Switch .env to approved watext: ${APPROVED_WATEXT_SID} `
+      + '(bash scripts/set-twilio-whatsapp-template.sh /root/SexAppeal-platform '
+      + `${APPROVED_WATEXT_SID}) `
+      + 'or use WHATSAPP_USE_WEBJS=true + QR in Admin until Meta approves.';
+  }
+
+  return '';
 }
 
 function formatWhatsAppAddress(digits) {
@@ -58,7 +74,7 @@ function resolveMediaUrl(options = {}) {
   return getOutreachBrandImageUrl();
 }
 
-/** Meta/Twilio template watext — sample value for {{1}} only (step-1 cold outreach). */
+/** Meta/Twilio template watext_updated — sample value for {{1}} only (step-1 cold outreach). */
 const WATEXT_TEMPLATE_EXAMPLES = Object.freeze({
   '1': process.env.TWILIO_WA_TEMPLATE_EXAMPLE_1 || 'María'
 });
@@ -155,6 +171,8 @@ module.exports = {
   getConfigError,
   isColdOutreachTemplateConfigured,
   getColdOutreachBlockReason,
+  APPROVED_WATEXT_SID,
+  PENDING_WATEXT_UPDATED_SID,
   sendWhatsAppMessage,
   formatWhatsAppAddress,
   resolveFromAddress,

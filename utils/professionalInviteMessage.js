@@ -130,7 +130,7 @@ Gracias por confiar en la Arquitectura de la Intimidad.
 — Equipo SexAppeal`;
 }
 
-// Step 1 cold outreach (Twilio template watext + web.js caption). {{1}} = alias in Meta template.
+// Step 1 cold outreach (Twilio template watext_updated + web.js caption). {{1}} = alias in Meta template.
 // Register URL is static in the template body (selfappeal alias — no "sex" substring).
 function buildColdOutreachStep1Message(alias) {
   const name = (alias && String(alias).trim()) || 'hermosa';
@@ -152,7 +152,7 @@ Y para hacerlo aún más a tu medida, ¿qué te parece que no debería faltar en
 Si querés probarlo: ${registerUrl}`;
 }
 
-/** Meta/Twilio template watext body — use {{1}} as the only variable (example: María). */
+/** Meta/Twilio template watext_updated body — use {{1}} as the only variable (example: María). */
 function getColdOutreachTemplateBodySample() {
   return buildColdOutreachStep1Message('María').replace('María', '{{1}}');
 }

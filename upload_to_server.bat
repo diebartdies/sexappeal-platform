@@ -16,7 +16,7 @@ call "%~dp0scripts\upload-ssl-certs-to-prod.bat"
 if errorlevel 1 goto ssl_failed
 
 echo [1b/7] Normalizing deploy script line endings (LF)...
-powershell -NoProfile -Command "$paths=@('%~dp0scripts\deploy-extract.sh','%~dp0scripts\deploy-restart.sh','%~dp0scripts\disk-housekeeping.sh','%~dp0scripts\install-housekeeping-cron.sh','%~dp0scripts\git-backup-push.sh','%~dp0scripts\install-git-backup-cron.sh','%~dp0scripts\install-daily-backup-cron.sh','%~dp0scripts\nginx-write-selfappeal-conf.sh','%~dp0scripts\nginx-emergency-fix.sh','%~dp0scripts\fix-nginx-now.sh','%~dp0scripts\sync-ssl-certs-selfappeal.sh'); foreach($p in $paths){ if(-not(Test-Path $p)){continue}; $t=[IO.File]::ReadAllText($p) -replace \"`r`n\",\"`n\" -replace \"`r\",\"\"; [IO.File]::WriteAllText($p,$t,(New-Object System.Text.UTF8Encoding $false)) }"
+powershell -NoProfile -Command "$paths=@('%~dp0scripts\deploy-extract.sh','%~dp0scripts\deploy-restart.sh','%~dp0scripts\disk-housekeeping.sh','%~dp0scripts\install-housekeeping-cron.sh','%~dp0scripts\git-backup-push.sh','%~dp0scripts\install-git-backup-cron.sh','%~dp0scripts\install-daily-backup-cron.sh','%~dp0scripts\nginx-write-selfappeal-conf.sh','%~dp0scripts\nginx-emergency-fix.sh','%~dp0scripts\fix-nginx-now.sh','%~dp0scripts\sync-ssl-certs-selfappeal.sh','%~dp0scripts\set-twilio-whatsapp-template.sh'); foreach($p in $paths){ if(-not(Test-Path $p)){continue}; $t=[IO.File]::ReadAllText($p) -replace \"`r`n\",\"`n\" -replace \"`r\",\"\"; [IO.File]::WriteAllText($p,$t,(New-Object System.Text.UTF8Encoding $false)) }"
 if errorlevel 1 goto line_endings_failed
 
 echo [2/7] Compressing project files locally (ignoring heavy cache files)...

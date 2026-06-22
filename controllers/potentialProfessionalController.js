@@ -1,18 +1,25 @@
 const PotentialProfessional = require('../models/PotentialProfessional');
-const { buildProfessionalInviteMessage, buildWhatsAppUrl, REGISTER_URL, PUBLIC_URL } = require('../utils/professionalInviteMessage');
+const {
+  buildColdOutreachStep1Message,
+  buildOutreachRegisterUrl,
+  getOutreachBrandImageUrl,
+  buildWhatsAppUrl
+} = require('../utils/professionalInviteMessage');
 
-// @desc    Preview outreach invite message
+// @desc    Preview outreach invite message (cold WhatsApp step 1 — same as drip/template)
 // @route   GET /api/v1/admin/outreach/invite-message
 // @access  Private/Admin
 exports.getInviteMessage = async (req, res, next) => {
   try {
-    const alias = req.query.alias || 'hermosa';
+    const alias = (req.query.alias && String(req.query.alias).trim()) || 'María';
     res.status(200).json({
       success: true,
       data: {
-        message: buildProfessionalInviteMessage(alias),
-        registerUrl: REGISTER_URL,
-        publicUrl: PUBLIC_URL
+        message: buildColdOutreachStep1Message(alias),
+        registerUrl: buildOutreachRegisterUrl(),
+        brandImageUrl: getOutreachBrandImageUrl(),
+        alias,
+        channel: 'whatsapp-cold'
       }
     });
   } catch (error) {
