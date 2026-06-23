@@ -88,8 +88,8 @@ export function returnToOrigin(fallback) {
     }
 
     if (point.href === currentHref()) {
-        window.scrollTo({ top: point.scrollY || 0, behavior: 'smooth' });
-        return true;
+        if (typeof fallback === 'function') fallback();
+        return false;
     }
 
     scheduleScrollRestore(point.scrollY);

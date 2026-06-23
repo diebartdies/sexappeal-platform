@@ -2,7 +2,7 @@ import { API_URL, appPath } from './globals.js';
 import { showAlert, attachPasswordToggles } from './uiHelpers.js';
 import { t, applyStaticTranslations } from './i18n.js';
 import { confirmDialog, wireFormLabel, setFieldInvalid } from './a11y.js';
-import { navigateWithReturn, returnToOrigin } from './navReturn.js';
+import { navigateWithReturn } from './navReturn.js';
 import { openFullTermsModal } from './terms.js';
 import { PHONE_COUNTRIES, defaultPhoneCountry, buildFullPhoneNumber } from './phoneCountryCodes.js';
 
@@ -102,6 +102,11 @@ function confirmLeaveRegistration(form) {
     return confirmDialog(t('Registration is not finished. If you leave now, your changes will be lost. Continue?'));
 }
 
+function goToRegistrationEntrance() {
+    sessionStorage.setItem('ancestor_code', 'index.html');
+    window.location.href = appPath('index.html');
+}
+
 function leaveRegistration(onLeave) {
     const form = document.getElementById('registerForm');
     confirmLeaveRegistration(form).then((ok) => {
@@ -110,26 +115,34 @@ function leaveRegistration(onLeave) {
             onLeave();
             return;
         }
-        returnToOrigin(() => { window.location.href = appPath('index.html'); });
+        goToRegistrationEntrance();
     });
+}
+
+function bindRegistrationFooterLinks() {
+    const loginLink = document.getElementById('regLoginLink');
+    if (loginLink && !loginLink.dataset.regLeaveBound) {
+        loginLink.dataset.regLeaveBound = '1';
+        loginLink.addEventListener('click', () => {
+            leaveRegistration(() => {
+                navigateWithReturn(appPath('login.html'));
+            });
+        });
+    }
+
+    const backOrigin = document.getElementById('regBackOrigin');
+    if (backOrigin && !backOrigin.dataset.regLeaveBound) {
+        backOrigin.dataset.regLeaveBound = '1';
+        backOrigin.addEventListener('click', () => leaveRegistration());
+    }
 }
 
 function setupRegistrationLeaveGuard(form) {
     const backBtn = document.getElementById('regBackToEntrance');
     if (backBtn) {
-        backBtn.textContent = `\u2190 ${t('Back')}`;
+        backBtn.textContent = `\u2190 ${t('Back to entrance')}`;
         backBtn.onclick = () => leaveRegistration();
     }
-
-    document.getElementById('regLoginLink')?.addEventListener('click', () => {
-        leaveRegistration(() => {
-            navigateWithReturn(appPath('login.html'));
-        });
-    });
-
-    document.getElementById('regBackOrigin')?.addEventListener('click', () => {
-        leaveRegistration();
-    });
 
     const topBack = document.querySelector('.left-group-back');
     if (topBack && !topBack.dataset.regLeaveBound) {
@@ -173,7 +186,7 @@ function applyRegistrationPageLabels() {
     setRegLabel('regPasswordConfirm', 'Confirm password', true);
 
     const backBtn = document.getElementById('regBackToEntrance');
-    if (backBtn) backBtn.textContent = `\u2190 ${t('Back')}`;
+    if (backBtn) backBtn.textContent = `\u2190 ${t('Back to entrance')}`;
 
     const submitBtn = document.querySelector('#registerForm button[type="submit"]');
     if (submitBtn) submitBtn.textContent = t('Submit Registration');
@@ -467,4 +480,5 @@ export function initProfessionalRegistration() {
 
     applyStaticTranslations(form);
     applyRegistrationPageLabels();
+    bindRegistrationFooterLinks();
 }

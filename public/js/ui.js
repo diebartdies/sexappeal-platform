@@ -282,7 +282,7 @@ export function initGlobalTopBar() {
         });
         backBtn.addEventListener('mouseover', () => backBtn.style.background = 'rgba(255, 255, 255, 0.1)');
         backBtn.addEventListener('mouseout', () => backBtn.style.background = 'transparent');
-        backBtn.onclick = () => navigateBack();
+        backBtn.onclick = () => navigateBack(() => { window.location.href = appPath('index.html'); });
         leftGroup.appendChild(backBtn);
     }
 
