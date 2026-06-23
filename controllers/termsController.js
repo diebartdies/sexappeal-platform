@@ -2,6 +2,8 @@ const jwt = require('jsonwebtoken');
 const config = require('../config/appConfig');
 const User = require('../models/User');
 const TermsAcceptance = require('../models/TermsAcceptance');
+const ActivityLog = require('../models/ActivityLog');
+const { getClientIp } = require('../utils/clientIp');
 
 // Best-effort, NON-blocking auth: returns the User id when a valid token is
 // present (Bearer header or cookie), otherwise null. Unlike the `protect`
@@ -53,6 +55,26 @@ exports.acceptTerms = async (req, res) => {
       ip: clientIpOf(req),
       userAgent: req.headers['user-agent'] ? String(req.headers['user-agent']).slice(0, 500) : undefined
     });
+
+    if (acceptedSource === 'registration') {
+      const user = userId ? await User.findById(userId).select('role email') : null;
+      if (user?.role !== 'admin') {
+        await ActivityLog.create({
+          action: 'registration_terms_accepted',
+          actorType: 'registration_visitor',
+          isGuest: !userId,
+          professional: userId || undefined,
+          highlight: false,
+          ipAddress: getClientIp(req),
+          userAgent: req.headers['user-agent'] ? String(req.headers['user-agent']).slice(0, 500) : undefined,
+          details: {
+            source: acceptedSource,
+            clientId: clientId ? String(clientId).slice(0, 100) : undefined,
+            termsVersion
+          }
+        }).catch((err) => console.error('Failed to log registration terms acceptance:', err.message));
+      }
+    }
 
     // Stamp the account itself when authenticated so future visits can skip the
     // gate for this version without relying on the browser's localStorage.

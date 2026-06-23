@@ -227,7 +227,7 @@ exports.register = async (req, res, next) => {
       await ActivityLog.create({
         professional: user._id,
         action: 'register',
-        ipAddress: req.ip,
+        actorType: 'professional',
         ipAddress: clientIp,
         userAgent: req.headers['user-agent']
       });
@@ -413,6 +413,7 @@ exports.login = async (req, res, next) => {
       await ActivityLog.create({
         professional: user._id,
         action: 'login',
+        actorType: 'professional',
         ipAddress: clientIp,
         userAgent: req.headers['user-agent']
       });
@@ -421,6 +422,7 @@ exports.login = async (req, res, next) => {
       await ActivityLog.create({
         professional: user._id,
         action: 'admin_login',
+        actorType: recordedIp ? 'admin_ho' : 'admin',
         ipAddress: clientIp,
         userAgent: req.headers['user-agent'],
         isGuest: false,

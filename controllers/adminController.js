@@ -16,6 +16,7 @@ const { resolveWhatsappNumber } = require('../utils/contactNumber');
 const smsNotifications = require('../services/smsNotifications');
 const { getClientIp, isTrustedAdminIp } = require('../utils/clientIp');
 const { loadKnownAdminIps, resolveAdminIpLabel } = require('../utils/adminKnownIps');
+const { ACTOR_TYPES, resolveActorType, buildActorTypeQuery } = require('../utils/activityLogMeta');
 
 function adminLogDetails(req, extra = {}) {
   return {
@@ -51,6 +52,7 @@ async function enrichActivityLogs(logs) {
     obj.adminIpLabel = ipLabel || null;
     obj.isAdminHomeIp = ipLabel === 'ho';
     obj.isTrustedAdminIp = isTrustedAdminIp(obj.ipAddress, trustedIps);
+    obj.actorType = resolveActorType(obj, trustedIps);
     return obj;
   }));
 }
@@ -209,6 +211,7 @@ exports.sendBroadcastEmail = async (req, res, next) => {
     await ActivityLog.create({
       professional: req.user.id,
       action: 'admin_broadcast_email',
+      actorType: 'admin',
       ipAddress: clientIp,
       userAgent: req.headers['user-agent'],
       isGuest: false,
@@ -259,6 +262,7 @@ exports.sendTargetedEmail = async (req, res, next) => {
     await ActivityLog.create({
       professional: req.user.id,
       action: 'admin_targeted_email',
+      actorType: 'admin',
       ipAddress: clientIp,
       userAgent: req.headers['user-agent'],
       isGuest: false,
@@ -278,19 +282,67 @@ exports.sendTargetedEmail = async (req, res, next) => {
   }
 };
 
+// @desc    Distinct filter values for activity logs UI
+// @route   GET /api/v1/admin/logs/filters
+// @access  Private/Admin
+exports.getActivityLogFilters = async (req, res, next) => {
+  try {
+    const [actions, ips, userAgents, highlightCount, registrationCount] = await Promise.all([
+      ActivityLog.distinct('action'),
+      ActivityLog.distinct('ipAddress', { ipAddress: { $exists: true, $nin: [null, ''] } }),
+      ActivityLog.distinct('userAgent', { userAgent: { $exists: true, $nin: [null, ''] } }),
+      ActivityLog.countDocuments({ highlight: true }),
+      ActivityLog.countDocuments({ action: { $regex: '^registration_', $options: 'i' } })
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        actions: actions.filter(Boolean).sort(),
+        actorTypes: ACTOR_TYPES,
+        ips: ips.filter(Boolean).sort().slice(0, 100),
+        userAgents: userAgents.filter(Boolean).sort((a, b) => a.localeCompare(b)).slice(0, 40),
+        stats: {
+          highlighted: highlightCount,
+          registrationEvents: registrationCount
+        }
+      }
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
 // @desc    Get all activity logs
 // @route   GET /api/v1/admin/logs
 // @access  Private/Admin
 exports.getActivityLogs = async (req, res, next) => {
   try {
-    const { action, ipAddress, userAgent, isGuest, page = 1, limit = 50 } = req.query;
+    const {
+      action,
+      ipAddress,
+      userAgent,
+      isGuest,
+      actorType,
+      highlight,
+      page = 1,
+      limit = 50
+    } = req.query;
 
     const query = {};
-    if (action) query.action = { $regex: action, $options: 'i' };
-    if (ipAddress) query.ipAddress = { $regex: ipAddress, $options: 'i' };
-    if (userAgent) query.userAgent = { $regex: userAgent, $options: 'i' };
+    if (action) query.action = action;
+    if (ipAddress) query.ipAddress = ipAddress;
+    if (userAgent) query.userAgent = userAgent;
     if (isGuest !== undefined) {
-        query.isGuest = isGuest === 'true' ? true : { $ne: true };
+      query.isGuest = isGuest === 'true' ? true : { $ne: true };
+    }
+    if (highlight === 'true') query.highlight = true;
+    if (highlight === 'false') query.highlight = { $ne: true };
+
+    const actorQuery = buildActorTypeQuery(actorType);
+    if (actorQuery) {
+      query.$and = query.$and || [];
+      query.$and.push(actorQuery);
     }
 
     const skip = (page - 1) * limit;
@@ -402,6 +454,7 @@ exports.verifyProfessional = async (req, res, next) => {
     await ActivityLog.create({
       professional: user._id,
       action: status === 'approved' ? 'admin_approve_verification' : 'admin_reject_verification',
+      actorType: 'admin',
       ipAddress: clientIp,
       userAgent: req.headers['user-agent'],
       isGuest: false,
@@ -597,6 +650,7 @@ exports.updateProfessionalProfile = async (req, res, next) => {
     await ActivityLog.create({
       professional: user._id,
       action: 'admin_edit_profile',
+      actorType: 'admin',
       ipAddress: clientIp,
       userAgent: req.headers['user-agent'],
       isGuest: false,

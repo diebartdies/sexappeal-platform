@@ -1216,7 +1216,38 @@ export async function loadDashboard() {
 let currentLogFilters = {};
 let currentLogBaseFilters = {};
 
+const LOG_ACTOR_TYPE_LABELS = {
+    admin: 'Admin',
+    admin_ho: 'Admin-ho',
+    professional: 'Professional',
+    guest: 'Guest',
+    registration_visitor: 'Registration visitor',
+    unknown: 'Unknown'
+};
+
+function actorTypeLabel(value) {
+    return t(LOG_ACTOR_TYPE_LABELS[value] || value || 'Unknown');
+}
+
+function formatLogActionCell(log) {
+    let html = escapeHtml(log.action || '');
+    const reason = log.details?.reason;
+    if (reason) {
+        html += ` <span style="color:#aaa;font-size:0.8rem;">(${escapeHtml(reason)})</span>`;
+    }
+    if (log.highlight || log.details?.regretTerms) {
+        html += ` <span style="color:#ffc107;font-weight:bold;">⚠ ${escapeHtml(t('Terms regret'))}</span>`;
+    }
+    return html;
+}
+
 function formatLogActor(log) {
+    if (log.action && log.action.startsWith('registration_')) {
+        const email = log.details?.userEmail || log.professional?.email;
+        const base = email ? `${t('Registration visitor')} (${email})` : t('Registration visitor');
+        return log.highlight || log.details?.regretTerms ? `${base} ⚠` : base;
+    }
+
     const homeAdmin = log.adminIpLabel === 'ho' || log.isAdminHomeIp
         || log.details?.adminIpLabel === 'ho';
 
@@ -1260,6 +1291,63 @@ function formatLogActor(log) {
     return t('Unknown');
 }
 
+async function loadLogFilterOptions() {
+    try {
+        const res = await fetch(`${API_URL}/admin/logs/filters`, {
+            headers: authHeaders(),
+            credentials: 'include'
+        });
+        const data = await parseAdminApiResponse(res);
+        if (!data.success) return;
+
+        const fillSelect = (el, values, emptyLabel, labelFn = (v) => v) => {
+            if (!el) return;
+            const current = el.value;
+            el.innerHTML = `<option value="">${escapeHtml(emptyLabel)}</option>`
+                + values.map((v) => `<option value="${escapeHtml(String(v))}">${escapeHtml(labelFn(v))}</option>`).join('');
+            if (current) el.value = current;
+        };
+
+        fillSelect(document.getElementById('logFilterAction'), data.data.actions || [], t('All actions'));
+        fillSelect(
+            document.getElementById('logFilterActor'),
+            data.data.actorTypes || [],
+            t('All actors'),
+            (v) => actorTypeLabel(v)
+        );
+        fillSelect(document.getElementById('logFilterIp'), data.data.ips || [], t('All IPs'));
+        fillSelect(
+            document.getElementById('logFilterAgent'),
+            data.data.userAgents || [],
+            t('All user agents'),
+            (v) => (String(v).length > 72 ? `${String(v).slice(0, 72)}…` : String(v))
+        );
+
+        const statsEl = document.getElementById('logFilterStats');
+        if (statsEl && data.data.stats) {
+            statsEl.textContent = t('Highlighted: {n} · Registration events: {r}')
+                .replace('{n}', String(data.data.stats.highlighted || 0))
+                .replace('{r}', String(data.data.stats.registrationEvents || 0));
+        }
+    } catch (err) {
+        console.error('Failed to load log filter options', err);
+    }
+}
+
+function readLogFiltersFromUi() {
+    currentLogFilters = { ...currentLogBaseFilters };
+    const action = document.getElementById('logFilterAction')?.value;
+    const actorType = document.getElementById('logFilterActor')?.value;
+    const ip = document.getElementById('logFilterIp')?.value;
+    const agent = document.getElementById('logFilterAgent')?.value;
+    const highlight = document.getElementById('logFilterHighlight')?.value;
+    if (action) currentLogFilters.action = action;
+    if (actorType) currentLogFilters.actorType = actorType;
+    if (ip) currentLogFilters.ipAddress = ip;
+    if (agent) currentLogFilters.userAgent = agent;
+    if (highlight) currentLogFilters.highlight = highlight;
+}
+
 export async function openActivityLogsModal(title = 'Activity Logs', baseFilters = {}) {
     let modal = document.getElementById('logsModal');
     currentLogBaseFilters = baseFilters;
@@ -1288,13 +1376,28 @@ export async function openActivityLogsModal(title = 'Activity Logs', baseFilters
 
         container.innerHTML = `
             <h2 id="logsModalTitle" class="gold-text" style="margin-bottom: 20px;">${title}</h2>
-            <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
-                <input type="text" id="logFilterAction" placeholder="Filter Action..." style="padding: 8px; border-radius: 4px; border: 1px solid #333; background: #222; color: white;">
-                <input type="text" id="logFilterIp" placeholder="Filter IP..." style="padding: 8px; border-radius: 4px; border: 1px solid #333; background: #222; color: white;">
-                <input type="text" id="logFilterAgent" placeholder="Filter User Agent..." style="padding: 8px; border-radius: 4px; border: 1px solid #333; background: #222; color: white;">
-                <button id="applyLogFiltersBtn">Apply Filters</button>
-                <button id="clearLogFiltersBtn">Clear</button>
+            <div style="display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;">
+                <select id="logFilterActor" style="padding: 8px; border-radius: 4px; border: 1px solid #333; background: #222; color: white; min-width: 160px;">
+                    <option value="">${t('All actors')}</option>
+                </select>
+                <select id="logFilterAction" style="padding: 8px; border-radius: 4px; border: 1px solid #333; background: #222; color: white; min-width: 180px;">
+                    <option value="">${t('All actions')}</option>
+                </select>
+                <select id="logFilterIp" style="padding: 8px; border-radius: 4px; border: 1px solid #333; background: #222; color: white; min-width: 140px;">
+                    <option value="">${t('All IPs')}</option>
+                </select>
+                <select id="logFilterAgent" style="padding: 8px; border-radius: 4px; border: 1px solid #333; background: #222; color: white; min-width: 220px; max-width: 320px;">
+                    <option value="">${t('All user agents')}</option>
+                </select>
+                <select id="logFilterHighlight" style="padding: 8px; border-radius: 4px; border: 1px solid #333; background: #222; color: white; min-width: 160px;">
+                    <option value="">${t('All rows')}</option>
+                    <option value="true">${t('Highlighted only')}</option>
+                    <option value="false">${t('Normal only')}</option>
+                </select>
+                <button id="applyLogFiltersBtn">${t('Apply Filters')}</button>
+                <button id="clearLogFiltersBtn">${t('Clear')}</button>
             </div>
+            <p id="logFilterStats" style="color:#888;font-size:0.85rem;margin:0 0 16px;"></p>
             <div style="overflow-x: auto;">
                 <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
                     <thead>
@@ -1318,29 +1421,29 @@ export async function openActivityLogsModal(title = 'Activity Logs', baseFilters
         applyStaticTranslations(modal);
 
         document.getElementById('applyLogFiltersBtn').onclick = () => {
-            currentLogFilters = { ...currentLogBaseFilters };
-            if (document.getElementById('logFilterAction').value) currentLogFilters.action = document.getElementById('logFilterAction').value;
-            if (document.getElementById('logFilterIp').value) currentLogFilters.ipAddress = document.getElementById('logFilterIp').value;
-            if (document.getElementById('logFilterAgent').value) currentLogFilters.userAgent = document.getElementById('logFilterAgent').value;
+            readLogFiltersFromUi();
             loadActivityLogs();
         };
 
         document.getElementById('clearLogFiltersBtn').onclick = () => {
-            document.getElementById('logFilterAction').value = '';
-            document.getElementById('logFilterIp').value = '';
-            document.getElementById('logFilterAgent').value = '';
+            ['logFilterAction', 'logFilterActor', 'logFilterIp', 'logFilterAgent', 'logFilterHighlight'].forEach((id) => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
             currentLogFilters = { ...currentLogBaseFilters };
             loadActivityLogs();
         };
     } else {
         const titleEl = document.getElementById('logsModalTitle');
         if (titleEl) titleEl.textContent = title;
-        document.getElementById('logFilterAction').value = '';
-        document.getElementById('logFilterIp').value = '';
-        document.getElementById('logFilterAgent').value = '';
+        ['logFilterAction', 'logFilterActor', 'logFilterIp', 'logFilterAgent', 'logFilterHighlight'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
     }
 
     openAdminOverlay(modal);
+    await loadLogFilterOptions();
     loadActivityLogs();
 }
 
@@ -1373,12 +1476,16 @@ export async function loadActivityLogs() {
                 const actorName = formatLogActor(log);
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid #333';
+                if (log.highlight || log.details?.regretTerms) {
+                    tr.style.background = 'rgba(255, 193, 7, 0.12)';
+                    tr.style.borderLeft = '3px solid #ffc107';
+                }
                 tr.innerHTML = `
                     <td style="padding: 10px;">${new Date(log.createdAt).toLocaleString()}</td>
-                    <td style="padding: 10px;">${actorName}</td>
-                    <td style="padding: 10px;">${log.action}</td>
-                    <td style="padding: 10px;">${log.ipAddress || 'N/A'}</td>
-                    <td style="padding: 10px;">${log.userAgent || 'N/A'}</td>
+                    <td style="padding: 10px;">${escapeHtml(actorName)}</td>
+                    <td style="padding: 10px;">${formatLogActionCell(log)}</td>
+                    <td style="padding: 10px;">${escapeHtml(log.ipAddress || 'N/A')}</td>
+                    <td style="padding: 10px;">${escapeHtml(log.userAgent || 'N/A')}</td>
                 `;
                 tbody.appendChild(tr);
             });

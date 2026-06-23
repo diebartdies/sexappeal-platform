@@ -6,6 +6,39 @@ import { navigateWithReturn } from './navReturn.js';
 import { openFullTermsModal } from './terms.js';
 import { PHONE_COUNTRIES, defaultPhoneCountry, buildFullPhoneNumber, getPhoneCountryFlagUrl, getPhoneCountryName } from './phoneCountryCodes.js';
 
+function isAdminSession() {
+    try {
+        const raw = localStorage.getItem('user');
+        if (!raw) return false;
+        return JSON.parse(raw)?.role === 'admin';
+    } catch {
+        return false;
+    }
+}
+
+function registrationTrackingPayload(extra = {}) {
+    const form = document.getElementById('registerForm');
+    return {
+        termsAccepted: document.getElementById('regTermsAccept')?.checked === true,
+        hadFormData: registrationFormHasChanges(form),
+        ...extra
+    };
+}
+
+function trackRegistrationEvent(event, extra = {}) {
+    if (isAdminSession()) return;
+    fetch(`${API_URL}/public/registration-track`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ event, ...registrationTrackingPayload(extra) })
+    }).catch(() => {});
+}
+
+function trackRegistrationAbandon(reason) {
+    trackRegistrationEvent('abandon', { reason });
+}
+
 function getRegistrationLocale() {
     return (localStorage.getItem('platform_lang') || 'es') === 'es' ? 'es-AR' : 'en-US';
 }
@@ -107,10 +140,11 @@ function goToRegistrationEntrance() {
     window.location.href = appPath('index.html');
 }
 
-function leaveRegistration(onLeave) {
+function leaveRegistration(onLeave, reason = 'leave') {
     const form = document.getElementById('registerForm');
     confirmLeaveRegistration(form).then((ok) => {
         if (!ok) return;
+        trackRegistrationAbandon(reason);
         if (typeof onLeave === 'function') {
             onLeave();
             return;
@@ -126,14 +160,14 @@ function bindRegistrationFooterLinks() {
         loginLink.addEventListener('click', () => {
             leaveRegistration(() => {
                 navigateWithReturn(appPath('login.html'));
-            });
+            }, 'login_link');
         });
     }
 
     const backOrigin = document.getElementById('regBackOrigin');
     if (backOrigin && !backOrigin.dataset.regLeaveBound) {
         backOrigin.dataset.regLeaveBound = '1';
-        backOrigin.addEventListener('click', () => leaveRegistration());
+        backOrigin.addEventListener('click', () => leaveRegistration(undefined, 'back_footer'));
     }
 }
 
@@ -141,13 +175,13 @@ function setupRegistrationLeaveGuard(form) {
     const backBtn = document.getElementById('regBackToEntrance');
     if (backBtn) {
         backBtn.textContent = `\u2190 ${t('Back to entrance')}`;
-        backBtn.onclick = () => leaveRegistration();
+        backBtn.onclick = () => leaveRegistration(undefined, 'back_to_entrance');
     }
 
     const topBack = document.querySelector('.left-group-back');
     if (topBack && !topBack.dataset.regLeaveBound) {
         topBack.dataset.regLeaveBound = '1';
-        topBack.onclick = () => leaveRegistration();
+        topBack.onclick = () => leaveRegistration(undefined, 'top_back');
     }
 
     const brandLogo = document.querySelector('.brand-logo');
@@ -155,7 +189,7 @@ function setupRegistrationLeaveGuard(form) {
         brandLogo.dataset.regLeaveBound = '1';
         brandLogo.addEventListener('click', (e) => {
             e.preventDefault();
-            leaveRegistration();
+            leaveRegistration(undefined, 'brand_logo');
         });
     }
 }
@@ -488,4 +522,19 @@ export function initProfessionalRegistration() {
     applyStaticTranslations(form);
     applyRegistrationPageLabels();
     bindRegistrationFooterLinks();
+
+    if (!isAdminSession() && !sessionStorage.getItem('regVisitTracked')) {
+        sessionStorage.setItem('regVisitTracked', '1');
+        trackRegistrationEvent('visit');
+    }
+
+    window.addEventListener('beforeunload', () => {
+        if (isAdminSession()) return;
+        const payload = registrationTrackingPayload({ reason: 'browser_close' });
+        if (!payload.termsAccepted && !payload.hadFormData) return;
+        const blob = new Blob([JSON.stringify({ event: 'abandon', ...payload })], { type: 'application/json' });
+        if (typeof navigator.sendBeacon === 'function') {
+            navigator.sendBeacon(`${API_URL}/public/registration-track`, blob);
+        }
+    });
 }

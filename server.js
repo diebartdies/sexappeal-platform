@@ -227,9 +227,11 @@ app.use((req, res, next) => {
       const clientIp = getClientIp(req);
       const trustedAdmin = await isKnownAdminIp(clientIp);
       const adminIpLabel = trustedAdmin ? await resolveAdminIpLabel(clientIp) : null;
+      const actorType = adminIpLabel === 'ho' ? 'admin_ho' : (trustedAdmin ? 'admin' : 'guest');
 
       ActivityLog.create({
         action: trustedAdmin ? 'admin_browsing' : 'guest_browsing',
+        actorType,
         isGuest: !trustedAdmin,
         details: {
           path: req.path,
@@ -368,6 +370,7 @@ app.put('/api/v1/admin/verifications/:id', protect, authorize('admin'), adminCon
 app.get('/api/v1/admin/payments/pending', protect, authorize('admin'), adminController.getPendingPayments);
 app.put('/api/v1/admin/payments/:id/acknowledge', protect, authorize('admin'), adminController.acknowledgePayment);
 app.post('/api/v1/admin/notify-rate-change', protect, authorize('admin'), professionalController.notifyRateChange);
+app.get('/api/v1/admin/logs/filters', protect, authorize('admin'), adminController.getActivityLogFilters);
 app.get('/api/v1/admin/logs', protect, authorize('admin'), adminController.getActivityLogs);
 app.put('/api/v1/admin/professionals/:id', protect, authorize('admin'), adminController.updateProfessionalProfile);
 app.delete('/api/v1/admin/professionals/:id', protect, authorize('admin'), adminController.deleteProfessional);
@@ -394,7 +397,9 @@ app.get('/api/v1/public/launch-curtain', launchCurtainController.getPublicLaunch
 
 // Age-verification + Terms & Conditions acceptance (public; optional auth)
 const termsController = require('./controllers/termsController');
+const registrationTrackController = require('./controllers/registrationTrackController');
 app.post('/api/v1/terms/accept', termsController.acceptTerms);
+app.post('/api/v1/public/registration-track', registrationTrackController.trackRegistration);
 
 // Support message queue
 app.post('/api/v1/support', protect, authorize('professional'), supportController.createSupportMessage);

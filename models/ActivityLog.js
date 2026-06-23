@@ -14,6 +14,17 @@ const ActivityLogSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  /** Computed category for admin log filters: admin, admin_ho, professional, guest, registration_visitor, unknown */
+  actorType: {
+    type: String,
+    index: true
+  },
+  /** Highlight rows in admin UI (e.g. registration abandon after accepting terms). */
+  highlight: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
   details: {
     type: mongoose.Schema.Types.Mixed
   },
