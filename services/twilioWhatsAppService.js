@@ -35,7 +35,9 @@ function getConfigError() {
 }
 
 const APPROVED_WATEXT_SID = 'HX92a57f64dfa083cb94b884da55a85cde';
-const PENDING_WATEXT_UPDATED_SID = 'HX3e76b50fc1f69871bfbc4404c7666482';
+const REJECTED_WATEXT_UPDATED_SID = 'HX3e76b50fc1f69871bfbc4404c7666482';
+// Back-compat alias
+const PENDING_WATEXT_UPDATED_SID = REJECTED_WATEXT_UPDATED_SID;
 
 function isColdOutreachTemplateConfigured() {
   return Boolean(config.sms.whatsappContentSid);
@@ -53,12 +55,12 @@ function getColdOutreachBlockReason() {
       + 'Or set WHATSAPP_USE_WEBJS=true and link WhatsApp via QR (no template).';
   }
 
-  if (sid === PENDING_WATEXT_UPDATED_SID) {
-    return 'Template watext_updated is pending Meta approval — Twilio will reject cold sends. '
-      + `Switch .env to approved watext: ${APPROVED_WATEXT_SID} `
+  if (sid === REJECTED_WATEXT_UPDATED_SID) {
+    return 'Template watext_updated was rejected by Meta — do not use for cold sends. '
+      + `Use approved watext: ${APPROVED_WATEXT_SID} `
       + '(bash scripts/set-twilio-whatsapp-template.sh /root/SexAppeal-platform '
       + `${APPROVED_WATEXT_SID}) `
-      + 'or use WHATSAPP_USE_WEBJS=true + QR in Admin until Meta approves.';
+      + 'or WHATSAPP_USE_WEBJS=true + QR. Resubmit a simpler text-only template (see getColdOutreachTemplateBodyMetaSample in code).';
   }
 
   return '';
@@ -172,6 +174,7 @@ module.exports = {
   isColdOutreachTemplateConfigured,
   getColdOutreachBlockReason,
   APPROVED_WATEXT_SID,
+  REJECTED_WATEXT_UPDATED_SID,
   PENDING_WATEXT_UPDATED_SID,
   sendWhatsAppMessage,
   formatWhatsAppAddress,

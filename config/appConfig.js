@@ -191,8 +191,8 @@ const config = {
     whatsappApiEnabled: process.env.TWILIO_WHATSAPP_API === 'true'
       || Boolean(process.env.TWILIO_WHATSAPP_FROM_NUMBER || process.env.TWILIO_FROM_NUMBER),
     // WhatsApp cold templates (Twilio Content SIDs):
-    //   watext         HX92a57f64dfa083cb94b884da55a85cde — Meta approved (use until watext_updated clears)
-    //   watext_updated HX3e76b50fc1f69871bfbc4404c7666482 — pending Meta approval
+    //   watext         HX92a57f64dfa083cb94b884da55a85cde — Meta approved (use now)
+    //   watext_updated HX3e76b50fc1f69871bfbc4404c7666482 — REJECTED by Meta
     // Env: TWILIO_WHATSAPP_CONTENT_SID
     // Example: TWILIO_WA_TEMPLATE_EXAMPLE_1=María
     whatsappContentSid: process.env.TWILIO_WHATSAPP_CONTENT_SID || '',

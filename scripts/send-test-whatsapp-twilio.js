@@ -1,19 +1,28 @@
 #!/usr/bin/env node
 /**
- * Send one test WhatsApp via Twilio API (template watext_updated when CONTENT_SID is set).
- * Step 1 only: {{1}} = alias. Register link is sent manually in step 2 after she replies.
- * Usage: node scripts/send-test-whatsapp-twilio.js 5491178280156 [alias]
+ * Send one test WhatsApp via Twilio API (template watext when CONTENT_SID is set).
+ * Usage: node scripts/send-test-whatsapp-twilio.js [phone] [alias]
+ * Default phone: WHATSAPP_TEST_PHONE in .env or 5491134679434
+ * Phone: E.164 digits only (no +). Argentina mobile: 549 + area + number.
  */
 require('dotenv').config();
 const twilioWa = require('../services/twilioWhatsAppService');
-const { buildSanitizedWhatsAppCaption } = require('../utils/professionalInviteMessage');
+const {
+  normalizeWhatsAppPhone,
+  normalizeE164Digits,
+  buildSanitizedWhatsAppCaption
+} = require('../utils/professionalInviteMessage');
 
 async function main() {
-  const to = process.argv[2];
+  const rawPhone = process.argv[2]
+    || process.env.WHATSAPP_TEST_PHONE
+    || '5491134679434';
   const alias = process.argv[3] || twilioWa.WATEXT_TEMPLATE_EXAMPLES['1'];
 
-  if (!to) {
-    console.error('Usage: node scripts/send-test-whatsapp-twilio.js <phone> [alias]');
+  const to = normalizeWhatsAppPhone(rawPhone) || normalizeE164Digits(rawPhone);
+  if (!to || to.length < 11) {
+    console.error('[WA] Invalid phone — use full E.164 digits, e.g. 5491134679434 (not 549XXXXXXXXX or +549).');
+    console.error('[WA] You passed:', rawPhone, '→ parsed as:', to || '(empty)');
     process.exit(1);
   }
 
@@ -39,10 +48,10 @@ async function main() {
 
   const contentVariables = twilioWa.buildContentVariables({ alias });
 
-  console.log('[WA] Template watext_updated (step 1):');
+  console.log('[WA] Template watext (approved):');
   console.log('  {{1}} alias example:', alias);
   console.log('[WA] contentVariables JSON:', contentVariables);
-  console.log('[WA] Sending test to', to, '...');
+  console.log('[WA] Sending test to whatsapp:+' + to, '...');
 
   const body = buildSanitizedWhatsAppCaption(alias);
   const sid = await twilioWa.sendWhatsAppMessage(to, body, {
