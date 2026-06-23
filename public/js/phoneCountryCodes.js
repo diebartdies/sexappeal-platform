@@ -1,46 +1,58 @@
 /** Dial codes for registration — Americas + Europe. Default: Argentina (+54). */
 export const PHONE_COUNTRIES = [
-    { iso: 'AR', name: 'Argentina', dial: '+54', flag: '🇦🇷', default: true },
-    { iso: 'US', name: 'United States', dial: '+1', flag: '🇺🇸' },
-    { iso: 'CA', name: 'Canada', dial: '+1', flag: '🇨🇦' },
-    { iso: 'MX', name: 'Mexico', dial: '+52', flag: '🇲🇽' },
-    { iso: 'GT', name: 'Guatemala', dial: '+502', flag: '🇬🇹' },
-    { iso: 'BZ', name: 'Belize', dial: '+501', flag: '🇧🇿' },
-    { iso: 'HN', name: 'Honduras', dial: '+504', flag: '🇭🇳' },
-    { iso: 'SV', name: 'El Salvador', dial: '+503', flag: '🇸🇻' },
-    { iso: 'NI', name: 'Nicaragua', dial: '+505', flag: '🇳🇮' },
-    { iso: 'CR', name: 'Costa Rica', dial: '+506', flag: '🇨🇷' },
-    { iso: 'PA', name: 'Panama', dial: '+507', flag: '🇵🇦' },
-    { iso: 'BR', name: 'Brazil', dial: '+55', flag: '🇧🇷' },
-    { iso: 'CL', name: 'Chile', dial: '+56', flag: '🇨🇱' },
-    { iso: 'CO', name: 'Colombia', dial: '+57', flag: '🇨🇴' },
-    { iso: 'PE', name: 'Peru', dial: '+51', flag: '🇵🇪' },
-    { iso: 'UY', name: 'Uruguay', dial: '+598', flag: '🇺🇾' },
-    { iso: 'PY', name: 'Paraguay', dial: '+595', flag: '🇵🇾' },
-    { iso: 'BO', name: 'Bolivia', dial: '+591', flag: '🇧🇴' },
-    { iso: 'EC', name: 'Ecuador', dial: '+593', flag: '🇪🇨' },
-    { iso: 'VE', name: 'Venezuela', dial: '+58', flag: '🇻🇪' },
-    { iso: 'ES', name: 'Spain', dial: '+34', flag: '🇪🇸' },
-    { iso: 'PT', name: 'Portugal', dial: '+351', flag: '🇵🇹' },
-    { iso: 'FR', name: 'France', dial: '+33', flag: '🇫🇷' },
-    { iso: 'DE', name: 'Germany', dial: '+49', flag: '🇩🇪' },
-    { iso: 'IT', name: 'Italy', dial: '+39', flag: '🇮🇹' },
-    { iso: 'GB', name: 'United Kingdom', dial: '+44', flag: '🇬🇧' },
-    { iso: 'NL', name: 'Netherlands', dial: '+31', flag: '🇳🇱' },
-    { iso: 'BE', name: 'Belgium', dial: '+32', flag: '🇧🇪' },
-    { iso: 'CH', name: 'Switzerland', dial: '+41', flag: '🇨🇭' },
-    { iso: 'AT', name: 'Austria', dial: '+43', flag: '🇦🇹' },
-    { iso: 'IE', name: 'Ireland', dial: '+353', flag: '🇮🇪' },
-    { iso: 'SE', name: 'Sweden', dial: '+46', flag: '🇸🇪' },
-    { iso: 'NO', name: 'Norway', dial: '+47', flag: '🇳🇴' },
-    { iso: 'PL', name: 'Poland', dial: '+48', flag: '🇵🇱' },
-    { iso: 'GR', name: 'Greece', dial: '+30', flag: '🇬🇷' },
-    { iso: 'RO', name: 'Romania', dial: '+40', flag: '🇷🇴' },
-    { iso: 'UA', name: 'Ukraine', dial: '+380', flag: '🇺🇦' }
+    { iso: 'AR', name: 'Argentina', nameEs: 'Argentina', dial: '+54', default: true },
+    { iso: 'US', name: 'United States', nameEs: 'Estados Unidos', dial: '+1' },
+    { iso: 'CA', name: 'Canada', nameEs: 'Canadá', dial: '+1' },
+    { iso: 'MX', name: 'Mexico', nameEs: 'México', dial: '+52' },
+    { iso: 'GT', name: 'Guatemala', nameEs: 'Guatemala', dial: '+502' },
+    { iso: 'BZ', name: 'Belize', nameEs: 'Belice', dial: '+501' },
+    { iso: 'HN', name: 'Honduras', nameEs: 'Honduras', dial: '+504' },
+    { iso: 'SV', name: 'El Salvador', nameEs: 'El Salvador', dial: '+503' },
+    { iso: 'NI', name: 'Nicaragua', nameEs: 'Nicaragua', dial: '+505' },
+    { iso: 'CR', name: 'Costa Rica', nameEs: 'Costa Rica', dial: '+506' },
+    { iso: 'PA', name: 'Panama', nameEs: 'Panamá', dial: '+507' },
+    { iso: 'BR', name: 'Brazil', nameEs: 'Brasil', dial: '+55' },
+    { iso: 'CL', name: 'Chile', nameEs: 'Chile', dial: '+56' },
+    { iso: 'CO', name: 'Colombia', nameEs: 'Colombia', dial: '+57' },
+    { iso: 'PE', name: 'Peru', nameEs: 'Perú', dial: '+51' },
+    { iso: 'UY', name: 'Uruguay', nameEs: 'Uruguay', dial: '+598' },
+    { iso: 'PY', name: 'Paraguay', nameEs: 'Paraguay', dial: '+595' },
+    { iso: 'BO', name: 'Bolivia', nameEs: 'Bolivia', dial: '+591' },
+    { iso: 'EC', name: 'Ecuador', nameEs: 'Ecuador', dial: '+593' },
+    { iso: 'VE', name: 'Venezuela', nameEs: 'Venezuela', dial: '+58' },
+    { iso: 'ES', name: 'Spain', nameEs: 'España', dial: '+34' },
+    { iso: 'PT', name: 'Portugal', nameEs: 'Portugal', dial: '+351' },
+    { iso: 'FR', name: 'France', nameEs: 'Francia', dial: '+33' },
+    { iso: 'DE', name: 'Germany', nameEs: 'Alemania', dial: '+49' },
+    { iso: 'IT', name: 'Italy', nameEs: 'Italia', dial: '+39' },
+    { iso: 'GB', name: 'United Kingdom', nameEs: 'Reino Unido', dial: '+44' },
+    { iso: 'NL', name: 'Netherlands', nameEs: 'Países Bajos', dial: '+31' },
+    { iso: 'BE', name: 'Belgium', nameEs: 'Bélgica', dial: '+32' },
+    { iso: 'CH', name: 'Switzerland', nameEs: 'Suiza', dial: '+41' },
+    { iso: 'AT', name: 'Austria', nameEs: 'Austria', dial: '+43' },
+    { iso: 'IE', name: 'Ireland', nameEs: 'Irlanda', dial: '+353' },
+    { iso: 'SE', name: 'Sweden', nameEs: 'Suecia', dial: '+46' },
+    { iso: 'NO', name: 'Norway', nameEs: 'Noruega', dial: '+47' },
+    { iso: 'PL', name: 'Poland', nameEs: 'Polonia', dial: '+48' },
+    { iso: 'GR', name: 'Greece', nameEs: 'Grecia', dial: '+30' },
+    { iso: 'RO', name: 'Romania', nameEs: 'Rumania', dial: '+40' },
+    { iso: 'UA', name: 'Ukraine', nameEs: 'Ucrania', dial: '+380' }
 ];
 
 export function defaultPhoneCountry() {
     return PHONE_COUNTRIES.find((c) => c.default) || PHONE_COUNTRIES[0];
+}
+
+export function getPhoneCountryFlagUrl(iso) {
+    const code = String(iso || '').trim().toLowerCase();
+    if (!code) return '';
+    return `https://flagcdn.com/w40/${code}.png`;
+}
+
+export function getPhoneCountryName(country, lang) {
+    if (!country) return '';
+    const useEs = (lang || 'es') === 'es';
+    return useEs ? (country.nameEs || country.name) : country.name;
 }
 
 /**

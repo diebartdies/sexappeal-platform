@@ -4,7 +4,7 @@ import { t, applyStaticTranslations } from './i18n.js';
 import { confirmDialog, wireFormLabel, setFieldInvalid } from './a11y.js';
 import { navigateWithReturn } from './navReturn.js';
 import { openFullTermsModal } from './terms.js';
-import { PHONE_COUNTRIES, defaultPhoneCountry, buildFullPhoneNumber } from './phoneCountryCodes.js';
+import { PHONE_COUNTRIES, defaultPhoneCountry, buildFullPhoneNumber, getPhoneCountryFlagUrl, getPhoneCountryName } from './phoneCountryCodes.js';
 
 function getRegistrationLocale() {
     return (localStorage.getItem('platform_lang') || 'es') === 'es' ? 'es-AR' : 'en-US';
@@ -265,24 +265,42 @@ function setupPhoneCountrySelect() {
     const menu = document.getElementById('regCountryMenu');
     const btn = document.getElementById('regCountryBtn');
     const hiddenDial = document.getElementById('regPhoneDial');
-    const flagEl = document.getElementById('regCountryFlag');
+    const codeEl = document.getElementById('regCountryCode');
+    const flagImg = document.getElementById('regCountryFlagImg');
     if (!menu || !btn || !hiddenDial) return;
 
     let selected = defaultPhoneCountry();
+    const lang = () => (localStorage.getItem('platform_lang') || 'es');
+
+    const renderMenu = () => {
+        menu.innerHTML = PHONE_COUNTRIES.map((c) => `
+            <li class="reg-country-option" role="option" data-dial="${c.dial}" data-iso="${c.iso}" aria-selected="${c.iso === selected.iso ? 'true' : 'false'}">
+                <span class="reg-country-option-dial">${c.dial}</span>
+                <span class="reg-country-option-name">${getPhoneCountryName(c, lang())}</span>
+            </li>`).join('');
+
+        menu.querySelectorAll('.reg-country-option').forEach((opt) => {
+            opt.addEventListener('click', () => {
+                const iso = opt.getAttribute('data-iso');
+                selected = PHONE_COUNTRIES.find((c) => c.iso === iso) || selected;
+                menu.querySelectorAll('.reg-country-option').forEach((o) => {
+                    o.setAttribute('aria-selected', o.getAttribute('data-iso') === selected.iso ? 'true' : 'false');
+                });
+                renderSelected();
+                closeMenu();
+            });
+        });
+    };
 
     const renderSelected = () => {
         hiddenDial.value = selected.dial;
-        if (flagEl) {
-            flagEl.innerHTML = `<span class="reg-flag-emoji">${selected.flag}</span><span class="reg-country-code" id="regCountryCode">${selected.dial}</span>`;
+        if (codeEl) codeEl.textContent = selected.dial;
+        if (flagImg) {
+            flagImg.src = getPhoneCountryFlagUrl(selected.iso);
+            flagImg.alt = getPhoneCountryName(selected, lang());
         }
-        btn.setAttribute('aria-label', `${t('Country code')} ${selected.name} ${selected.dial}`);
+        btn.setAttribute('aria-label', `${t('Country code')} ${getPhoneCountryName(selected, lang())} ${selected.dial}`);
     };
-
-    menu.innerHTML = PHONE_COUNTRIES.map((c) => `
-        <li class="reg-country-option" role="option" data-dial="${c.dial}" data-iso="${c.iso}" aria-selected="${c.iso === selected.iso ? 'true' : 'false'}">
-            <span class="reg-country-flag"><span class="reg-flag-emoji">${c.flag}</span><span class="reg-country-code-static">${c.dial}</span></span>
-            <span>${c.name}</span>
-        </li>`).join('');
 
     const closeMenu = () => {
         menu.classList.add('hidden');
@@ -300,22 +318,11 @@ function setupPhoneCountrySelect() {
         }
     });
 
-    menu.querySelectorAll('.reg-country-option').forEach((opt) => {
-        opt.addEventListener('click', () => {
-            const iso = opt.getAttribute('data-iso');
-            selected = PHONE_COUNTRIES.find((c) => c.iso === iso) || selected;
-            menu.querySelectorAll('.reg-country-option').forEach((o) => {
-                o.setAttribute('aria-selected', o.getAttribute('data-iso') === selected.iso ? 'true' : 'false');
-            });
-            renderSelected();
-            closeMenu();
-        });
-    });
-
     document.addEventListener('click', (e) => {
         if (!document.getElementById('regCountrySelect')?.contains(e.target)) closeMenu();
     });
 
+    renderMenu();
     renderSelected();
 }
 
