@@ -789,7 +789,7 @@ const translations = {
         'Admin': 'Admin',
         'Admin-ho': 'Admin-ho',
         'Guest': 'Invitado',
-        'Registration visitor': 'Visitante registro',
+        'Open calendar': 'Abrir calendario',
         'Terms regret': 'Arrepentimiento términos',
         'All actions': 'Todas las acciones',
         'All actors': 'Todos los actores',

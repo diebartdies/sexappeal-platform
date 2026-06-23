@@ -241,6 +241,13 @@ function applyRegistrationPageLabels() {
     if (birthHint) birthHint.textContent = t('We calculate your age automatically — you must be 18 or older.');
 }
 
+function formatBirthDateInput(raw) {
+    const digits = String(raw || '').replace(/\D/g, '').slice(0, 8);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
 function setupBirthDateField() {
     const textInput = document.getElementById('regBirthDate');
     const nativeInput = document.getElementById('regBirthDateNative');
@@ -248,12 +255,17 @@ function setupBirthDateField() {
     const hint = document.getElementById('regBirthDateHint');
     if (!textInput || !nativeInput) return;
 
+    textInput.readOnly = false;
+    textInput.removeAttribute('readonly');
+
     const lang = getRegistrationLocale();
     document.documentElement.lang = lang;
     textInput.lang = lang;
     nativeInput.lang = lang;
     textInput.placeholder = birthDatePlaceholder();
     textInput.setAttribute('aria-describedby', 'regBirthDateHint');
+    textInput.setAttribute('inputmode', 'text');
+    if (pickerBtn) pickerBtn.setAttribute('aria-label', t('Open calendar'));
     if (hint) {
         hint.textContent = isSpanishLocale()
             ? t('Format: dd/mm/aaaa. We calculate your age automatically — you must be 18 or older.')
@@ -270,7 +282,17 @@ function setupBirthDateField() {
         textInput.classList.remove('reg-field-error');
     };
 
+    const syncNativeFromText = () => {
+        const iso = parseDisplayBirthDate(textInput.value);
+        if (iso) {
+            nativeInput.value = iso;
+            textInput.value = formatDisplayBirthDate(iso);
+        }
+        return iso;
+    };
+
     const openPicker = () => {
+        syncNativeFromText();
         if (typeof nativeInput.showPicker === 'function') {
             nativeInput.showPicker();
             return;
@@ -282,16 +304,22 @@ function setupBirthDateField() {
     pickerBtn?.addEventListener('click', openPicker);
     nativeInput.addEventListener('change', syncTextFromNative);
 
-    textInput.addEventListener('blur', () => {
-        const iso = parseDisplayBirthDate(textInput.value);
-        if (iso) {
-            nativeInput.value = iso;
-            textInput.value = formatDisplayBirthDate(iso);
+    textInput.addEventListener('input', () => {
+        const formatted = formatBirthDateInput(textInput.value);
+        if (formatted !== textInput.value) {
+            const pos = textInput.selectionStart;
+            textInput.value = formatted;
+            if (typeof pos === 'number') {
+                textInput.setSelectionRange(formatted.length, formatted.length);
+            }
         }
+        textInput.classList.remove('reg-field-error');
+        const iso = parseDisplayBirthDate(textInput.value);
+        if (iso) nativeInput.value = iso;
     });
 
-    textInput.addEventListener('input', () => {
-        textInput.classList.remove('reg-field-error');
+    textInput.addEventListener('blur', () => {
+        syncNativeFromText();
     });
 }
 
