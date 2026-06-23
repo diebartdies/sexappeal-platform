@@ -14,6 +14,46 @@ const { isValidRejectionReason, buildRejectionEmail } = require('../utils/reject
 const { isUploadPath, resolvePhotoForClient, resolvePhotosForClient, resolveFirstPhotoForClient, normalizePhotosForStorage } = require('../utils/photoUtils');
 const { resolveWhatsappNumber } = require('../utils/contactNumber');
 const smsNotifications = require('../services/smsNotifications');
+const { getClientIp, isTrustedAdminIp } = require('../utils/clientIp');
+const { loadKnownAdminIps, resolveAdminIpLabel } = require('../utils/adminKnownIps');
+
+function adminLogDetails(req, extra = {}) {
+  return {
+    adminId: req.user.id,
+    adminEmail: req.user.email,
+    ...extra
+  };
+}
+
+async function enrichActivityLogs(logs) {
+  const adminIds = [
+    ...new Set(
+      logs
+        .map((log) => log.details && log.details.adminId)
+        .filter(Boolean)
+        .map((id) => String(id))
+    )
+  ];
+
+  const admins = adminIds.length
+    ? await User.find({ _id: { $in: adminIds } }).select('email name role')
+    : [];
+  const adminMap = new Map(admins.map((admin) => [admin._id.toString(), admin.toObject()]));
+  const trustedIps = await loadKnownAdminIps();
+
+  return Promise.all(logs.map(async (log) => {
+    const obj = log.toObject ? log.toObject() : { ...log };
+    const adminId = obj.details && obj.details.adminId ? String(obj.details.adminId) : '';
+    if (adminId && adminMap.has(adminId)) {
+      obj.adminUser = adminMap.get(adminId);
+    }
+    const ipLabel = obj.details?.adminIpLabel || await resolveAdminIpLabel(obj.ipAddress);
+    obj.adminIpLabel = ipLabel || null;
+    obj.isAdminHomeIp = ipLabel === 'ho';
+    obj.isTrustedAdminIp = isTrustedAdminIp(obj.ipAddress, trustedIps);
+    return obj;
+  }));
+}
 
 // Best-effort removal of an uploaded asset that lives under /public.
 // Mirrors the cleanup helper used by professionalController.deleteMyProfile.
@@ -165,14 +205,14 @@ exports.sendBroadcastEmail = async (req, res, next) => {
       }).catch(err => console.error(`Failed to send email to ${p.email}:`, err));
     });
 
-    const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket ? req.socket.remoteAddress : req.ip);
+    const clientIp = getClientIp(req);
     await ActivityLog.create({
-      professional: req.user.id, // Log against the admin who triggered it
+      professional: req.user.id,
       action: 'admin_broadcast_email',
       ipAddress: clientIp,
       userAgent: req.headers['user-agent'],
       isGuest: false,
-      details: { adminId: req.user.id, count: professionals.length, subject, audience }
+      details: adminLogDetails(req, { count: professionals.length, subject, audience })
     });
 
     res.status(200).json({
@@ -215,19 +255,18 @@ exports.sendTargetedEmail = async (req, res, next) => {
       }).catch(err => console.error(`Failed to send email to ${p.email}:`, err));
     });
 
-    const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket ? req.socket.remoteAddress : req.ip);
+    const clientIp = getClientIp(req);
     await ActivityLog.create({
       professional: req.user.id,
       action: 'admin_targeted_email',
       ipAddress: clientIp,
       userAgent: req.headers['user-agent'],
       isGuest: false,
-      details: {
-        adminId: req.user.id,
+      details: adminLogDetails(req, {
         count: professionals.length,
         subject,
         recipientIds: professionals.map(p => p._id)
-      }
+      })
     });
 
     res.status(200).json({
@@ -257,22 +296,23 @@ exports.getActivityLogs = async (req, res, next) => {
     const skip = (page - 1) * limit;
 
     const logs = await ActivityLog.find(query)
-      .populate('professional', 'email professionalProfile.alias')
+      .populate('professional', 'email role professionalProfile.alias')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit, 10));
 
     const total = await ActivityLog.countDocuments(query);
+    const enrichedLogs = await enrichActivityLogs(logs);
 
     res.status(200).json({
       success: true,
-      count: logs.length,
+      count: enrichedLogs.length,
       pagination: {
         page: parseInt(page, 10),
         limit: parseInt(limit, 10),
         total
       },
-      data: logs
+      data: enrichedLogs
     });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
@@ -358,18 +398,17 @@ exports.verifyProfessional = async (req, res, next) => {
       status === 'approved' ? 'aprobado y visible' : 'no aprobado'
     ).catch(() => {});
 
-    const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket ? req.socket.remoteAddress : req.ip);
+    const clientIp = getClientIp(req);
     await ActivityLog.create({
       professional: user._id,
       action: status === 'approved' ? 'admin_approve_verification' : 'admin_reject_verification',
       ipAddress: clientIp,
       userAgent: req.headers['user-agent'],
       isGuest: false,
-      details: {
-        adminId: req.user.id,
+      details: adminLogDetails(req, {
         rejectionReason: status === 'rejected' ? rejectionReason : undefined,
         rejectionDetails: status === 'rejected' ? String(rejectionDetails).trim() : undefined
-      }
+      })
     });
 
     res.status(200).json({
@@ -554,14 +593,14 @@ exports.updateProfessionalProfile = async (req, res, next) => {
       ).catch(() => {});
     }
 
-    const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket ? req.socket.remoteAddress : req.ip);
+    const clientIp = getClientIp(req);
     await ActivityLog.create({
       professional: user._id,
       action: 'admin_edit_profile',
       ipAddress: clientIp,
       userAgent: req.headers['user-agent'],
       isGuest: false,
-      details: { adminId: req.user.id }
+      details: adminLogDetails(req)
     });
 
     const responseUser = user.toObject();

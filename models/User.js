@@ -84,7 +84,13 @@ const UserSchema = new mongoose.Schema({
       // e.g. '2026-06-24T00:00:00-03:00'. When set & valid this overrides the
       // config/env default (config.launchCurtain.openingAt). null = use default.
       openingAt: { type: String, default: null }
-    }
+    },
+    /** Public IPs seen on admin login — used to label browsing logs as Admin-ho. */
+    knownIps: [{
+      ip: { type: String, trim: true },
+      label: { type: String, default: 'ho' },
+      lastSeenAt: { type: Date, default: Date.now }
+    }]
   },
   professionalProfile: {
     alias: {

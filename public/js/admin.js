@@ -1216,6 +1216,50 @@ export async function loadDashboard() {
 let currentLogFilters = {};
 let currentLogBaseFilters = {};
 
+function formatLogActor(log) {
+    const homeAdmin = log.adminIpLabel === 'ho' || log.isAdminHomeIp
+        || log.details?.adminIpLabel === 'ho';
+
+    if (homeAdmin) {
+        const email = log.adminUser?.email || log.details?.adminEmail;
+        if (log.action && log.action.startsWith('admin_') && log.action !== 'admin_login') {
+            const target = log.professional?.professionalProfile?.alias || log.professional?.email;
+            if (target && log.professional?.role !== 'admin') {
+                return `${t('Admin-ho')}${email ? ` (${email})` : ''} → ${target}`;
+            }
+        }
+        return email ? `${t('Admin-ho')} (${email})` : t('Admin-ho');
+    }
+
+    const adminEmail = log.adminUser?.email || log.details?.adminEmail;
+    const adminLabel = adminEmail ? `${t('Admin')} (${adminEmail})` : t('Admin');
+
+    if (log.action && (log.action.startsWith('admin_') || log.action === 'admin_browsing')) {
+        const target = log.professional?.professionalProfile?.alias || log.professional?.email;
+        if (target && log.professional?.role !== 'admin') {
+            return `${adminLabel} → ${target}`;
+        }
+        return adminLabel;
+    }
+
+    if (log.isGuest) {
+        return log.isTrustedAdminIp ? adminLabel : t('Guest');
+    }
+
+    if (log.professional) {
+        if (log.professional.role === 'admin') {
+            return adminLabel;
+        }
+        return log.professional.professionalProfile?.alias || log.professional.email || t('Unknown');
+    }
+
+    if (log.isTrustedAdminIp) {
+        return adminLabel;
+    }
+
+    return t('Unknown');
+}
+
 export async function openActivityLogsModal(title = 'Activity Logs', baseFilters = {}) {
     let modal = document.getElementById('logsModal');
     currentLogBaseFilters = baseFilters;
@@ -1256,7 +1300,7 @@ export async function openActivityLogsModal(title = 'Activity Logs', baseFilters
                     <thead>
                         <tr style="border-bottom: 1px solid var(--primary-gold);">
                             <th style="padding: 10px;">Date</th>
-                            <th style="padding: 10px;">Professional</th>
+                            <th style="padding: 10px;">${t('Actor')}</th>
                             <th style="padding: 10px;">Action</th>
                             <th style="padding: 10px;">IP Address</th>
                             <th style="padding: 10px;">User Agent</th>
@@ -1326,12 +1370,12 @@ export async function loadActivityLogs() {
             }
             
             data.data.forEach(log => {
-                const profName = log.professional ? (log.professional.professionalProfile?.alias || log.professional.email) : 'Unknown';
+                const actorName = formatLogActor(log);
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid #333';
                 tr.innerHTML = `
                     <td style="padding: 10px;">${new Date(log.createdAt).toLocaleString()}</td>
-                    <td style="padding: 10px;">${profName}</td>
+                    <td style="padding: 10px;">${actorName}</td>
                     <td style="padding: 10px;">${log.action}</td>
                     <td style="padding: 10px;">${log.ipAddress || 'N/A'}</td>
                     <td style="padding: 10px;">${log.userAgent || 'N/A'}</td>

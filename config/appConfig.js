@@ -42,6 +42,22 @@ const config = {
   readRateLimitWindow: parseInt(process.env.READ_RATE_LIMIT_WINDOW, 10) || 60 * 1000, // 1 minute
   readRateLimitMax: parseInt(process.env.READ_RATE_LIMIT_MAX, 10) || 600,
 
+  // Production VPS — admin activity logs label this IP as Admin (not Guest/Unknown).
+  productionServerIp: '91.208.206.35',
+
+  // Comma-separated IPs trusted as admin browsing. In production, defaults to the VPS IP above.
+  adminTrustedIps: (() => {
+    const fromEnv = (process.env.ADMIN_TRUSTED_IPS || '')
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+    if (fromEnv.length) return fromEnv;
+    if ((process.env.NODE_ENV || 'development') === 'production') {
+      return ['91.208.206.35'];
+    }
+    return [];
+  })(),
+
   // Enums
   roles: ['user', 'professional', 'admin'],
   verificationStatuses: ['pending', 'approved', 'rejected'],

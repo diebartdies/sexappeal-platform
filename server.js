@@ -13,6 +13,8 @@ const connectDB = require('./config/database');
 const User = require('./models/User');
 const { calculateMonthlyInvoiceAmount } = require('./utils/categoryBilling');
 const ActivityLog = require('./models/ActivityLog');
+const { getClientIp } = require('./utils/clientIp');
+const { isKnownAdminIp, resolveAdminIpLabel } = require('./utils/adminKnownIps');
 const sendEmail = require('./sendEmail');
 const { resolveWhatsappNumber } = require('./utils/contactNumber');
 const smsNotifications = require('./services/smsNotifications');
@@ -213,23 +215,36 @@ const upload = multer({
 // --- Global Guest Activity Tracker ---
 // This logs every search and profile view made by non-logged-in users so you can data-mine their preferences
 app.use((req, res, next) => {
-  // Only track GET requests to the API (searches, profile views, locations)
-  if (req.path.startsWith('/api/v1/') && req.method === 'GET') {
-    // If there is no authorization header and no token cookie, it's a guest
-    if (!req.headers.authorization && !req.cookies.token) {
-      const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket.remoteAddress || req.ip);
-      
-      // We don't use 'await' here so it doesn't slow down the user's request
+  if (!(req.path.startsWith('/api/v1/') && req.method === 'GET')) {
+    return next();
+  }
+  if (req.headers.authorization || req.cookies.token) {
+    return next();
+  }
+
+  (async () => {
+    try {
+      const clientIp = getClientIp(req);
+      const trustedAdmin = await isKnownAdminIp(clientIp);
+      const adminIpLabel = trustedAdmin ? await resolveAdminIpLabel(clientIp) : null;
+
       ActivityLog.create({
-        action: 'guest_browsing',
-        isGuest: true,
-        details: { path: req.path, query: req.query },
+        action: trustedAdmin ? 'admin_browsing' : 'guest_browsing',
+        isGuest: !trustedAdmin,
+        details: {
+          path: req.path,
+          query: req.query,
+          adminIpLabel: adminIpLabel || undefined,
+          trustedAdminIp: trustedAdmin || undefined
+        },
         ipAddress: clientIp,
         userAgent: req.headers['user-agent']
       }).catch(err => console.error('Failed to log guest activity:', err.message));
+    } catch (err) {
+      console.error('Failed to evaluate admin IP for activity log:', err.message);
     }
-  }
-  next();
+    next();
+  })();
 });
 
 // Mount routers

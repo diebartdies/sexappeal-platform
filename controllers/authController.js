@@ -4,6 +4,8 @@ const sendEmail = require('../sendEmail');
 const crypto = require('crypto');
 const fs = require('fs');
 const ActivityLog = require('../models/ActivityLog');
+const { getClientIp } = require('../utils/clientIp');
+const { recordAdminLoginIp, HOME_LABEL } = require('../utils/adminKnownIps');
 const Specialty = require('../models/Specialty');
 const { normalizeRegistrationMobilePhone } = require('../utils/professionalInviteMessage');
 
@@ -406,14 +408,28 @@ exports.login = async (req, res, next) => {
     }
 
     // Log professional login activity
+    const clientIp = getClientIp(req);
     if (user.role === 'professional') {
-      const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket.remoteAddress || req.ip);
       await ActivityLog.create({
         professional: user._id,
         action: 'login',
-        ipAddress: req.ip,
         ipAddress: clientIp,
         userAgent: req.headers['user-agent']
+      });
+    } else if (user.role === 'admin') {
+      const recordedIp = await recordAdminLoginIp(user, clientIp);
+      await ActivityLog.create({
+        professional: user._id,
+        action: 'admin_login',
+        ipAddress: clientIp,
+        userAgent: req.headers['user-agent'],
+        isGuest: false,
+        details: {
+          adminId: user._id,
+          adminEmail: user.email,
+          adminIpLabel: recordedIp ? HOME_LABEL : undefined,
+          recordedIp: recordedIp || undefined
+        }
       });
     }
 
