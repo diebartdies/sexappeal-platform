@@ -85,6 +85,22 @@ function closeAdminOverlay(modal, afterClose) {
     if (typeof afterClose === 'function') afterClose();
 }
 
+/** Top-right close control aligned with the modal card (full button hit area). */
+function createAdminModalCloseBar({ maxWidth = '1000px', label, onClick } = {}) {
+    const closeBar = document.createElement('div');
+    closeBar.className = 'modal-close-bar';
+    if (maxWidth) closeBar.style.maxWidth = maxWidth;
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'admin-modal-close-btn modal-close-external';
+    closeBtn.textContent = label || t('Close');
+    closeBtn.onclick = onClick;
+
+    closeBar.appendChild(closeBtn);
+    return closeBar;
+}
+
 function renderAdminCategorySection(content, cat, items, eagerImages = false) {
     const meta = CATEGORY_META[cat];
 
@@ -1362,11 +1378,10 @@ export async function openActivityLogsModal(title = 'Activity Logs', baseFilters
             flexDirection: 'column', padding: '20px', overflowY: 'auto'
         });
 
-        const closeBtn = document.createElement('button');
-        closeBtn.textContent = t('Close');
-        closeBtn.style.alignSelf = 'flex-end';
-        closeBtn.style.marginBottom = '10px';
-        closeBtn.onclick = () => closeAdminOverlay(modal);
+        const closeBar = createAdminModalCloseBar({
+            maxWidth: '1200px',
+            onClick: () => closeAdminOverlay(modal)
+        });
 
         const container = document.createElement('div');
         Object.assign(container.style, {
@@ -1415,7 +1430,7 @@ export async function openActivityLogsModal(title = 'Activity Logs', baseFilters
             </div>
         `;
 
-        modal.appendChild(closeBtn);
+        modal.appendChild(closeBar);
         modal.appendChild(container);
         document.body.appendChild(modal);
         applyStaticTranslations(modal);
@@ -1511,11 +1526,10 @@ export async function openViewLeadsModal() {
             flexDirection: 'column', overflowY: 'auto', boxSizing: 'border-box'
         });
 
-        const closeBtn = document.createElement('button');
-        closeBtn.textContent = t('Close');
-        closeBtn.style.alignSelf = 'flex-end';
-        closeBtn.style.marginBottom = '10px';
-        closeBtn.onclick = () => closeAdminOverlay(modal);
+        const closeBar = createAdminModalCloseBar({
+            maxWidth: '1000px',
+            onClick: () => closeAdminOverlay(modal)
+        });
 
         const container = document.createElement('div');
         container.className = 'admin-leads-panel admin-modal-panel';
@@ -1594,7 +1608,7 @@ export async function openViewLeadsModal() {
             </div>
         `;
 
-        modal.appendChild(closeBtn);
+        modal.appendChild(closeBar);
         modal.appendChild(container);
         document.body.appendChild(modal);
         applyStaticTranslations(modal);
@@ -2048,11 +2062,10 @@ export async function openPaymentVerificationsModal() {
             flexDirection: 'column', padding: '20px', overflowY: 'auto'
         });
 
-        const closeBtn = document.createElement('button');
-        closeBtn.textContent = t('Close');
-        closeBtn.style.alignSelf = 'flex-end';
-        closeBtn.style.marginBottom = '10px';
-        closeBtn.onclick = () => closeAdminOverlay(modal);
+        const closeBar = createAdminModalCloseBar({
+            maxWidth: '1000px',
+            onClick: () => closeAdminOverlay(modal)
+        });
 
         const container = document.createElement('div');
         Object.assign(container.style, {
@@ -2080,7 +2093,7 @@ export async function openPaymentVerificationsModal() {
             </div>
         `;
 
-        modal.appendChild(closeBtn);
+        modal.appendChild(closeBar);
         modal.appendChild(container);
         document.body.appendChild(modal);
         applyStaticTranslations(modal);
@@ -2186,11 +2199,10 @@ export async function openSupportMessagesModal() {
             flexDirection: 'column', padding: '20px', overflowY: 'auto'
         });
 
-        const closeBtn = document.createElement('button');
-        closeBtn.textContent = t('Close');
-        closeBtn.style.alignSelf = 'flex-end';
-        closeBtn.style.marginBottom = '10px';
-        closeBtn.onclick = () => closeAdminOverlay(modal);
+        const closeBar = createAdminModalCloseBar({
+            maxWidth: '1000px',
+            onClick: () => closeAdminOverlay(modal)
+        });
 
         const container = document.createElement('div');
         Object.assign(container.style, {
@@ -2205,7 +2217,7 @@ export async function openSupportMessagesModal() {
             </div>
         `;
 
-        modal.appendChild(closeBtn);
+        modal.appendChild(closeBar);
         modal.appendChild(container);
         document.body.appendChild(modal);
         applyStaticTranslations(modal);
@@ -2760,11 +2772,10 @@ export async function openMailBroadcastModal() {
             flexDirection: 'column', padding: '20px', overflowY: 'auto'
         });
 
-        const closeBtn = document.createElement('button');
-        closeBtn.textContent = t('Close');
-        closeBtn.style.alignSelf = 'flex-end';
-        closeBtn.style.marginBottom = '10px';
-        closeBtn.onclick = () => closeAdminOverlay(modal);
+        const closeBar = createAdminModalCloseBar({
+            maxWidth: '600px',
+            onClick: () => closeAdminOverlay(modal)
+        });
 
         const container = document.createElement('div');
         Object.assign(container.style, {
@@ -2795,7 +2806,7 @@ export async function openMailBroadcastModal() {
             </form>
         `;
 
-        modal.appendChild(closeBtn);
+        modal.appendChild(closeBar);
         modal.appendChild(container);
         document.body.appendChild(modal);
         applyStaticTranslations(modal);
@@ -2896,11 +2907,10 @@ export async function openMailSpecialModal() {
             flexDirection: 'column', padding: '20px', overflowY: 'auto'
         });
 
-        const closeBtn = document.createElement('button');
-        closeBtn.textContent = t('Close');
-        closeBtn.style.alignSelf = 'flex-end';
-        closeBtn.style.marginBottom = '10px';
-        closeBtn.onclick = () => closeAdminOverlay(modal);
+        const closeBar = createAdminModalCloseBar({
+            maxWidth: '700px',
+            onClick: () => closeAdminOverlay(modal)
+        });
 
         const container = document.createElement('div');
         Object.assign(container.style, {
@@ -2927,7 +2937,7 @@ export async function openMailSpecialModal() {
             </form>
         `;
 
-        modal.appendChild(closeBtn);
+        modal.appendChild(closeBar);
         modal.appendChild(container);
         document.body.appendChild(modal);
         applyStaticTranslations(modal);
@@ -3011,11 +3021,10 @@ export async function openWaSpecialModal() {
             flexDirection: 'column', padding: '20px', overflowY: 'auto'
         });
 
-        const closeBtn = document.createElement('button');
-        closeBtn.textContent = t('Close');
-        closeBtn.style.alignSelf = 'flex-end';
-        closeBtn.style.marginBottom = '10px';
-        closeBtn.onclick = () => closeAdminOverlay(modal);
+        const closeBar = createAdminModalCloseBar({
+            maxWidth: '800px',
+            onClick: () => closeAdminOverlay(modal)
+        });
 
         const container = document.createElement('div');
         Object.assign(container.style, {
@@ -3058,7 +3067,7 @@ export async function openWaSpecialModal() {
             <button type="button" id="waSpecialSendBtn" style="padding:10px 20px;background:#25D366;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">${t('Send WhatsApp to selected')}</button>
         `;
 
-        modal.appendChild(closeBtn);
+        modal.appendChild(closeBar);
         modal.appendChild(container);
         document.body.appendChild(modal);
         applyStaticTranslations(modal);
@@ -3247,11 +3256,11 @@ export async function openEditProfessionalModal(prof = null) {
             backgroundColor: 'rgba(0,0,0,0.9)', zIndex: '3000', display: 'flex',
             flexDirection: 'column', padding: '20px', overflowY: 'auto'
         });
-        const closeBtn = document.createElement('button');
-        closeBtn.innerHTML = '&#8592; ' + t('Back to Dashboard');
-        closeBtn.style.alignSelf = 'flex-end';
-        closeBtn.style.marginBottom = '10px';
-        closeBtn.onclick = () => closeAdminEditModalToDashboard();
+        const closeBar = createAdminModalCloseBar({
+            maxWidth: '800px',
+            label: '← ' + t('Back to Dashboard'),
+            onClick: () => closeAdminEditModalToDashboard()
+        });
         const container = document.createElement('div');
         container.id = 'editProfContainer';
         Object.assign(container.style, {
@@ -3259,7 +3268,7 @@ export async function openEditProfessionalModal(prof = null) {
             borderRadius: '8px', color: 'white', maxWidth: '800px', margin: '0 auto', width: '100%'
         });
 
-        modal.appendChild(closeBtn);
+        modal.appendChild(closeBar);
         modal.appendChild(container);
         document.body.appendChild(modal);
         applyStaticTranslations(modal);
@@ -3657,15 +3666,11 @@ export async function openEditPricingModal(currentPricing) {
             flexDirection: 'column', padding: '20px', overflowY: 'auto'
         });
 
-        const closeBtn = document.createElement('button');
-        closeBtn.id = 'editPricingBackBtn';
-        closeBtn.innerHTML = '&#8592; Back to Dashboard';
-        Object.assign(closeBtn.style, {
-            marginTop: '10px', padding: '10px 12px', width: '100%',
-            background: 'transparent', border: '1px solid var(--primary-gold)',
-            color: 'var(--primary-gold)', borderRadius: '4px', cursor: 'pointer'
+        const closeBar = createAdminModalCloseBar({
+            maxWidth: '600px',
+            label: '← ' + t('Back to Dashboard'),
+            onClick: () => closeAdminOverlay(modal)
         });
-        closeBtn.onclick = () => closeAdminOverlay(modal);
 
         const container = document.createElement('div');
         Object.assign(container.style, {
@@ -3698,8 +3703,8 @@ export async function openEditPricingModal(currentPricing) {
             </form>
         `;
 
+        modal.appendChild(closeBar);
         modal.appendChild(container);
-        container.querySelector('#editPricingForm').appendChild(closeBtn);
         document.body.appendChild(modal);
         applyStaticTranslations(modal);
 
@@ -4466,31 +4471,21 @@ export async function openDashboardConfigModal() {
             flexDirection: 'column', padding: '20px', overflowY: 'auto'
         });
 
-        // Header row aligned with panel — close sits just above the card (top-right).
-        const closeBar = document.createElement('div');
-        closeBar.className = 'modal-close-bar';
-        Object.assign(closeBar.style, {
-            width: '100%', maxWidth: '720px', margin: '0 auto 8px',
-            display: 'flex', justifyContent: 'flex-end'
+        const closeBar = createAdminModalCloseBar({
+            maxWidth: '720px',
+            onClick: () => {
+                if (waConfigPollTimer) {
+                    clearInterval(waConfigPollTimer);
+                    waConfigPollTimer = null;
+                }
+                if (waDripPollTimer) {
+                    clearInterval(waDripPollTimer);
+                    waDripPollTimer = null;
+                }
+                stopWhatsAppInboundPolling();
+                closeAdminOverlay(modal);
+            }
         });
-
-        const closeBtn = document.createElement('button');
-        closeBtn.type = 'button';
-        closeBtn.className = 'modal-close-external';
-        closeBtn.textContent = t('Close');
-        closeBtn.onclick = () => {
-            if (waConfigPollTimer) {
-                clearInterval(waConfigPollTimer);
-                waConfigPollTimer = null;
-            }
-            if (waDripPollTimer) {
-                clearInterval(waDripPollTimer);
-                waDripPollTimer = null;
-            }
-            stopWhatsAppInboundPolling();
-            closeAdminOverlay(modal);
-        };
-        closeBar.appendChild(closeBtn);
 
         const container = document.createElement('div');
         Object.assign(container.style, {

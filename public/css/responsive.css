@@ -71,10 +71,15 @@ input[type="submit"],
 }
 
 .payment-modal-close,
-.modal-close-external,
 .reg-country-btn,
 .reg-date-picker-btn {
     min-height: unset;
+}
+
+.admin-modal-close-btn,
+.modal-close-external {
+    min-height: 44px;
+    min-width: 44px;
 }
 
 /* Admin shell (dashboard.html + admin.js) */

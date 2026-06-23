@@ -31,6 +31,9 @@
             background: transparent; border: 1px solid rgba(212,175,55,0.55);
             color: var(--primary-gold); border-radius: 4px; cursor: pointer;
             font-size: 0.9rem; font-weight: bold;
+            box-sizing: border-box;
+            min-height: 44px;
+            -webkit-tap-highlight-color: transparent;
         }
         .reg-back-btn:hover { background: rgba(212,175,55,0.12); }
         .reg-inline-link {
@@ -46,11 +49,12 @@
             position: relative;
             width: 100%; height: 46px; min-height: 46px; max-height: 46px;
             box-sizing: border-box;
-            display: inline-flex; align-items: center; justify-content: flex-end;
+            display: flex; align-items: center; justify-content: flex-end;
             background: #222;
             border: 1px solid rgba(212,175,55,0.45); border-right: none;
             border-radius: 4px 0 0 4px; cursor: pointer; padding: 0 8px 0 40px;
             white-space: nowrap;
+            -webkit-tap-highlight-color: transparent;
         }
         .reg-country-btn:hover,
         .reg-country-btn:focus-visible {
@@ -65,7 +69,7 @@
         .reg-country-code {
             font-size: 0.82rem; font-weight: 700; color: #111;
             background: rgba(255,255,255,0.92); padding: 2px 5px; border-radius: 3px;
-            line-height: 1.2;
+            line-height: 1.2; pointer-events: none;
         }
         .reg-phone-input {
             flex: 1 1 auto; min-width: 0; border-radius: 0 4px 4px 0 !important;
@@ -101,15 +105,21 @@
             height: 46px; min-height: 46px; max-height: 46px;
             padding-right: 12px !important; border-radius: 4px 0 0 4px !important;
         }
-        .reg-date-picker-btn {
+        .reg-date-picker-slot {
+            position: relative;
             flex: 0 0 46px; width: 46px; min-width: 46px;
             height: 46px; min-height: 46px; max-height: 46px;
+        }
+        .reg-date-picker-btn {
+            position: relative; z-index: 2;
+            display: flex; align-items: center; justify-content: center;
+            width: 100%; height: 100%;
             box-sizing: border-box;
             border: 1px solid rgba(212,175,55,0.45);
-            border-left: none; border-radius: 0 4px 4px 0; background: #1a1a1a;
+            border-left: none; border-radius: 0 4px 4px 0;
+            background: #1a1a1a; color: var(--primary-gold);
             cursor: pointer; padding: 0; margin: 0;
-            display: inline-flex; align-items: center; justify-content: center;
-            color: var(--primary-gold);
+            -webkit-tap-highlight-color: transparent;
         }
         .reg-date-picker-btn:hover,
         .reg-date-picker-btn:focus-visible {
@@ -118,11 +128,12 @@
         }
         .reg-date-picker-btn svg {
             width: 18px; height: 18px; fill: currentColor; display: block;
+            pointer-events: none;
         }
         .reg-date-native {
-            position: fixed; left: -9999px; top: auto;
-            width: 1px; height: 1px; opacity: 0;
-            pointer-events: none; border: 0; padding: 0; margin: 0;
+            position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+            overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap;
+            border: 0; opacity: 0; pointer-events: none;
         }
         #regTermsBlock.reg-terms-error {
             outline: 2px solid var(--accent-red); outline-offset: 4px; border-radius: 6px; padding: 6px;
@@ -130,10 +141,13 @@
         .register-page .reg-country-btn,
         .register-page .reg-phone-input,
         .register-page .reg-date-text,
-        .register-page .reg-date-picker-btn {
+        .register-page .reg-date-picker-slot,
+        .register-page .reg-date-picker-btn,
+        .register-page #registerForm button[type="submit"] {
             min-height: 46px;
             height: 46px;
             max-height: 46px;
+            box-sizing: border-box;
         }
     </style>
     <meta name="robots" content="noindex, nofollow">
@@ -198,10 +212,12 @@
                         <label for="regBirthDate">Birth date <span class="required-star">*</span></label>
                         <div class="reg-date-field date-wrap">
                             <input type="text" id="regBirthDate" class="reg-input reg-date-text" required autocomplete="bday" inputmode="text" placeholder="dd/mm/aaaa">
-                            <button type="button" id="regBirthDatePickerBtn" class="reg-date-picker-btn" aria-label="Open calendar">
-                                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 16H5V10h14v10zM5 8V6h14v2H5z"/></svg>
-                            </button>
-                            <input type="date" id="regBirthDateNative" class="reg-date-native" tabindex="-1" aria-hidden="true">
+                            <div class="reg-date-picker-slot">
+                                <button type="button" id="regBirthDatePickerBtn" class="reg-date-picker-btn" aria-label="Open calendar">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 16H5V10h14v10zM5 8V6h14v2H5z"/></svg>
+                                </button>
+                                <input type="date" id="regBirthDateNative" class="reg-date-native" tabindex="-1" aria-hidden="true">
+                            </div>
                         </div>
                         <p class="reg-hint" id="regBirthDateHint">We calculate your age automatically — you must be 18 or older.</p>
                     </div>

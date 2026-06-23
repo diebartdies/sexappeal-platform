@@ -293,25 +293,30 @@ function setupBirthDateField() {
 
     const openPicker = () => {
         syncNativeFromText();
-        if (typeof nativeInput.showPicker === 'function') {
-            nativeInput.showPicker();
-            return;
+        try {
+            if (typeof nativeInput.showPicker === 'function') {
+                nativeInput.showPicker();
+                return;
+            }
+        } catch (_) {
+            /* fall through */
         }
-        nativeInput.focus();
+        nativeInput.focus({ preventScroll: true });
         nativeInput.click();
     };
 
-    pickerBtn?.addEventListener('click', openPicker);
+    pickerBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        openPicker();
+    });
     nativeInput.addEventListener('change', syncTextFromNative);
+    nativeInput.addEventListener('input', syncTextFromNative);
 
     textInput.addEventListener('input', () => {
         const formatted = formatBirthDateInput(textInput.value);
         if (formatted !== textInput.value) {
-            const pos = textInput.selectionStart;
             textInput.value = formatted;
-            if (typeof pos === 'number') {
-                textInput.setSelectionRange(formatted.length, formatted.length);
-            }
+            textInput.setSelectionRange(formatted.length, formatted.length);
         }
         textInput.classList.remove('reg-field-error');
         const iso = parseDisplayBirthDate(textInput.value);

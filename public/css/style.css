@@ -1847,30 +1847,44 @@ body.small-grid-mode #treasureGrid .treasure-card {
 }
 
 .admin-overlay-modal > button:first-of-type,
+.admin-modal-close-btn,
 .modal-close-external {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-height: 44px;
     min-width: 44px;
+    width: auto;
+    max-width: max-content;
+    flex: 0 0 auto;
     padding: 8px 16px;
     line-height: 1.2;
     box-sizing: border-box;
     cursor: pointer;
     pointer-events: auto;
     position: relative;
-    z-index: 2;
+    z-index: 11;
     flex-shrink: 0;
 }
 
 .modal-close-bar {
     width: 100%;
-    max-width: 720px;
+    max-width: 1000px;
     margin: 0 auto 8px;
     display: flex;
     justify-content: flex-end;
-    position: relative;
-    z-index: 2;
+    align-items: center;
+    position: sticky;
+    top: max(0px, env(safe-area-inset-top));
+    z-index: 10;
+    flex-shrink: 0;
+    pointer-events: none;
+    box-sizing: border-box;
+}
+
+.modal-close-bar .admin-modal-close-btn,
+.modal-close-bar .modal-close-external {
+    pointer-events: auto;
 }
 
 .how-to-pay-intro {
