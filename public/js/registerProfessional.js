@@ -520,8 +520,6 @@ export function initProfessionalRegistration() {
         const alert = document.getElementById('registerAlert');
         if (!validateRegistrationForm(form)) return;
 
-        if (!(await confirmDialog(t('When you submit, we will email you a 6-digit verification code. Check your inbox AND your Spam/Junk folder — our emails often land there. Continue?')))) return;
-
         const submitBtn = form.querySelector('button[type="submit"]');
         const originalText = submitBtn.textContent;
         submitBtn.disabled = true;
