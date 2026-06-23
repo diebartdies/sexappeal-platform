@@ -89,6 +89,21 @@ function normalizeWhatsAppPhone(phone) {
   return cleanPhone;
 }
 
+/** Registration form: normalize E.164; Argentina gets mobile 9 after +54 when missing. */
+function normalizeRegistrationMobilePhone(phone) {
+  if (!phone) return '';
+  const raw = String(phone).trim();
+  const digits = normalizeE164Digits(raw);
+  if (!digits) return raw;
+
+  if (digits.startsWith('54') || raw.startsWith('+54')) {
+    const normalized = normalizeWhatsAppPhone(raw);
+    return normalized ? `+${normalized}` : raw;
+  }
+
+  return raw.startsWith('+') ? raw : `+${digits}`;
+}
+
 function buildProfessionalInviteMessage(alias) {
   const name = (alias && String(alias).trim()) || 'hermosa';
 
@@ -203,6 +218,7 @@ module.exports = {
   buildStep2OutreachReply,
   normalizeE164Digits,
   normalizeWhatsAppPhone,
+  normalizeRegistrationMobilePhone,
   buildProfessionalInviteMessage,
   buildSanitizedWhatsAppCaption,
   buildWhatsAppUrl

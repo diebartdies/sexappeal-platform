@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const ActivityLog = require('../models/ActivityLog');
 const Specialty = require('../models/Specialty');
+const { normalizeRegistrationMobilePhone } = require('../utils/professionalInviteMessage');
 
 function ageFromBirthDate(dateStr) {
   if (!dateStr) return null;
@@ -57,6 +58,8 @@ exports.register = async (req, res, next) => {
       if (!mobilePhone || !String(mobilePhone).trim()) {
         return res.status(400).json({ success: false, error: 'Mobile phone is required.' });
       }
+      const normalizedMobile = normalizeRegistrationMobilePhone(mobilePhone);
+      if (normalizedMobile) mobilePhone = normalizedMobile;
       if (!birthDate || !String(birthDate).trim()) {
         return res.status(400).json({ success: false, error: 'Birth date is required.' });
       }

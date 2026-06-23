@@ -4,7 +4,7 @@ import { t, applyStaticTranslations } from './i18n.js';
 import { confirmDialog, wireFormLabel, setFieldInvalid } from './a11y.js';
 import { navigateWithReturn, returnToOrigin } from './navReturn.js';
 import { openFullTermsModal } from './terms.js';
-import { PHONE_COUNTRIES, defaultPhoneCountry } from './phoneCountryCodes.js';
+import { PHONE_COUNTRIES, defaultPhoneCountry, buildFullPhoneNumber } from './phoneCountryCodes.js';
 
 function getRegistrationLocale() {
     return (localStorage.getItem('platform_lang') || 'es') === 'es' ? 'es-AR' : 'en-US';
@@ -260,14 +260,14 @@ function setupPhoneCountrySelect() {
     const renderSelected = () => {
         hiddenDial.value = selected.dial;
         if (flagEl) {
-            flagEl.innerHTML = `${selected.flag}<span class="reg-country-code" id="regCountryCode">${selected.dial}</span>`;
+            flagEl.innerHTML = `<span class="reg-flag-emoji">${selected.flag}</span><span class="reg-country-code" id="regCountryCode">${selected.dial}</span>`;
         }
         btn.setAttribute('aria-label', `${t('Country code')} ${selected.name} ${selected.dial}`);
     };
 
     menu.innerHTML = PHONE_COUNTRIES.map((c) => `
         <li class="reg-country-option" role="option" data-dial="${c.dial}" data-iso="${c.iso}" aria-selected="${c.iso === selected.iso ? 'true' : 'false'}">
-            <span class="reg-country-flag">${c.flag}<span class="reg-country-code">${c.dial}</span></span>
+            <span class="reg-country-flag"><span class="reg-flag-emoji">${c.flag}</span><span class="reg-country-code-static">${c.dial}</span></span>
             <span>${c.name}</span>
         </li>`).join('');
 
@@ -307,10 +307,9 @@ function setupPhoneCountrySelect() {
 }
 
 function buildFullMobilePhone() {
-    const dial = (document.getElementById('regPhoneDial')?.value || '+54').replace(/\s/g, '');
-    let local = String(document.getElementById('regMobilePhone')?.value || '').trim().replace(/\D/g, '');
-    if (local.startsWith('0')) local = local.replace(/^0+/, '');
-    return `${dial}${local}`;
+    const dial = document.getElementById('regPhoneDial')?.value || '+54';
+    const local = document.getElementById('regMobilePhone')?.value || '';
+    return buildFullPhoneNumber(dial, local);
 }
 
 function computeAgeFromBirthDate(dateStr) {

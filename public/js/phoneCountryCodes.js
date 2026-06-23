@@ -42,3 +42,22 @@ export const PHONE_COUNTRIES = [
 export function defaultPhoneCountry() {
     return PHONE_COUNTRIES.find((c) => c.default) || PHONE_COUNTRIES[0];
 }
+
+/**
+ * Build E.164 phone from dial code (+54) and local digits entered by user.
+ * Argentina (+54): inserts mobile prefix 9 when missing (549 + area + number).
+ */
+export function buildFullPhoneNumber(dial, localRaw) {
+    const dialDigits = String(dial || '').replace(/\D/g, '') || '54';
+    let local = String(localRaw || '').trim().replace(/\D/g, '');
+    if (local.startsWith('0')) local = local.replace(/^0+/, '');
+
+    if (dialDigits === '54') {
+        if (local.startsWith('549')) local = local.slice(3);
+        else if (local.startsWith('54')) local = local.slice(2);
+        if (local && local[0] !== '9') local = `9${local}`;
+    }
+
+    if (!local) return '';
+    return `+${dialDigits}${local}`;
+}
