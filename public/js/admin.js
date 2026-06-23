@@ -1386,6 +1386,18 @@ export async function openViewLeadsModal() {
                     <input type="radio" name="inviteChannel" value="sms" style="width:auto;"> ${t('SMS')}
                 </label>
             </div>
+            <div class="admin-leads-filters" style="display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;">
+                <label for="leadsFilterStatus" style="color: var(--primary-gold); font-weight: bold;">${t('Status')}:</label>
+                <select id="leadsFilterStatus" style="padding: 8px; background: #333; color: white; border: 1px solid #555; border-radius: 4px; min-width: 160px;">
+                    <option value="">${t('All Statuses')}</option>
+                    <option value="pending">${t('pending')}</option>
+                    <option value="contacted">${t('contacted')}</option>
+                    <option value="joined">${t('joined')}</option>
+                    <option value="rejected">${t('rejected')}</option>
+                </select>
+                <button id="leadsFilterBtn" type="button" style="background: #333; color: white; border: 1px solid #555; padding: 8px 12px; border-radius: 4px; cursor: pointer;">${t('Filter')}</button>
+                <span id="leadsTotalInfo" style="color: #888; font-size: 0.85rem; margin-left: auto;"></span>
+            </div>
             <div class="admin-leads-toolbar" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
                 <button id="refreshLeadsBtn">${t('Refresh List')}</button>
                 <button id="previewInviteBtn" type="button" style="background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold);">${t('Preview invite message')}</button>
@@ -1424,6 +1436,11 @@ export async function openViewLeadsModal() {
                     </tbody>
                 </table>
             </div>
+            <div class="admin-leads-pagination" style="display: flex; align-items: center; gap: 12px; margin-top: 16px; flex-wrap: wrap;">
+                <button type="button" id="leadsBtnPrev" style="padding: 8px 16px; background: transparent; color: var(--primary-gold); border: 1px solid var(--primary-gold); border-radius: 4px; cursor: pointer;">${t('Previous')}</button>
+                <span id="leadsPageInfo" style="color: #ccc; font-size: 0.9rem;">${t('Page {page} of {total}').replace('{page}', '1').replace('{total}', '1')}</span>
+                <button type="button" id="leadsBtnNext" style="padding: 8px 16px; background: transparent; color: var(--primary-gold); border: 1px solid var(--primary-gold); border-radius: 4px; cursor: pointer;">${t('Next')}</button>
+            </div>
         `;
 
         modal.appendChild(closeBtn);
@@ -1431,7 +1448,15 @@ export async function openViewLeadsModal() {
         document.body.appendChild(modal);
         applyStaticTranslations(modal);
 
-        document.getElementById('refreshLeadsBtn').onclick = loadLeads;
+        document.getElementById('refreshLeadsBtn').onclick = () => loadLeads(leadsCurrentPage);
+        document.getElementById('leadsFilterBtn').onclick = () => loadLeads(1);
+        document.getElementById('leadsFilterStatus').addEventListener('change', () => loadLeads(1));
+        document.getElementById('leadsBtnPrev').onclick = () => {
+            if (leadsCurrentPage > 1) loadLeads(leadsCurrentPage - 1);
+        };
+        document.getElementById('leadsBtnNext').onclick = () => {
+            if (leadsCurrentPage < leadsTotalPages) loadLeads(leadsCurrentPage + 1);
+        };
         document.getElementById('previewInviteBtn').onclick = previewInviteMessage;
         document.getElementById('selectPendingLeadsBtn').onclick = () => {
             document.querySelectorAll('.lead-invite-cb:not(:disabled)').forEach((cb) => { cb.checked = true; });
@@ -1447,17 +1472,58 @@ export async function openViewLeadsModal() {
     }
 
     openAdminOverlay(modal);
-    loadLeads();
+    loadLeads(1);
     pollBulkWhatsappStatus();
 }
 
-export async function loadLeads() {
+let leadsCurrentPage = 1;
+let leadsTotalPages = 1;
+const LEADS_PAGE_SIZE = 50;
+
+function updateLeadsPagination(pagination) {
+    const total = pagination?.total || 0;
+    const page = pagination?.page || leadsCurrentPage;
+    const limit = pagination?.limit || LEADS_PAGE_SIZE;
+    leadsTotalPages = Math.max(1, Math.ceil(total / limit) || 1);
+    leadsCurrentPage = page;
+
+    const pageInfo = document.getElementById('leadsPageInfo');
+    const totalInfo = document.getElementById('leadsTotalInfo');
+    const prevBtn = document.getElementById('leadsBtnPrev');
+    const nextBtn = document.getElementById('leadsBtnNext');
+
+    if (pageInfo) {
+        pageInfo.textContent = t('Page {page} of {total} ({count} total)')
+            .replace('{page}', String(page))
+            .replace('{total}', String(leadsTotalPages))
+            .replace('{count}', String(total));
+    }
+    if (totalInfo && total > 0) {
+        const from = (page - 1) * limit + 1;
+        const to = Math.min(page * limit, total);
+        totalInfo.textContent = t('Showing {from}-{to} of {total}')
+            .replace('{from}', String(from))
+            .replace('{to}', String(to))
+            .replace('{total}', String(total));
+    } else if (totalInfo) {
+        totalInfo.textContent = '';
+    }
+    if (prevBtn) prevBtn.disabled = page <= 1;
+    if (nextBtn) nextBtn.disabled = page >= leadsTotalPages;
+}
+
+export async function loadLeads(page = leadsCurrentPage) {
+    leadsCurrentPage = Math.max(1, page);
     const tbody = document.getElementById('leadsTableBody');
     tbody.innerHTML = `<tr><td colspan="7" style="padding: 10px; text-align: center;">${t('Loading...')}</td></tr>`;
     
     try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`${API_URL}/admin/potential-professionals`, { 
+        const statusEl = document.getElementById('leadsFilterStatus');
+        const status = statusEl ? statusEl.value : '';
+        let url = `${API_URL}/admin/potential-professionals?page=${leadsCurrentPage}&limit=${LEADS_PAGE_SIZE}`;
+        if (status) url += `&status=${encodeURIComponent(status)}`;
+
+        const res = await fetch(url, { 
             headers: authHeaders(),
             credentials: 'include'
         });
@@ -1465,6 +1531,8 @@ export async function loadLeads() {
 
         if (data.success) {
             tbody.innerHTML = '';
+            updateLeadsPagination(data.pagination);
+
             if (data.data.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="7" style="padding: 10px; text-align: center;">${t('No leads found.')}</td></tr>`;
                 return;
@@ -1757,7 +1825,7 @@ function renderBulkWhatsappStatus(status) {
         const selectedBtn = document.getElementById('applySelectedInviteBtn');
         if (bulkBtn) bulkBtn.disabled = false;
         if (selectedBtn) selectedBtn.disabled = false;
-        loadLeads();
+        loadLeads(leadsCurrentPage);
     } else if (status.phase === 'sending' || status.phase === 'qr' || status.phase === 'initializing' || status.phase === 'waiting_window') {
         const bulkBtn = document.getElementById('bulkWhatsappBtn');
         const selectedBtn = document.getElementById('applySelectedInviteBtn');

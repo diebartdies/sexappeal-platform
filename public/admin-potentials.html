@@ -102,6 +102,7 @@
         <div class="pagination">
             <button class="btn" id="btnPrev">Previous</button>
             <span id="pageInfo">Page 1</span>
+            <span id="pageRangeInfo" style="color: #888; font-size: 0.9rem;"></span>
             <button class="btn" id="btnNext">Next</button>
         </div>
     </div>
@@ -112,6 +113,7 @@
 
         const API_URL = window.location.protocol === 'file:' ? 'http://localhost:5000/api/v1' : window.location.origin + '/api/v1';
         let currentPage = 1;
+        let totalPages = 1;
         const limit = 50;
 
         document.documentElement.lang = currentLang === 'es' ? 'es' : 'en';
@@ -164,13 +166,30 @@
                         tbody.appendChild(tr);
                     });
 
-                    const totalPages = Math.ceil(data.pagination.total / limit) || 1;
-                    document.getElementById('pageInfo').textContent = t('Page {page} of {total}')
-                        .replace('{page}', data.pagination.page)
-                        .replace('{total}', totalPages);
+                    const total = data.pagination.total || 0;
+                    totalPages = Math.ceil(total / limit) || 1;
+                    const page = data.pagination.page;
+                    document.getElementById('pageInfo').textContent = t('Page {page} of {total} ({count} total)')
+                        .replace('{page}', page)
+                        .replace('{total}', totalPages)
+                        .replace('{count}', total);
+                    const rangeEl = document.getElementById('pageRangeInfo');
+                    if (rangeEl) {
+                        if (total > 0) {
+                            const from = (page - 1) * limit + 1;
+                            const to = Math.min(page * limit, total);
+                            rangeEl.textContent = t('Showing {from}-{to} of {total}')
+                                .replace('{from}', from)
+                                .replace('{to}', to)
+                                .replace('{total}', total);
+                        } else {
+                            rangeEl.textContent = '';
+                        }
+                    }
                     
-                    document.getElementById('btnPrev').disabled = data.pagination.page <= 1;
-                    document.getElementById('btnNext').disabled = data.pagination.page >= totalPages;
+                    document.getElementById('btnPrev').disabled = page <= 1;
+                    document.getElementById('btnNext').disabled = page >= totalPages;
+                    currentPage = page;
 
                     document.querySelectorAll('.btn-update').forEach(btn => {
                         btn.addEventListener('click', async (e) => {
@@ -230,8 +249,10 @@
         });
 
         document.getElementById('btnNext').addEventListener('click', () => {
-            currentPage++;
-            loadPotentials();
+            if (currentPage < totalPages) {
+                currentPage++;
+                loadPotentials();
+            }
         });
 
         loadPotentials();

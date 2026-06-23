@@ -783,6 +783,8 @@ const translations = {
         'Previous': 'Anterior',
         'Next': 'Siguiente',
         'Page {page} of {total}': 'Página {page} de {total}',
+        'Page {page} of {total} ({count} total)': 'Página {page} de {total} ({count} en total)',
+        'Showing {from}-{to} of {total}': 'Mostrando {from}-{to} de {total}',
         'You must be logged in as an admin to view this page.': 'Debe iniciar sesión como administrador para ver esta página.',
         'Status updated successfully': 'Estado actualizado correctamente',
         'Failed to update status': 'Error al actualizar el estado',
