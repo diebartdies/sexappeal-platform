@@ -1,4 +1,4 @@
-/* SexAppeal - Mobile & tablet responsive layer (v8.12) */
+/* SexAppeal - Mobile & tablet responsive layer (v8.13) */
 
 html {
     -webkit-text-size-adjust: 100%;
@@ -379,6 +379,40 @@ body.landing-page .landing-pro-links {
     margin-bottom: max(72px, calc(56px + env(safe-area-inset-bottom)));
 }
 
+/* Landing index — global top bar + privacy shield must not clip content */
+body.landing-page.has-global-topbar {
+    padding-top: calc(var(--global-topbar-height, 55px) + env(safe-area-inset-top, 0px));
+}
+
+body.landing-page .landing-container {
+    padding-bottom: max(88px, calc(72px + env(safe-area-inset-bottom)));
+    box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+    body.landing-page .landing-dual,
+    body.landing-page .landing-triple,
+    body.landing-page .landing-frame {
+        min-height: auto !important;
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    body.landing-page .landing-logo {
+        max-height: min(38vh, 260px);
+    }
+
+    body.landing-page .landing-brand-row {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    body.landing-page .landing-pro-links {
+        margin-bottom: max(96px, calc(76px + env(safe-area-inset-bottom)));
+    }
+}
+
 /* Registration — instructions + Google above email on mobile */
 @media (max-width: 768px) {
     body.register-page #regNoPaymentNote {
@@ -444,8 +478,9 @@ body.register-page #registerMain {
 }
 
 .landing-page {
-    padding-top: env(safe-area-inset-top);
-    overflow-x: auto;
+    padding-top: calc(var(--global-topbar-height, 55px) + env(safe-area-inset-top, 0px));
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 #treasureContent h2.gold-text {
