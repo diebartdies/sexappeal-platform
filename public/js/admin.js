@@ -223,7 +223,7 @@ async function handleDeleteProfessional(p, card) {
 
 export async function renderAdminGrid(container) {
     container.innerHTML = `
-        <h3 class="gold-text" style="margin-bottom: 15px; font-size: 1.5rem; border-bottom: 1px solid rgba(212, 175, 55, 0.3); padding-bottom: 10px;">${t('Professionals Directory')}</h3>
+        <h3 class="gold-text" style="margin-bottom: 15px; font-size: 1.5rem; border-bottom: 1px solid rgba(212, 175, 55, 0.3); padding-bottom: 10px;">${t('Models Directory')}</h3>
         <div class="admin-grid-layout" style="display: flex; gap: 20px; align-items: flex-start; flex-direction: row; flex-wrap: wrap;">
             <div class="card admin-grid-sidebar" style="width: 100%; max-width: 250px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; position: sticky; top: 70px;">
                 <h4 class="gold-text" style="margin-bottom: 5px;">${t('Filters')}</h4>
@@ -1364,7 +1364,7 @@ function renderActivityLogDetail() {
 const LOG_ACTOR_TYPE_LABELS = {
     admin: 'Admin',
     admin_ho: 'Admin-ho',
-    professional: 'Professional',
+    professional: 'Model',
     guest: 'Guest',
     registration_visitor: 'Registration visitor',
     unknown: 'Unknown'

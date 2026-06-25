@@ -685,7 +685,7 @@ export function initProfessionalRegistration() {
             if (aliasValue) formData.append('alias', aliasValue);
         } else {
             formData.append('role', 'professional');
-            formData.append('registrationMode', 'express');
+            formData.append('registrationMode', document.getElementById('regRegistrationMode')?.value || 'express');
             formData.append('password', document.getElementById('regPassword').value);
             formData.append('mobilePhone', buildFullMobilePhone());
             formData.append('birthDate', getBirthDateIsoValue());
@@ -732,6 +732,15 @@ export function initProfessionalRegistration() {
                 redirectToLogin(emailValue, t('This email is already registered. Redirecting to sign in...'));
                 navigated = true;
                 return;
+            } else if (
+                data.error && (
+                    /verification photo/i.test(data.error)
+                    || /verification document/i.test(data.error)
+                    || /three verification/i.test(data.error)
+                    || /no verification documents/i.test(data.error)
+                )
+            ) {
+                showAlert(alert, t('Express registration does not require ID photos. Please try again — if this persists, refresh the page and submit once more.'));
             } else {
                 showAlert(alert, data.error || t('Registration failed'));
             }

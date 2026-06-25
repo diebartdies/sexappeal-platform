@@ -263,11 +263,17 @@ function bindAgeGateButtons() {
 
 export function setupLandingPageAgeGate() {
     window.addEventListener('pageshow', () => {
-        if (!document.getElementById('landing')) return;
-        document.documentElement.classList.remove('page-pending');
-        resetLandingEnterButton();
-        applyStaticTranslations(document.getElementById('landing') || document.body);
-        applyStaticTranslations(document.getElementById('landingAdvantages'));
+        const landing = document.getElementById('landing');
+        const platformDetails = document.getElementById('platformDetails');
+
+        if (landing) {
+            document.documentElement.classList.remove('page-pending');
+            resetLandingEnterButton();
+            applyStaticTranslations(landing);
+        }
+        if (platformDetails) {
+            applyStaticTranslations(platformDetails);
+        }
     });
 
     whenDomReady(() => {

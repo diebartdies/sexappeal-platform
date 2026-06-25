@@ -42,6 +42,27 @@ async function generateExpressAlias(phone, mail) {
 
 const PROFESSIONAL_QUALITIES = ['Standard', 'Silver', 'Gold', 'Premium', 'Elite'];
 
+function normalizeRegistrationMode(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function resolveProfessionalRegistrationMode(role, registrationMode) {
+  if (role !== 'professional') return null;
+  const mode = normalizeRegistrationMode(registrationMode);
+  return mode === 'full' ? 'full' : 'express';
+}
+
+function buildVerificationDocumentsFromUpload(req) {
+  const verificationDocuments = [];
+  if (!req.files || !req.files.length) return verificationDocuments;
+  for (const file of req.files) {
+    const base64Data = fs.readFileSync(file.path, 'base64');
+    verificationDocuments.push(`data:${file.mimetype};base64,${base64Data}`);
+    if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+  }
+  return verificationDocuments;
+}
+
 async function syncProfessionalSpecialties(user) {
   if (user.role !== 'professional' || !user.professionalProfile?.services?.length) return;
   await Specialty.deleteMany({ user: user._id });
@@ -94,9 +115,9 @@ async function upgradeGuestToProfessional(existingUser, {
   existingUser.role = 'professional';
   existingUser.registrationMode = isExpressRegistration ? 'express' : undefined;
   existingUser.professionalProfile = professionalProfile;
-  existingUser.verificationDocuments = verificationDocuments;
+  existingUser.verificationDocuments = verificationDocuments || [];
   existingUser.verificationStatus = 'pending';
-  existingUser.verificationGesture = verificationGesture;
+  existingUser.verificationGesture = isExpressRegistration ? undefined : verificationGesture;
   existingUser.isVerified = false;
   existingUser.isEmailVerified = true;
   existingUser.emailVerificationCode = undefined;
@@ -155,11 +176,12 @@ exports.register = async (req, res, next) => {
       originCountry, instagram, facebook, quality, registrationMode
     } = req.body;
 
-    const isExpressRegistration = role === 'professional'
-      && (registrationMode === 'express' || String(registrationMode || '').toLowerCase() === 'express');
-
     const isGuestRegistration = role === 'user'
-      && String(registrationMode || '').toLowerCase() === 'guest';
+      && normalizeRegistrationMode(registrationMode) === 'guest';
+
+    const professionalRegistrationMode = resolveProfessionalRegistrationMode(role, registrationMode);
+    const isFullRegistration = professionalRegistrationMode === 'full';
+    const isExpressRegistration = professionalRegistrationMode === 'express';
 
     let passwordWasGenerated = false;
 
@@ -212,7 +234,7 @@ exports.register = async (req, res, next) => {
       if (age === undefined || age === null || !Number.isFinite(age) || age < 18 || age > 99) {
         return res.status(400).json({ success: false, error: 'You must be at least 18 years old to register.' });
       }
-    } else if (role === 'professional') {
+    } else if (role === 'professional' && isFullRegistration) {
       const required = [
         ['firstName', firstName], ['surname', surname], ['alias', alias], ['idNumber', idNumber],
         ['street', street], ['number', number], ['province', province], ['city', city],
@@ -261,6 +283,9 @@ exports.register = async (req, res, next) => {
       expressRegistration: isExpressRegistration
     } : undefined;
 
+    // Express and guest signups never require ID verification photos at registration.
+    const verificationDocuments = buildVerificationDocumentsFromUpload(req);
+
     // Block only verified professionals/admins; verified guests may upgrade to professional
     const existingUser = await User.findOne({ email });
     if (existingUser?.isEmailVerified) {
@@ -308,27 +333,19 @@ exports.register = async (req, res, next) => {
     const verificationCodeExpire = new Date(Date.now() + codeExpireMs);
 
     // Category chosen at registration (admin pricing table); legacy auto-score removed.
-    // Convert uploaded files to Base64 strings to store directly in the database
-    const verificationDocuments = [];
-    if (req.files) {
-      for (const file of req.files) {
-        const base64Data = fs.readFileSync(file.path, 'base64');
-        verificationDocuments.push(`data:${file.mimetype};base64,${base64Data}`);
-        if (fs.existsSync(file.path)) fs.unlinkSync(file.path); // Remove external file
-      }
-    }
-
     // Create user
     const user = await User.create({
       email,
       password,
       role,
       name: isGuestRegistration ? alias : undefined,
-      registrationMode: isGuestRegistration ? 'guest' : (isExpressRegistration ? 'express' : undefined),
+      registrationMode: isGuestRegistration
+        ? 'guest'
+        : (isExpressRegistration ? 'express' : (isFullRegistration ? 'full' : undefined)),
       professionalProfile: role === 'professional' ? professionalProfile : undefined,
       verificationDocuments,
       verificationStatus: role === 'professional' ? 'pending' : 'approved',
-      verificationGesture: role === 'professional' ? verificationGesture : undefined,
+      verificationGesture: role === 'professional' && isFullRegistration ? verificationGesture : undefined,
       isVerified: role !== 'professional',
       isEmailVerified: false,
       emailVerificationCode: verificationCode,

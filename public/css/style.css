@@ -1398,9 +1398,10 @@ textarea:focus:not(:focus-visible) {
     display: flex;
     align-items: baseline;
     justify-content: center;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+    gap: 0.35em 0.5em;
     margin: 0 0 14px;
-    line-height: 1;
+    line-height: 1.35;
 }
 
 .landing-brand-name {
@@ -1411,6 +1412,7 @@ textarea:focus:not(:focus-visible) {
     font-weight: 400;
 }
 
+.landing-brochure-link,
 .landing-advantages-link {
     margin-left: 0.35em;
     font-family: 'Segoe UI', system-ui, sans-serif;
@@ -1420,6 +1422,47 @@ textarea:focus:not(:focus-visible) {
     text-underline-offset: 3px;
     letter-spacing: 0.04em;
     text-transform: lowercase;
+}
+
+.landing-brochure-link:hover,
+.landing-brochure-link:focus-visible,
+.landing-advantages-link:hover,
+.landing-advantages-link:focus-visible {
+    color: var(--primary-gold);
+}
+
+.landing-details-page {
+    padding-top: 12px;
+    padding-bottom: 48px;
+}
+
+.landing-details-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+.landing-details-back {
+    align-self: flex-start;
+    margin-bottom: 0;
+}
+
+.landing-details-logo-link {
+    display: block;
+}
+
+.landing-details-logo {
+    display: block;
+    max-width: min(280px, 70vw);
+    height: auto;
+    margin: 0 auto;
+}
+
+.landing-advantages-standalone {
+    border-top: none;
+    padding-top: 8px;
 }
 
 .landing-advantages {
@@ -1536,11 +1579,6 @@ textarea:focus:not(:focus-visible) {
     background: transparent;
     color: #8fdfb0;
     border-color: rgba(143, 223, 176, 0.55);
-}
-
-.landing-advantages-link:hover,
-.landing-advantages-link:focus-visible {
-    color: var(--primary-gold);
 }
 
 .landing-logo {
