@@ -24,8 +24,8 @@ function getOutreachAliasDomain() {
 
 function buildOutreachRegisterUrl() {
   const host = getOutreachAliasDomain();
-  if (!host) return null;
-  return `https://${host}/register.html`;
+  if (!host) return '';
+  return `https://${host}/register.html?type=professional`;
 }
 
 /** Public HTTPS URL for outreach logo (Twilio template header / media messages). */
@@ -149,7 +149,7 @@ Gracias por confiar en la Arquitectura de la Intimidad.
 // Register URL is static in the template body (selfappeal alias — no "sex" substring).
 function buildColdOutreachStep1Message(alias) {
   const name = (alias && String(alias).trim()) || 'hermosa';
-  const registerUrl = buildOutreachRegisterUrl() || 'https://selfappeal.drsrv.net.ar/register.html';
+  const registerUrl = buildOutreachRegisterUrl() || 'https://selfappeal.drsrv.net.ar/register.html?type=professional';
 
   return `Hola ${name} ✨
 

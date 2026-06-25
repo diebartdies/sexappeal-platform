@@ -149,6 +149,18 @@
             max-height: 46px;
             box-sizing: border-box;
         }
+        .reg-type-picker { margin-bottom: 24px; }
+        .reg-type-picker.hidden, .reg-form-panel.hidden, .reg-pro-only.hidden, .reg-guest-only.hidden { display: none !important; }
+        .reg-type-options { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+        .reg-type-btn {
+            width: 100%; padding: 16px 18px; text-align: left;
+            background: rgba(212,175,55,0.08); border: 1px solid rgba(212,175,55,0.45);
+            border-radius: 8px; color: #eee; cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .reg-type-btn:hover { background: rgba(212,175,55,0.16); border-color: rgba(212,175,55,0.75); }
+        .reg-type-btn strong { display: block; color: var(--primary-gold); font-size: 1rem; margin-bottom: 4px; }
+        .reg-type-btn span { display: block; font-size: 0.88rem; color: #aaa; line-height: 1.4; }
     </style>
     <meta name="robots" content="noindex, nofollow">
     <meta name="theme-color" content="#B8922E">
@@ -165,11 +177,27 @@
 </head>
 <body class="register-page">
     <main id="registerMain" class="container reg-page">
-        <h1 class="gold-text" style="text-align:center;font-size:1.6rem;margin:0 0 8px;">Professional Registration</h1>
-        <p style="text-align:center;color:#aaa;font-size:0.95rem;margin:0 0 8px;line-height:1.5;">
+        <section id="regTypePicker" class="reg-type-picker card" style="padding:24px;">
+            <h1 class="gold-text" style="text-align:center;font-size:1.5rem;margin:0 0 8px;">Create an account</h1>
+            <p style="text-align:center;color:#aaa;font-size:0.95rem;margin:0;line-height:1.5;">Choose how you want to join SexAppeal.</p>
+            <div class="reg-type-options">
+                <button type="button" class="reg-type-btn" data-reg-type="guest">
+                    <strong>Guest registration</strong>
+                    <span>Browse the collection — email only, optional display name.</span>
+                </button>
+                <button type="button" class="reg-type-btn" data-reg-type="professional">
+                    <strong>Professional registration</strong>
+                    <span>Publish your profile — quick signup; we help you finish photos and details.</span>
+                </button>
+            </div>
+        </section>
+
+        <div id="regFormPanel" class="reg-form-panel hidden">
+        <h1 id="regFormTitle" class="gold-text" style="text-align:center;font-size:1.6rem;margin:0 0 8px;">Professional Registration</h1>
+        <p id="regFormIntro" style="text-align:center;color:#aaa;font-size:0.95rem;margin:0 0 8px;line-height:1.5;">
             Quick signup — only what you need to get started. We will help you complete your profile and photos.
         </p>
-        <p id="regNoPaymentNote" style="text-align:center;color:#25D366;font-size:0.88rem;margin:0 0 20px;line-height:1.5;padding:10px 14px;background:rgba(37,211,102,0.08);border:1px solid rgba(37,211,102,0.25);border-radius:6px;">
+        <p id="regNoPaymentNote" class="reg-pro-only" style="text-align:center;color:#25D366;font-size:0.88rem;margin:0 0 20px;line-height:1.5;padding:10px 14px;background:rgba(37,211,102,0.08);border:1px solid rgba(37,211,102,0.25);border-radius:6px;">
             We never ask you to register a payment method — no card, no automatic debit.
         </p>
 
@@ -192,7 +220,13 @@
                         <input type="email" id="regEmail" class="reg-input" required autocomplete="email">
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group reg-guest-only hidden">
+                        <label for="regGuestAlias">Display name (alias) <span style="color:#888;font-weight:normal;">(optional)</span></label>
+                        <input type="text" id="regGuestAlias" class="reg-input" maxlength="50" autocomplete="nickname" placeholder="How you want to appear">
+                        <p class="reg-hint">Optional — how you appear as a guest. Leave blank to use your email name.</p>
+                    </div>
+
+                    <div class="form-group reg-pro-only">
                         <label for="regMobilePhone">Mobile phone <span class="required-star">*</span></label>
                         <div class="reg-phone-row">
                             <div class="reg-country-select" id="regCountrySelect">
@@ -208,7 +242,7 @@
                         <p class="reg-hint">WhatsApp number — we will contact you here to finish your profile.</p>
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group reg-pro-only">
                         <label for="regBirthDate">Birth date <span class="required-star">*</span></label>
                         <div class="reg-date-field date-wrap">
                             <input type="text" id="regBirthDate" class="reg-input reg-date-text" required autocomplete="bday" inputmode="text" placeholder="dd/mm/aaaa">
@@ -222,25 +256,15 @@
                         <p class="reg-hint" id="regBirthDateHint">We calculate your age automatically — you must be 18 or older.</p>
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group reg-pro-only">
                         <label for="regPassword">Password (min 6) <span class="required-star">*</span></label>
                         <input type="password" id="regPassword" class="reg-input" required minlength="6" autocomplete="new-password">
                         <p class="reg-hint">To sign in to your panel after email verification.</p>
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group reg-pro-only">
                         <label for="regPasswordConfirm">Confirm password <span class="required-star">*</span></label>
                         <input type="password" id="regPasswordConfirm" class="reg-input" required minlength="6" autocomplete="new-password">
-                    </div>
-
-                    <div id="regTermsBlock" style="margin-top: 8px;">
-                        <label class="reg-check-label" for="regTermsAccept">
-                            <input type="checkbox" id="regTermsAccept" required>
-                            <span>I have read and accept the
-                                <button type="button" id="regTermsLink" class="reg-inline-link" style="font-weight:bold;text-decoration:underline;">terms and conditions</button>.
-                                <span class="required-star">*</span>
-                            </span>
-                        </label>
                     </div>
 
                     <button type="submit" style="width:100%;margin-top:24px;padding:14px;font-weight:bold;">Submit Registration</button>
@@ -253,8 +277,9 @@
                 </p>
             </div>
         </section>
+        </div>
     </main>
-    <script src="/js/app.js?v=8.9" type="module"></script>
+    <script src="/js/app.js?v=8.12" type="module"></script>
     <script src="/js/adminHome.js?v=1" defer></script>
 </body>
 </html>

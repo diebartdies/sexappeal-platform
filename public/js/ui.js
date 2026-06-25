@@ -11,6 +11,57 @@ export function navigateBack(fallback) {
     returnNavigateBack(fallback);
 }
 
+function promptRegistrationType() {
+    return new Promise((resolve) => {
+        const existing = document.getElementById('regTypePromptOverlay');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'regTypePromptOverlay';
+        Object.assign(overlay.style, {
+            position: 'fixed', inset: '0', zIndex: '12000',
+            background: 'rgba(0,0,0,0.88)', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', padding: '20px'
+        });
+
+        const card = document.createElement('div');
+        Object.assign(card.style, {
+            maxWidth: '420px', width: '100%', background: '#141414',
+            border: '1px solid rgba(212,175,55,0.45)', borderRadius: '10px', padding: '24px'
+        });
+
+        card.innerHTML = `
+            <h2 style="margin:0 0 8px;color:var(--primary-gold);font-family:'Playfair Display',serif;font-size:1.35rem;">${t('What type of registration?')}</h2>
+            <p style="margin:0 0 16px;color:#aaa;font-size:0.92rem;line-height:1.5;">${t('Choose how you want to join SexAppeal.')}</p>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <button type="button" data-choice="guest" style="padding:14px;text-align:left;background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.45);border-radius:8px;color:#eee;cursor:pointer;">
+                    <strong style="display:block;color:var(--primary-gold);margin-bottom:4px;">${t('Guest registration')}</strong>
+                    <span style="font-size:0.85rem;color:#aaa;">${t('Browse the collection — email only, optional display name.')}</span>
+                </button>
+                <button type="button" data-choice="professional" style="padding:14px;text-align:left;background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.45);border-radius:8px;color:#eee;cursor:pointer;">
+                    <strong style="display:block;color:var(--primary-gold);margin-bottom:4px;">${t('Professional registration')}</strong>
+                    <span style="font-size:0.85rem;color:#aaa;">${t('Publish your profile — quick signup; we help you finish photos and details.')}</span>
+                </button>
+                <button type="button" data-choice="cancel" style="margin-top:4px;padding:10px;background:transparent;border:1px solid #555;border-radius:6px;color:#aaa;cursor:pointer;">${t('Cancel')}</button>
+            </div>`;
+
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+
+        const close = (value) => {
+            overlay.remove();
+            resolve(value);
+        };
+
+        card.querySelector('[data-choice="guest"]')?.addEventListener('click', () => close('guest'));
+        card.querySelector('[data-choice="professional"]')?.addEventListener('click', () => close('professional'));
+        card.querySelector('[data-choice="cancel"]')?.addEventListener('click', () => close(null));
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) close(null);
+        });
+    });
+}
+
 function ensureResponsiveCss() {
     if (document.getElementById('sexappeal-responsive-css')) return;
     const link = document.createElement('link');
@@ -249,6 +300,14 @@ export function initGlobalTopBar() {
         registerLink.textContent = t('Register');
         registerLink.style.color = '#ccc';
         registerLink.style.textDecoration = 'none';
+        registerLink.addEventListener('click', async (e) => {
+            if (window.location.pathname.endsWith('register.html')) return;
+            e.preventDefault();
+            const type = await promptRegistrationType();
+            if (type) {
+                window.location.href = appPath(`register.html?type=${type}`);
+            }
+        });
 
         authLinks.appendChild(loginLink);
         const sep = document.createElement('span');

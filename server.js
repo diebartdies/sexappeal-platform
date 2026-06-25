@@ -265,6 +265,8 @@ const { protect, authorize } = require('./middleware/auth');
 app.post('/api/v1/auth/register', upload.array('verificationDocuments', 3), authController.register);
 app.post('/api/v1/auth/verify-email', authController.verifyEmail);
 app.post('/api/v1/auth/login', authController.login);
+app.get('/api/v1/auth/check-email', authController.checkEmailRegistered);
+app.post('/api/v1/auth/logout', authController.logout);
 app.post('/api/v1/auth/guest-login', authController.guestLogin);
 app.post('/api/v1/auth/forgotpassword', authController.forgotPassword);
 app.put('/api/v1/auth/resetpassword', authController.resetPassword);

@@ -3,7 +3,6 @@ import { showAlert, attachPasswordToggles } from './uiHelpers.js';
 import { t, applyStaticTranslations } from './i18n.js';
 import { confirmDialog, wireFormLabel, setFieldInvalid } from './a11y.js';
 import { navigateWithReturn } from './navReturn.js';
-import { openFullTermsModal } from './terms.js';
 import { PHONE_COUNTRIES, defaultPhoneCountry, buildFullPhoneNumber, getPhoneCountryFlagUrl, getPhoneCountryName } from './phoneCountryCodes.js';
 
 function isAdminSession() {
@@ -19,10 +18,40 @@ function isAdminSession() {
 function registrationTrackingPayload(extra = {}) {
     const form = document.getElementById('registerForm');
     return {
-        termsAccepted: document.getElementById('regTermsAccept')?.checked === true,
         hadFormData: registrationFormHasChanges(form),
         ...extra
     };
+}
+
+function redirectToLogin(email) {
+    const trimmed = String(email || '').trim();
+    const q = trimmed ? `?email=${encodeURIComponent(trimmed)}` : '';
+    window.location.href = appPath(`login.html${q}`);
+}
+
+async function isEmailAlreadyRegistered(email) {
+    const trimmed = String(email || '').trim().toLowerCase();
+    if (!trimmed || !/.+@.+\..+/.test(trimmed)) return false;
+    const res = await fetch(`${API_URL}/auth/check-email?email=${encodeURIComponent(trimmed)}`);
+    const data = await res.json();
+    return Boolean(data.success && data.data?.registered);
+}
+
+function setupEmailExistsGuard() {
+    const emailEl = document.getElementById('regEmail');
+    if (!emailEl || emailEl.dataset.regEmailGuard === '1') return;
+    emailEl.dataset.regEmailGuard = '1';
+    emailEl.addEventListener('blur', async () => {
+        const email = emailEl.value.trim();
+        if (!email) return;
+        try {
+            if (await isEmailAlreadyRegistered(email)) {
+                redirectToLogin(email);
+            }
+        } catch {
+            /* network error — submit will re-check */
+        }
+    });
 }
 
 function trackRegistrationEvent(event, extra = {}) {
@@ -136,8 +165,110 @@ function confirmLeaveRegistration(form) {
 }
 
 function goToRegistrationEntrance() {
+    if (document.getElementById('regTypePicker')) {
+        showRegistrationTypePicker();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+    }
     sessionStorage.setItem('ancestor_code', 'index.html');
     window.location.href = appPath('index.html');
+}
+
+let currentRegistrationType = null;
+
+function getRegistrationTypeFromUrl() {
+    const type = new URLSearchParams(window.location.search).get('type');
+    return type === 'guest' || type === 'professional' ? type : null;
+}
+
+function isGuestRegistrationType() {
+    return currentRegistrationType === 'guest';
+}
+
+function showRegistrationTypePicker() {
+    currentRegistrationType = null;
+    document.getElementById('regTypePicker')?.classList.remove('hidden');
+    document.getElementById('regFormPanel')?.classList.add('hidden');
+    const roleEl = document.getElementById('regRole');
+    const modeEl = document.getElementById('regRegistrationMode');
+    if (roleEl) roleEl.value = '';
+    if (modeEl) modeEl.value = '';
+}
+
+function setRegistrationFormFieldsRequired(type) {
+    const guestAlias = document.getElementById('regGuestAlias');
+    if (guestAlias) guestAlias.required = false;
+    ['regMobilePhone', 'regBirthDate', 'regPassword', 'regPasswordConfirm'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.required = type === 'professional';
+    });
+}
+
+function showRegistrationForm(type) {
+    currentRegistrationType = type;
+    document.getElementById('regTypePicker')?.classList.add('hidden');
+    document.getElementById('regFormPanel')?.classList.remove('hidden');
+    document.getElementById('regRole').value = type === 'guest' ? 'user' : 'professional';
+    document.getElementById('regRegistrationMode').value = type === 'guest' ? 'guest' : 'express';
+
+    document.querySelectorAll('.reg-pro-only').forEach((el) => {
+        el.classList.toggle('hidden', type === 'guest');
+    });
+    document.querySelectorAll('.reg-guest-only').forEach((el) => {
+        el.classList.toggle('hidden', type !== 'guest');
+    });
+
+    setRegistrationFormFieldsRequired(type);
+    applyRegistrationPageLabels(type);
+    setupInstructions(type);
+    bindRegistrationFooterLinks();
+    setupEmailExistsGuard();
+
+    if (!isAdminSession() && !sessionStorage.getItem('regVisitTracked')) {
+        sessionStorage.setItem('regVisitTracked', '1');
+        trackRegistrationEvent('visit', { registrationType: type });
+    }
+}
+
+function applyTypePickerLabels() {
+    const picker = document.getElementById('regTypePicker');
+    if (!picker) return;
+    const h1 = picker.querySelector('h1');
+    const lead = picker.querySelector('p');
+    if (h1) h1.textContent = t('Create an account');
+    if (lead) lead.textContent = t('Choose how you want to join SexAppeal.');
+    const guestBtn = picker.querySelector('[data-reg-type="guest"]');
+    const proBtn = picker.querySelector('[data-reg-type="professional"]');
+    if (guestBtn) {
+        guestBtn.querySelector('strong').textContent = t('Guest registration');
+        guestBtn.querySelector('span').textContent = t('Browse the collection — email only, optional display name.');
+    }
+    if (proBtn) {
+        proBtn.querySelector('strong').textContent = t('Professional registration');
+        proBtn.querySelector('span').textContent = t('Publish your profile — quick signup; we help you finish photos and details.');
+    }
+}
+
+function setupRegistrationTypePicker() {
+    const picker = document.getElementById('regTypePicker');
+    if (!picker || picker.dataset.bound === '1') return;
+    picker.dataset.bound = '1';
+
+    applyTypePickerLabels();
+
+    picker.querySelectorAll('[data-reg-type]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const type = btn.getAttribute('data-reg-type');
+            if (type === 'guest' || type === 'professional') {
+                showRegistrationForm(type);
+            }
+        });
+    });
+
+    const preset = getRegistrationTypeFromUrl();
+    if (preset) {
+        showRegistrationForm(preset);
+    }
 }
 
 function leaveRegistration(onLeave, reason = 'leave') {
@@ -194,18 +325,21 @@ function setupRegistrationLeaveGuard(form) {
     }
 }
 
-function applyRegistrationPageLabels() {
+function applyRegistrationPageLabels(type = currentRegistrationType || 'professional') {
     const main = document.getElementById('registerMain');
     if (!main) return;
 
-    document.title = `SexAppeal - ${t('Professional Registration')}`;
+    const isGuest = type === 'guest';
+    document.title = `SexAppeal - ${t(isGuest ? 'Guest registration' : 'Professional Registration')}`;
 
-    const h1 = main.querySelector(':scope > h1');
-    if (h1) h1.textContent = t('Professional Registration');
+    const h1 = document.getElementById('regFormTitle') || main.querySelector('#regFormPanel > h1');
+    if (h1) h1.textContent = t(isGuest ? 'Guest registration' : 'Professional Registration');
 
-    const intro = main.querySelector(':scope > p');
+    const intro = document.getElementById('regFormIntro') || main.querySelector('#regFormPanel > p');
     if (intro) {
-        intro.textContent = t('Quick signup — only what you need to get started. We will help you complete your profile and photos.');
+        intro.textContent = t(isGuest
+            ? 'Email only — optional display name. Confirm your email to browse.'
+            : 'Create your professional profile — first time only. If you already have an account, use Login.');
     }
 
     const noPayNote = document.getElementById('regNoPaymentNote');
@@ -214,16 +348,17 @@ function applyRegistrationPageLabels() {
     }
 
     setRegLabel('regEmail', 'Email', true);
+    setRegLabel('regGuestAlias', 'Display name (alias)', false);
     setRegLabel('regMobilePhone', 'Mobile phone', true);
     setRegLabel('regBirthDate', 'Birth date', true);
     setRegLabel('regPassword', 'Password (min 6)', true);
     setRegLabel('regPasswordConfirm', 'Confirm password', true);
 
     const backBtn = document.getElementById('regBackToEntrance');
-    if (backBtn) backBtn.textContent = `\u2190 ${t('Back to entrance')}`;
+    if (backBtn) backBtn.textContent = `\u2190 ${t('Back to account type')}`;
 
     const submitBtn = document.querySelector('#registerForm button[type="submit"]');
-    if (submitBtn) submitBtn.textContent = t('Submit Registration');
+    if (submitBtn) submitBtn.textContent = t(isGuest ? 'Create guest account' : 'Submit Registration');
 
     const footer = main.querySelector('.card > p:last-of-type');
     if (footer) {
@@ -231,13 +366,16 @@ function applyRegistrationPageLabels() {
         footer.innerHTML = `${t('Already registered?')} <button type="button" id="regLoginLink" class="reg-inline-link">${t('Login here')}</button> &nbsp;|&nbsp; <button type="button" id="regBackOrigin" class="reg-inline-link muted">${t('Back')}</button>`;
     }
 
+    const guestHint = main.querySelector('#regGuestAlias + .reg-hint');
+    if (guestHint) guestHint.textContent = t('Optional — how you appear as a guest. Leave blank to use your email name.');
+
     const phoneHint = main.querySelector('#regMobilePhone + .reg-hint');
     if (phoneHint) phoneHint.textContent = t('WhatsApp number — we will contact you here to finish your profile.');
 
     const passHint = main.querySelector('#regPassword + .reg-hint');
     if (passHint) passHint.textContent = t('To sign in to your panel after email verification.');
 
-    const birthHint = main.querySelector('#regBirthDate')?.closest('.form-group')?.querySelector('.reg-hint');
+    const birthHint = document.getElementById('regBirthDateHint');
     if (birthHint) birthHint.textContent = t('We calculate your age automatically — you must be 18 or older.');
 }
 
@@ -411,6 +549,17 @@ function computeAgeFromBirthDate(dateStr) {
 
 function validateRegistrationForm(form) {
     clearFieldErrors(form);
+
+    if (isGuestRegistrationType()) {
+        const emailEl = document.getElementById('regEmail');
+        if (!emailEl || !String(emailEl.value || '').trim()) {
+            highlightField(emailEl, true);
+            showAlert(document.getElementById('registerAlert'), `${t('Required field missing:')} ${t('Email')}`, true, 'regEmail');
+            return false;
+        }
+        return true;
+    }
+
     const required = [
         { id: 'regEmail', label: t('Email') },
         { id: 'regMobilePhone', label: t('Mobile phone') },
@@ -460,22 +609,25 @@ function validateRegistrationForm(form) {
         return false;
     }
 
-    const termsCheckbox = document.getElementById('regTermsAccept');
-    const termsBlock = document.getElementById('regTermsBlock');
-    if (termsCheckbox && !termsCheckbox.checked) {
-        termsBlock?.classList.add('reg-terms-error');
-        showAlert(document.getElementById('registerAlert'), t('You must accept the terms and conditions to register.'), true, 'regTermsAccept');
-        termsCheckbox.focus();
-        return false;
-    }
-    termsBlock?.classList.remove('reg-terms-error');
-
     return true;
 }
 
-function setupInstructions() {
+function setupInstructions(type = currentRegistrationType || 'professional') {
     const host = document.getElementById('regInstructions');
     if (!host) return;
+
+    if (type === 'guest') {
+        host.innerHTML = `
+        <h3 class="gold-text" style="margin-top:0;">${t('Guest signup')}</h3>
+        <p style="font-size:0.95rem;line-height:1.5;margin:0 0 12px;">${t('Email only — optional name. We send a verification code; check Spam if needed.')}</p>
+        <ol style="font-size:0.9rem;margin:0 0 0 20px;line-height:1.6;padding:0;">
+            <li>${t('Enter your email (alias optional).')}</li>
+            <li>${t('Confirm your email with the 6-digit code we send you.')}</li>
+            <li>${t('Sign in with the password we email you and browse the collection.')}</li>
+        </ol>`;
+        applyStaticTranslations(host);
+        return;
+    }
 
     host.innerHTML = `
         <h3 class="gold-text" style="margin-top:0;">${t('Quick registration')}</h3>
@@ -497,23 +649,11 @@ export function initProfessionalRegistration() {
     const form = document.getElementById('registerForm');
     if (!form) return;
 
-    applyRegistrationPageLabels();
-    setupInstructions();
+    setupRegistrationTypePicker();
     setupBirthDateField();
     setupPhoneCountrySelect();
     setupRegistrationLeaveGuard(form);
     attachPasswordToggles(form);
-
-    const termsCheckbox = document.getElementById('regTermsAccept');
-    termsCheckbox?.addEventListener('change', () => {
-        document.getElementById('regTermsBlock')?.classList.remove('reg-terms-error');
-    });
-
-    const termsLink = document.getElementById('regTermsLink');
-    if (termsLink && !termsLink.dataset.bound) {
-        termsLink.dataset.bound = '1';
-        termsLink.addEventListener('click', () => openFullTermsModal(termsLink));
-    }
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -526,19 +666,36 @@ export function initProfessionalRegistration() {
         submitBtn.textContent = t('Submitting...');
 
         const formData = new FormData();
-        formData.append('role', 'professional');
-        formData.append('registrationMode', 'express');
-        formData.append('email', document.getElementById('regEmail').value.trim());
-        formData.append('password', document.getElementById('regPassword').value);
-        formData.append('mobilePhone', buildFullMobilePhone());
-        formData.append('birthDate', getBirthDateIsoValue());
-        formData.append('termsAccepted', document.getElementById('regTermsAccept')?.checked ? 'true' : 'false');
+        const emailValue = document.getElementById('regEmail').value.trim();
+        formData.append('email', emailValue);
+
+        if (await isEmailAlreadyRegistered(emailValue)) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            redirectToLogin(emailValue);
+            return;
+        }
+
+        if (isGuestRegistrationType()) {
+            formData.append('role', 'user');
+            formData.append('registrationMode', 'guest');
+            const aliasValue = document.getElementById('regGuestAlias')?.value.trim();
+            if (aliasValue) formData.append('alias', aliasValue);
+        } else {
+            formData.append('role', 'professional');
+            formData.append('registrationMode', 'express');
+            formData.append('password', document.getElementById('regPassword').value);
+            formData.append('mobilePhone', buildFullMobilePhone());
+            formData.append('birthDate', getBirthDateIsoValue());
+        }
 
         try {
             const res = await fetch(`${API_URL}/auth/register`, { method: 'POST', body: formData });
             const data = await res.json();
             if (data.success) {
-                window.location.href = `${appPath('verify.html')}?email=${encodeURIComponent(document.getElementById('regEmail').value.trim())}`;
+                window.location.href = `${appPath('verify.html')}?email=${encodeURIComponent(emailValue)}`;
+            } else if (data.code === 'EMAIL_ALREADY_REGISTERED') {
+                redirectToLogin(emailValue);
             } else {
                 showAlert(alert, data.error || t('Registration failed'));
             }
@@ -551,18 +708,11 @@ export function initProfessionalRegistration() {
     });
 
     applyStaticTranslations(form);
-    applyRegistrationPageLabels();
-    bindRegistrationFooterLinks();
-
-    if (!isAdminSession() && !sessionStorage.getItem('regVisitTracked')) {
-        sessionStorage.setItem('regVisitTracked', '1');
-        trackRegistrationEvent('visit');
-    }
 
     window.addEventListener('beforeunload', () => {
         if (isAdminSession()) return;
         const payload = registrationTrackingPayload({ reason: 'browser_close' });
-        if (!payload.termsAccepted && !payload.hadFormData) return;
+        if (!payload.hadFormData) return;
         const blob = new Blob([JSON.stringify({ event: 'abandon', ...payload })], { type: 'application/json' });
         if (typeof navigator.sendBeacon === 'function') {
             navigator.sendBeacon(`${API_URL}/public/registration-track`, blob);

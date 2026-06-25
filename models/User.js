@@ -65,6 +65,11 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  /** express | guest | full — how the account was created */
+  registrationMode: {
+    type: String,
+    trim: true
+  },
   adminSettings: {
     pricing: {
       Elite: { type: Number, default: 50000 },

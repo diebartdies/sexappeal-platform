@@ -36,8 +36,28 @@ exports.register = async (req, res, next) => {
     const isExpressRegistration = role === 'professional'
       && (registrationMode === 'express' || String(registrationMode || '').toLowerCase() === 'express');
 
+    const isGuestRegistration = role === 'user'
+      && String(registrationMode || '').toLowerCase() === 'guest';
+
+    let passwordWasGenerated = false;
+
     // Normalize email to prevent case-sensitive duplicate accounts
     if (email) email = email.toLowerCase().trim();
+
+    if (isGuestRegistration) {
+      if (!email || !String(email).trim()) {
+        return res.status(400).json({ success: false, error: 'Email is required.' });
+      }
+      if (alias && String(alias).trim()) {
+        alias = String(alias).trim().slice(0, config.maxAliasLength || 50);
+      } else {
+        alias = String(email).split('@')[0].replace(/\W/g, '').slice(0, config.maxAliasLength || 50) || 'guest';
+      }
+      if (!password || String(password).length < 6) {
+        password = crypto.randomBytes(16).toString('base64url').slice(0, 12);
+        passwordWasGenerated = true;
+      }
+    }
 
     let age;
     if (birthDate) {
@@ -138,9 +158,10 @@ exports.register = async (req, res, next) => {
     // Check if user already exists
     let existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({
+      return res.status(409).json({
         success: false,
-        error: 'This email is already registered. If you forgot your password, please use the recovery option.'
+        code: 'EMAIL_ALREADY_REGISTERED',
+        error: 'This email is already registered. Please sign in.'
       });
     }
 
@@ -174,16 +195,16 @@ exports.register = async (req, res, next) => {
       }
     }
 
-    // Age-verification + Terms & Conditions acceptance captured at registration.
-    // The frontend blocks submission until the checkbox is ticked, so this is
-    // expected to be truthy for every real registration.
-    const acceptedTerms = termsAccepted === true || termsAccepted === 'true' || termsAccepted === 'on';
+    // Terms checkbox deferred — not collected on registration form yet.
+    const acceptedTerms = false;
 
     // Create user
     const user = await User.create({
       email,
       password,
       role,
+      name: isGuestRegistration ? alias : undefined,
+      registrationMode: isGuestRegistration ? 'guest' : (isExpressRegistration ? 'express' : undefined),
       professionalProfile: role === 'professional' ? professionalProfile : undefined,
       verificationDocuments,
       verificationStatus: role === 'professional' ? 'pending' : 'approved',
@@ -196,7 +217,7 @@ exports.register = async (req, res, next) => {
       termsVersion: acceptedTerms ? config.terms.version : undefined
     });
 
-    // Audit-log the registration acceptance alongside the per-account stamp.
+    // Audit-log terms when we re-enable the registration checkbox.
     if (acceptedTerms) {
       try {
         const TermsAcceptance = require('../models/TermsAcceptance');
@@ -243,6 +264,19 @@ exports.register = async (req, res, next) => {
             : `A new professional has registered: ${email}\nRole: ${role}\nVerification Status: ${user.verificationStatus}`
         });
       } catch (err) { console.error('Failed to notify admin:', err.message); }
+    }
+
+    if (isGuestRegistration) {
+      const clientIp = getClientIp(req);
+      await ActivityLog.create({
+        professional: user._id,
+        action: 'register',
+        actorType: 'guest',
+        isGuest: true,
+        ipAddress: clientIp,
+        userAgent: req.headers['user-agent'],
+        details: { alias, registrationMode: 'guest' }
+      }).catch((err) => console.error('Failed to log guest registration:', err.message));
     }
 
     // Craft a luxurious welcome message specifically for professionals
@@ -295,6 +329,25 @@ Gracias por confiar en la Arquitectura de la Intimidad.
 
 — Equipo SexAppeal`;
       }
+    } else if (isGuestRegistration) {
+      emailSubject = 'SexAppeal — confirm your email';
+      emailMessage = `Hello ${alias},
+
+Welcome to SexAppeal.
+
+Your verification code is: ${verificationCode}
+(This code expires in ${config.verificationCodeExpireMinutes} minutes.)`;
+      if (passwordWasGenerated) {
+        emailMessage += `
+
+Your temporary password: ${password}
+Use it to sign in after you verify your email. You can change it anytime via password recovery.`;
+      }
+      emailMessage += `
+
+After verification you can browse the collection and participate as a guest.
+
+— SexAppeal Team`;
     }
 
     try {
@@ -359,6 +412,22 @@ exports.verifyEmail = async (req, res, next) => {
     sendTokenResponse(user, 200, res);
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Check whether an email is already registered (public, for registration UX)
+// @route   GET /api/v1/auth/check-email
+// @access  Public
+exports.checkEmailRegistered = async (req, res) => {
+  try {
+    const email = String(req.query.email || '').toLowerCase().trim();
+    if (!email || !/.+@.+\..+/.test(email)) {
+      return res.status(400).json({ success: false, error: 'Please provide a valid email.' });
+    }
+    const registered = Boolean(await User.exists({ email }));
+    return res.status(200).json({ success: true, data: { registered } });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
   }
 };
 
@@ -564,6 +633,18 @@ exports.resetPassword = async (req, res, next) => {
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
   }
+};
+
+// @desc    Log out user / clear auth cookie
+// @route   POST /api/v1/auth/logout
+// @access  Public (clears httpOnly cookie; Bearer optional)
+exports.logout = (req, res) => {
+  res.cookie('token', 'none', {
+    expires: new Date(Date.now() + 10 * 1000),
+    httpOnly: true,
+    ...(process.env.NODE_ENV === 'production' && { secure: true })
+  });
+  res.status(200).json({ success: true });
 };
 
 // Get token from model, create cookie and send response
