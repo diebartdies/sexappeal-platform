@@ -163,6 +163,7 @@ const translations = {
         'Google sign-in complete. Add your WhatsApp number and birth date to finish your model registration.': 'Inicio de sesión con Google completado. Agregue su número de WhatsApp y fecha de nacimiento para terminar el registro de modelo.',
         'Google sign-in complete. Add your WhatsApp and birth date to finish.': 'Inicio con Google completado. Agregue WhatsApp y fecha de nacimiento para terminar.',
         'Signed in with Google. Please add your WhatsApp and birth date below.': 'Sesión iniciada con Google. Agregue su WhatsApp y fecha de nacimiento abajo.',
+        'For Google sign-in, open this page in Chrome or Safari (WhatsApp browser often blocks it). Use the menu ⋮ → Open in browser.': 'Para Google, abra esta página en Chrome o Safari (el navegador de WhatsApp suele bloquearlo). Menú ⋮ → Abrir en el navegador.',
         'Finish registration': 'Finalizar registro',
         'or sign in with email': 'o inicie sesión con correo',
         'or register with email': 'o regístrese con correo',

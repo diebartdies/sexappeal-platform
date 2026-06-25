@@ -409,6 +409,21 @@ app.get('/api/v1/public/client-config', (req, res) => {
   });
 });
 
+// Temporary client debug relay (session 153bbd — registration instructions)
+app.post('/api/v1/public/client-debug', express.json(), (req, res) => {
+  if (req.body?.sessionId !== '153bbd') {
+    return res.status(404).json({ success: false });
+  }
+  try {
+    const logPath = path.join(__dirname, 'public', 'debug-153bbd.log');
+    const line = `${JSON.stringify({ ...req.body, timestamp: Date.now() })}\n`;
+    fs.appendFileSync(logPath, line);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Terms acceptance deferred — re-enable POST /api/v1/terms/accept when legal flow ships
 // const termsController = require('./controllers/termsController');
 // app.post('/api/v1/terms/accept', termsController.acceptTerms);
