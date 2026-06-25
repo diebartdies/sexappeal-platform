@@ -8,7 +8,7 @@
     <title>SexAppeal — Directorio exclusivo de Living Treasures en Argentina</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css?v=8.24">
-    <link rel="stylesheet" href="/css/responsive.css?v=8.13">
+    <link id="sexappeal-responsive-css" rel="stylesheet" href="/css/responsive.css?v=8.13">
     <meta name="description" content="SexAppeal — La arquitectura de la intimidad. Directorio exclusivo y discreto de acompañantes VIP y Living Treasures en Argentina.">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://sexappeal.drsrv.net.ar/">
@@ -22,6 +22,32 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="theme-color" content="#B8922E">
     <meta name="color-scheme" content="dark">
+    <style>
+        /* Critical landing layout — survives stale responsive.css cache on selfappeal */
+        body.landing-page {
+            padding-top: calc(55px + env(safe-area-inset-top, 0px));
+            overflow-x: hidden;
+        }
+        body.landing-page .landing-container {
+            padding-bottom: max(88px, calc(72px + env(safe-area-inset-bottom)));
+            box-sizing: border-box;
+        }
+        @media (max-width: 768px) {
+            body.landing-page .landing-dual,
+            body.landing-page .landing-triple,
+            body.landing-page .landing-frame {
+                min-height: auto !important;
+                width: 100% !important;
+                min-width: 0 !important;
+            }
+            body.landing-page .landing-logo {
+                max-height: min(38vh, 260px);
+            }
+            body.landing-page .landing-pro-links {
+                margin-bottom: max(96px, calc(76px + env(safe-area-inset-bottom)));
+            }
+        }
+    </style>
 
     <!-- SEO & Open Graph Tags -->
     <meta name="description" content="SexAppeal - The Architecture of Intimacy. Directorio exclusivo de acompañantes VIP y Living Treasures.">
@@ -64,7 +90,7 @@
         </section>
     </div>
 
-    <script src="/js/app.js?v=8.24" type="module"></script>
+    <script src="/js/app.js?v=8.29" type="module"></script>
     <script src="/js/adminHome.js?v=1" defer></script>
 </body>
 </html>

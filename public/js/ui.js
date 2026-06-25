@@ -13,10 +13,12 @@ export function navigateBack(fallback) {
 
 function ensureResponsiveCss() {
     if (document.getElementById('sexappeal-responsive-css')) return;
+    if (document.querySelector('link[rel="stylesheet"][href*="responsive.css"]')) return;
+
     const link = document.createElement('link');
     link.id = 'sexappeal-responsive-css';
     link.rel = 'stylesheet';
-    link.href = '/css/responsive.css?v=8.10';
+    link.href = '/css/responsive.css?v=8.13';
     document.head.appendChild(link);
 
     const viewport = document.querySelector('meta[name="viewport"]');
