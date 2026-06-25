@@ -132,6 +132,14 @@ async function upgradeGuestToProfessional(existingUser, {
   return existingUser;
 }
 
+function needsGoogleProfileCompletion(user) {
+  if (!user || user.role !== 'professional') return false;
+  const prof = user.professionalProfile || {};
+  const hasPhone = Boolean(String(prof.mobilePhone || prof.whatsappNumber || '').trim());
+  const hasBirth = Boolean(prof.birthDate) || (Number.isFinite(prof.age) && prof.age >= 18);
+  return !hasPhone || !hasBirth;
+}
+
 async function upgradeGuestToProfessionalViaGoogle(user, req, name) {
   const email = user.email;
   const alias = await generateExpressAlias('', email);
@@ -903,8 +911,13 @@ exports.googleAuth = async (req, res) => {
       }
       if (registrationIntent === 'professional' && user.role === 'user') {
         user = await upgradeGuestToProfessionalViaGoogle(user, req, name);
-        return sendTokenResponse(user, 200, res);
+        return sendTokenResponse(user, 200, res, {
+          needsProfileCompletion: needsGoogleProfileCompletion(user)
+        });
       }
+      return sendTokenResponse(user, 200, res, {
+        needsProfileCompletion: registrationIntent === 'professional' && needsGoogleProfileCompletion(user)
+      });
     } else if (registrationIntent === 'professional') {
       const alias = await generateExpressAlias('', email);
       const evaluationQuality = PROFESSIONAL_QUALITIES[Math.floor(Math.random() * PROFESSIONAL_QUALITIES.length)];
@@ -948,6 +961,8 @@ exports.googleAuth = async (req, res) => {
       } catch (err) {
         console.error('Failed to notify admin:', err.message);
       }
+
+      return sendTokenResponse(user, 200, res, { needsProfileCompletion: true });
     } else {
       const guestAlias = String(name).trim().slice(0, config.maxAliasLength || 50)
         || String(email).split('@')[0].replace(/\W/g, '').slice(0, config.maxAliasLength || 50)
@@ -976,12 +991,52 @@ exports.googleAuth = async (req, res) => {
       }).catch((err) => console.error('Failed to log Google guest registration:', err.message));
     }
 
-    sendTokenResponse(user, 200, res);
+    sendTokenResponse(user, 200, res, { needsProfileCompletion: false });
   } catch (error) {
     res.status(400).json({
       success: false,
       error: 'Google authentication failed: ' + error.message
     });
+  }
+};
+
+// @desc    Complete express model profile after Google sign-in (phone + birth date)
+// @route   POST /api/v1/auth/google/complete-profile
+// @access  Private (JWT from Google sign-in)
+exports.completeGoogleProfile = async (req, res) => {
+  try {
+    let { mobilePhone, birthDate } = req.body;
+    const user = await User.findById(req.user.id);
+
+    if (!user || user.role !== 'professional') {
+      return res.status(400).json({ success: false, error: 'Professional account required.' });
+    }
+
+    if (!mobilePhone || !String(mobilePhone).trim()) {
+      return res.status(400).json({ success: false, error: 'Mobile phone is required.' });
+    }
+    if (!birthDate || !String(birthDate).trim()) {
+      return res.status(400).json({ success: false, error: 'Birth date is required.' });
+    }
+
+    const normalizedMobile = normalizeRegistrationMobilePhone(mobilePhone);
+    if (normalizedMobile) mobilePhone = normalizedMobile;
+
+    const age = ageFromBirthDate(birthDate);
+    if (age === null || age < 18 || age > 99) {
+      return res.status(400).json({ success: false, error: 'You must be at least 18 years old to register.' });
+    }
+
+    if (!user.professionalProfile) user.professionalProfile = {};
+    user.professionalProfile.mobilePhone = mobilePhone;
+    user.professionalProfile.whatsappNumber = mobilePhone;
+    user.professionalProfile.birthDate = new Date(birthDate);
+    user.professionalProfile.age = age;
+    await user.save();
+
+    sendTokenResponse(user, 200, res, { needsProfileCompletion: false });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message || 'Could not save profile.' });
   }
 };
 
@@ -998,25 +1053,30 @@ exports.logout = (req, res) => {
 };
 
 // Get token from model, create cookie and send response
-const sendTokenResponse = (user, statusCode, res) => {
+const sendTokenResponse = (user, statusCode, res, options = {}) => {
   // Create token
   const token = user.getSignedJwtToken();
 
-  const options = {
+  const cookieOptions = {
     expires: new Date(Date.now() + process.env.JWT_COOKIE_EXPIRE * 24 * 60 * 60 * 1000),
     httpOnly: true
   };
 
   if (process.env.NODE_ENV === 'production') {
-    options.secure = true;
+    cookieOptions.secure = true;
+  }
+
+  const payload = {
+    success: true,
+    token,
+    user
+  };
+  if (options.needsProfileCompletion === true) {
+    payload.needsProfileCompletion = true;
   }
 
   res
     .status(statusCode)
-    .cookie('token', token, options)
-    .json({
-      success: true,
-      token,
-      user
-    });
+    .cookie('token', token, cookieOptions)
+    .json(payload);
 };

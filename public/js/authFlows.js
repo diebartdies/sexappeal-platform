@@ -300,7 +300,7 @@ export function initAuthForms() {
             loginForm.parentNode.insertBefore(blogReminder, loginForm);
 
             mountGoogleSignIn({
-                insertBefore: loginForm,
+                mountEl: document.getElementById('loginGoogleMount'),
                 alertEl: document.getElementById('loginAlert'),
                 onSuccess: redirectAfterLogin,
                 intent: 'login',

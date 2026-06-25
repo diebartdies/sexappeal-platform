@@ -66,7 +66,7 @@ async function handleGoogleCredential(credential, alertEl, onSuccess, intent) {
             sessionStorage.setItem('valid_entry', 'true');
             if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
             if (typeof onSuccess === 'function') {
-                onSuccess(data.user || {});
+                onSuccess(data.user || {}, data);
             }
             return;
         }
@@ -76,11 +76,23 @@ async function handleGoogleCredential(credential, alertEl, onSuccess, intent) {
     }
 }
 
+function clearGoogleMount(mountEl) {
+    if (!mountEl) return;
+    mountEl.innerHTML = '';
+    mountEl.classList.add('hidden');
+    mountEl.dataset.googleMounted = '0';
+    const divider = mountEl.nextElementSibling;
+    if (divider?.classList.contains('google-signin-divider')) {
+        divider.classList.add('hidden');
+    }
+}
+
 /**
- * Mount Google Sign-In before a form (login or registration).
+ * Mount Google Sign-In above the email field (login or registration).
  * No-op when GOOGLE_CLIENT_ID is not configured on the server.
  */
 export async function mountGoogleSignIn({
+    mountEl,
     insertBefore,
     alertEl,
     onSuccess,
@@ -88,32 +100,69 @@ export async function mountGoogleSignIn({
     intent = 'login',
     dividerKey = 'or sign in with email'
 } = {}) {
-    if (!insertBefore || insertBefore.dataset.googleMounted === '1') return;
+    const host = mountEl || null;
+    if (!host && !insertBefore) return;
+    if (host?.dataset.googleMounted === '1') return;
 
     const clientId = await resolveGoogleClientId();
-    if (!clientId) return;
+    if (!clientId) {
+        clearGoogleMount(host);
+        return;
+    }
 
-    insertBefore.dataset.googleMounted = '1';
+    let block;
+    let wrapper;
 
-    const block = document.createElement('div');
-    block.className = 'google-signin-block';
-    block.innerHTML = `
-        <div class="google-signin-wrapper"></div>
-        <p class="google-signin-divider">${t(dividerKey)}</p>
-    `;
-    insertBefore.parentNode.insertBefore(block, insertBefore);
+    if (host) {
+        host.dataset.googleMounted = '1';
+        host.classList.remove('hidden');
+        host.innerHTML = `
+            <p class="google-signin-label">${t('Continue with Google')}</p>
+            <div class="google-signin-wrapper"></div>
+        `;
+        wrapper = host.querySelector('.google-signin-wrapper');
+
+        let divider = host.nextElementSibling;
+        if (!divider?.classList.contains('google-signin-divider')) {
+            divider = document.createElement('p');
+            divider.className = 'google-signin-divider';
+            host.insertAdjacentElement('afterend', divider);
+        }
+        divider.textContent = t(dividerKey);
+        divider.classList.remove('hidden');
+    } else {
+        if (insertBefore.dataset.googleMounted === '1') return;
+        insertBefore.dataset.googleMounted = '1';
+
+        block = document.createElement('div');
+        block.className = 'google-signin-block';
+        block.innerHTML = `
+            <p class="google-signin-label">${t('Continue with Google')}</p>
+            <div class="google-signin-wrapper"></div>
+            <p class="google-signin-divider">${t(dividerKey)}</p>
+        `;
+        insertBefore.parentNode.insertBefore(block, insertBefore);
+        wrapper = block.querySelector('.google-signin-wrapper');
+    }
 
     try {
         await loadGoogleSdk();
         await waitForGoogle();
     } catch {
-        block.remove();
-        insertBefore.dataset.googleMounted = '0';
+        if (host) clearGoogleMount(host);
+        else block?.remove();
+        if (insertBefore) insertBefore.dataset.googleMounted = '0';
         return;
     }
 
-    const wrapper = block.querySelector('.google-signin-wrapper');
-    const btnWidth = width || insertBefore.offsetWidth || 300;
+    if (!window.google?.accounts?.id) {
+        if (host) clearGoogleMount(host);
+        else block?.remove();
+        if (insertBefore) insertBefore.dataset.googleMounted = '0';
+        return;
+    }
+
+    const btnWidth = width || host?.offsetWidth || insertBefore?.offsetWidth || 300;
 
     window.handleGoogleCallback = (response) => {
         handleGoogleCredential(response.credential, alertEl, onSuccess, intent);
@@ -126,8 +175,9 @@ export async function mountGoogleSignIn({
     window.google.accounts.id.renderButton(wrapper, {
         theme: 'outline',
         size: 'large',
-        width: Math.min(Math.max(btnWidth, 240), 400),
-        text: 'signin_with',
+        type: 'standard',
+        width: Math.min(Math.max(btnWidth, 260), 400),
+        text: intent === 'login' ? 'signin_with' : 'continue_with',
         locale: (localStorage.getItem('platform_lang') || 'es') === 'es' ? 'es' : 'en'
     });
 }

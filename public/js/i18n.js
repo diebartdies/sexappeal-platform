@@ -158,6 +158,7 @@ const translations = {
         'Register as a professional': 'Registrarse como modelo',
         'Email': 'Correo',
         'Google login failed': 'Error al iniciar sesión con Google',
+        'Continue with Google': 'Continuar con Google',
         'or sign in with email': 'o inicie sesión con correo',
         'or register with email': 'o regístrese con correo',
         'Use Google for instant access (no verification code), or register with email. Email signup sends a 6-digit code — check Spam if needed.': 'Use Google para acceso inmediato (sin código de verificación), o regístrese con correo. El registro por correo envía un código de 6 dígitos — revise Spam si no lo ve.',

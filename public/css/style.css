@@ -1860,21 +1860,70 @@ textarea:focus:not(:focus-visible) {
     color: #8fdfb0 !important;
 }
 
-.google-signin-block {
-    margin-bottom: 20px;
+.google-signin-block,
+.google-signin-mount {
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.google-signin-label {
+    margin: 0 0 10px;
+    font-size: 0.88rem;
+    color: #ccc;
     text-align: center;
 }
 
 .google-signin-divider {
     font-size: 0.88rem;
     color: #999;
-    margin: 16px 0 12px;
+    margin: 16px 0 18px;
     text-align: center;
+}
+
+.google-signin-divider.hidden,
+.google-signin-mount.hidden {
+    display: none;
 }
 
 .google-signin-wrapper {
     display: flex;
     justify-content: center;
+    width: 100%;
+}
+
+.reg-page .google-signin-wrapper > div,
+.landing-login-form .google-signin-wrapper > div {
+    width: 100%;
+    max-width: 100%;
+}
+
+.reg-page .google-signin-wrapper iframe,
+.landing-login-form .google-signin-wrapper iframe {
+    width: 100% !important;
+    max-width: 100%;
+}
+
+.reg-google-complete-intro {
+    margin-bottom: 18px;
+    padding: 14px 16px;
+    border: 1px solid rgba(var(--gold-rgb), 0.45);
+    border-radius: 8px;
+    background: rgba(212, 175, 55, 0.08);
+}
+
+.reg-google-complete-intro.hidden {
+    display: none;
+}
+
+#registerForm[data-google-complete="1"] .reg-google-email-fields,
+#registerForm[data-google-complete="1"] #regGoogleMount,
+#registerForm[data-google-complete="1"] .google-signin-divider,
+#registerForm[data-google-complete="1"] .reg-guest-only {
+    display: none !important;
+}
+
+#registerForm[data-google-complete="1"] .reg-google-profile-fields {
+    display: block !important;
 }
 
 #loginAlert .login-error-actions {

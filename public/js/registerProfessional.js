@@ -247,7 +247,7 @@ function showRegistrationForm(type) {
     setupEmailExistsGuard();
 
     mountGoogleSignIn({
-        insertBefore: document.getElementById('registerForm'),
+        mountEl: document.getElementById('regGoogleMount'),
         alertEl: document.getElementById('registerAlert'),
         onSuccess: redirectAfterLogin,
         intent: type === 'guest' ? 'guest' : 'professional',

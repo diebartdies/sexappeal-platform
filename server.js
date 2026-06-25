@@ -267,6 +267,7 @@ app.post('/api/v1/auth/verify-email', authController.verifyEmail);
 app.post('/api/v1/auth/resend-verification', authController.resendVerificationCode);
 app.post('/api/v1/auth/login', authController.login);
 app.post('/api/v1/auth/google', authController.googleAuth);
+app.post('/api/v1/auth/google/complete-profile', protect, authController.completeGoogleProfile);
 app.get('/api/v1/auth/check-email', authController.checkEmailRegistered);
 app.post('/api/v1/auth/logout', authController.logout);
 app.post('/api/v1/auth/guest-login', authController.guestLogin);
