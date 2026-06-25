@@ -1,8 +1,23 @@
-/* SexAppeal - Mobile & tablet responsive layer (v8.11) */
+/* SexAppeal - Mobile & tablet responsive layer (v8.12) */
 
 html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+    scroll-padding-top: calc(55px + env(safe-area-inset-top, 0px) + 8px);
+}
+
+:root {
+    --global-topbar-height: 55px;
+}
+
+#globalTopBar {
+    top: 0 !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    height: calc(var(--global-topbar-height) + env(safe-area-inset-top, 0px)) !important;
+    min-height: var(--global-topbar-height);
+    padding-left: max(12px, env(safe-area-inset-left)) !important;
+    padding-right: max(12px, env(safe-area-inset-right)) !important;
+    box-sizing: border-box !important;
 }
 
 body {
@@ -417,11 +432,15 @@ body.landing-page .landing-pro-links {
 }
 
 body:not(.landing-page) {
-    padding-top: max(55px, calc(55px + env(safe-area-inset-top)));
+    padding-top: calc(var(--global-topbar-height, 55px) + env(safe-area-inset-top, 0px));
 }
 
 body.has-global-topbar {
-    padding-top: max(55px, calc(55px + env(safe-area-inset-top))) !important;
+    padding-top: calc(var(--global-topbar-height, 55px) + env(safe-area-inset-top, 0px)) !important;
+}
+
+body.register-page #registerMain {
+    scroll-margin-top: calc(var(--global-topbar-height, 55px) + env(safe-area-inset-top, 0px) + 12px);
 }
 
 .landing-page {

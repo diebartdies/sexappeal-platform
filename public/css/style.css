@@ -2918,7 +2918,7 @@ body.b2b-page h3 {
 
 /* Categories page — three-frame layout (side | grid | side) */
 body.categories-page {
-    padding-top: 55px;
+    padding-top: calc(var(--global-topbar-height, 55px) + env(safe-area-inset-top, 0px));
 }
 
 body.categories-page .categories-container {

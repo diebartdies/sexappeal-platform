@@ -766,7 +766,7 @@ function showGoogleProfileCompletionUI(user = {}) {
     const alert = document.getElementById('registerAlert');
     showAlert(alert, t('Signed in with Google. Please add your WhatsApp and birth date below.'), false);
     revealRegisterAlert(alert);
-    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('regGoogleCompleteIntro')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     document.getElementById('regMobilePhone')?.focus({ preventScroll: true });
 }
 
