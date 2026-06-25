@@ -11,7 +11,7 @@ set SERVER_IP=91.208.206.35
 set SERVER_PATH=/root/SexAppeal-platform
 set SSH_OPTS=-o ConnectTimeout=60 -o ServerAliveInterval=15 -o ServerAliveCountMax=480 -o TCPKeepAlive=yes
 
-echo [1/7] Syncing and uploading TLS certs to Moldova prod (both domains)...
+echo [1/7] Syncing and uploading TLS certs to Moldova prod - both domains...
 call "%~dp0scripts\upload-ssl-certs-to-prod.bat"
 if errorlevel 1 goto ssl_failed
 
@@ -54,14 +54,15 @@ if errorlevel 1 goto extract_failed
 ssh %SSH_OPTS% %SERVER_USER%@%SERVER_IP% "sed -i 's/\r$//' %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%/scripts/disk-housekeeping.sh %SERVER_PATH%/scripts/install-housekeeping-cron.sh %SERVER_PATH%/scripts/git-backup-push.sh %SERVER_PATH%/scripts/install-git-backup-cron.sh %SERVER_PATH%/scripts/install-daily-backup-cron.sh %SERVER_PATH%/scripts/nginx-write-selfappeal-conf.sh && chmod +x %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%/scripts/disk-housekeeping.sh %SERVER_PATH%/scripts/install-housekeeping-cron.sh %SERVER_PATH%/scripts/git-backup-push.sh %SERVER_PATH%/scripts/install-git-backup-cron.sh %SERVER_PATH%/scripts/install-daily-backup-cron.sh %SERVER_PATH%/scripts/nginx-write-selfappeal-conf.sh"
 
 echo.
-echo [5b/7] Server disk housekeeping (before Docker build)...
+echo [5b/7] Server disk housekeeping - before Docker build...
 ssh %SSH_OPTS% %SERVER_USER%@%SERVER_IP% "bash %SERVER_PATH%/scripts/disk-housekeeping.sh %SERVER_PATH%"
 if errorlevel 1 goto disk_failed
 
 echo.
-echo [6/7] Building and restarting containers (app + nginx for SSL)...
-echo     This step takes about 4-8 minutes (npm install + image export). Do NOT press Ctrl+C.
-ssh %SSH_OPTS% -o ServerAliveCountMax=480 %SERVER_USER%@%SERVER_IP% "bash %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%"
+echo [6/7] Building and restarting containers - app and nginx for SSL...
+echo     This step takes about 4-8 minutes - npm install and image export. Do NOT press Ctrl+C.
+set "DEPLOY_RESTART_CMD=bash %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%"
+ssh %SSH_OPTS% -o ServerAliveCountMax=480 %SERVER_USER%@%SERVER_IP% "!DEPLOY_RESTART_CMD!"
 if errorlevel 1 goto docker_failed
 
 echo 🚀 DEPLOYMENT SUCCEEDED! Application is now running the new code.
@@ -69,8 +70,8 @@ goto cleanup
 
 :ssl_failed
 echo ❌ ERROR: TLS cert sync/upload to Moldova prod failed.
-echo    SexAppeal: certbot/conf/live/sexappeal.drsrv.net.ar/ (sexappeal.chain + sexappeal.key locally)
-echo    SelfAppeal: D:\Certs-Selfapeal (selfa.chain + selfa.key)
+echo    SexAppeal: certbot/conf/live/sexappeal.drsrv.net.ar/ - sexappeal.chain + sexappeal.key locally
+echo    SelfAppeal: D:\Certs-Selfapeal - selfa.chain + selfa.key
 goto cleanup
 
 :ssl_selfappeal_failed
