@@ -591,16 +591,37 @@ exports.resetPassword = async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'Please provide email, code, and new password' });
     }
 
-    const user = await User.findOne({
-      email,
-      emailVerificationCode: code,
-      emailVerificationCodeExpire: { $gt: Date.now() }
-    });
+    const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid or expired reset code'
+        code: 'INVALID_RESET_CODE',
+        error: 'Invalid reset code'
+      });
+    }
+
+    if (!user.emailVerificationCode) {
+      return res.status(400).json({
+        success: false,
+        code: 'RESET_CODE_EXPIRED',
+        error: 'Your recovery code has expired.'
+      });
+    }
+
+    if (user.emailVerificationCode !== String(code).trim()) {
+      return res.status(400).json({
+        success: false,
+        code: 'INVALID_RESET_CODE',
+        error: 'Invalid reset code'
+      });
+    }
+
+    if (!user.emailVerificationCodeExpire || user.emailVerificationCodeExpire.getTime() <= Date.now()) {
+      return res.status(400).json({
+        success: false,
+        code: 'RESET_CODE_EXPIRED',
+        error: 'Your recovery code has expired.'
       });
     }
 

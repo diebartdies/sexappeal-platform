@@ -41,6 +41,9 @@ function recoveryMarkup() {
                 <label for="recoveryConfirmPassword">${t('Confirm Password')}</label>
                 <input type="password" id="recoveryConfirmPassword" placeholder="${t('Confirm Password')}" required minlength="6" autocomplete="new-password">
                 <button type="button" id="recoverySubmitBtn" class="landing-btn landing-btn-login">${t('Reset Password')}</button>
+                <p class="recovery-resend-row">
+                    <button type="button" id="recoveryResendCodeBtn" class="recovery-resend-link">${t('Send new code')}</button>
+                </p>
             </div>
             <button type="button" id="recoveryBackToLoginBtn" class="recovery-back-btn">${t('Back to login')}</button>
         </div>
@@ -178,11 +181,13 @@ async function sendRecoveryCode(email, alertEl) {
 async function submitPasswordReset(email, code, password, confirmPassword, alertEl, fieldIds = { password: 'recoveryNewPassword', confirm: 'recoveryConfirmPassword', code: 'recoveryCode' }) {
     if (password !== confirmPassword) {
         showAlert(alertEl, t('Passwords do not match'), true, fieldIds.confirm);
-        return false;
+        revealRecoveryAlert(alertEl);
+        return { ok: false };
     }
     if (password.length < 6) {
         showAlert(alertEl, t('Password must be at least 6 characters'), true, fieldIds.password);
-        return false;
+        revealRecoveryAlert(alertEl);
+        return { ok: false };
     }
 
     const res = await fetch(`${API_URL}/auth/resetpassword`, {
@@ -190,12 +195,73 @@ async function submitPasswordReset(email, code, password, confirmPassword, alert
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, code, password })
     });
-    const data = await res.json();
+    let data = {};
+    try {
+        data = await res.json();
+    } catch {
+        showAlert(alertEl, t('Server connection error'));
+        revealRecoveryAlert(alertEl);
+        return { ok: false };
+    }
     if (!data.success) {
+        if (data.code === 'RESET_CODE_EXPIRED') {
+            showExpiredCodePrompt(alertEl, email, fieldIds);
+            return { ok: false, code: data.code };
+        }
         showAlert(alertEl, t(data.error || 'Reset failed'), true, fieldIds.code);
+        revealRecoveryAlert(alertEl);
+        return { ok: false, code: data.code };
+    }
+    return { ok: true };
+}
+
+function clearRecoveryCodeFields(fieldIds = { code: 'recoveryCode' }) {
+    const codeEl = document.getElementById(fieldIds.code);
+    if (codeEl) codeEl.value = '';
+}
+
+async function resendRecoveryCode(email, alertEl, fieldIds = { code: 'recoveryCode' }) {
+    if (!email) {
+        showAlert(alertEl, t('Please provide an email address'));
+        revealRecoveryAlert(alertEl);
         return false;
     }
+    alertEl?.classList.add('hidden');
+    alertEl && (alertEl.textContent = '');
+
+    const ok = await sendRecoveryCode(email, alertEl);
+    if (!ok) return false;
+
+    clearRecoveryCodeFields(fieldIds);
+    showAlert(alertEl, t('A new recovery code was sent to your email.'), false);
+    revealRecoveryAlert(alertEl);
+    window.setTimeout(() => {
+        document.getElementById(fieldIds.code)?.focus();
+    }, 50);
     return true;
+}
+
+function showExpiredCodePrompt(alertEl, email, fieldIds = { code: 'recoveryCode' }) {
+    if (!alertEl) return;
+    alertEl.classList.remove('hidden');
+    alertEl.style.color = 'var(--accent-red)';
+    alertEl.innerHTML = `
+        <p><strong>${t('Your recovery code has expired.')}</strong></p>
+        <p style="margin-top:8px;font-size:0.92rem;">${t('Request a new code and we will email it to you.')}</p>
+        <div class="recovery-error-actions">
+            <button type="button" data-recovery-resend>${t('Send new code')}</button>
+        </div>
+    `;
+    alertEl.querySelector('[data-recovery-resend]')?.addEventListener('click', async () => {
+        const btn = alertEl.querySelector('[data-recovery-resend]');
+        if (btn) btn.disabled = true;
+        try {
+            await resendRecoveryCode(email, alertEl, fieldIds);
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    });
+    revealRecoveryAlert(alertEl);
 }
 
 function bindInlineRecoveryEvents(shell) {
@@ -237,8 +303,8 @@ function bindInlineRecoveryEvents(shell) {
         const btn = document.getElementById('recoverySubmitBtn');
         if (btn) btn.disabled = true;
         try {
-            const ok = await submitPasswordReset(email, code, password, confirmPassword, alertEl);
-            if (ok) {
+            const result = await submitPasswordReset(email, code, password, confirmPassword, alertEl);
+            if (result.ok) {
                 showAlert(alertEl, t('Password reset successful!'), false);
                 setTimeout(() => closeInlinePasswordRecovery(), 1800);
             }
@@ -251,6 +317,18 @@ function bindInlineRecoveryEvents(shell) {
 
     document.getElementById('recoveryBackToLoginBtn')?.addEventListener('click', () => {
         closeInlinePasswordRecovery();
+    });
+
+    document.getElementById('recoveryResendCodeBtn')?.addEventListener('click', async () => {
+        const alertEl = document.getElementById('recoveryAlert');
+        const email = document.getElementById('recoveryHiddenEmail')?.value.trim() || activeEmail;
+        const btn = document.getElementById('recoveryResendCodeBtn');
+        if (btn) btn.disabled = true;
+        try {
+            await resendRecoveryCode(email, alertEl);
+        } finally {
+            if (btn) btn.disabled = false;
+        }
     });
 }
 
@@ -348,17 +426,30 @@ export function initRecoverPage() {
         const alert = document.getElementById('resetAlert');
 
         try {
-            const ok = await submitPasswordReset(email, code, password, confirmPassword, alert, {
+            const result = await submitPasswordReset(email, code, password, confirmPassword, alert, {
                 password: 'resetNewPassword',
                 confirm: 'resetConfirmPassword',
                 code: 'resetCode'
             });
-            if (ok) {
+            if (result.ok) {
                 showAlert(alert, t('Password reset successful!'), false);
                 setTimeout(() => { window.location.href = appPath('index.html'); }, 2000);
             }
         } catch (err) {
             showAlert(alert, t('Server connection error'));
+            revealRecoveryAlert(alert);
+        }
+    });
+
+    document.getElementById('recoveryResendPageBtn')?.addEventListener('click', async () => {
+        const email = document.getElementById('resetEmail')?.value.trim() || activeEmail;
+        const alert = document.getElementById('resetAlert');
+        const btn = document.getElementById('recoveryResendPageBtn');
+        if (btn) btn.disabled = true;
+        try {
+            await resendRecoveryCode(email, alert, { code: 'resetCode' });
+        } finally {
+            if (btn) btn.disabled = false;
         }
     });
 

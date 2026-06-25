@@ -168,6 +168,10 @@ const translations = {
         'There is no user with that email': 'No existe un usuario con ese correo',
         'Invalid or expired reset code': 'Código inválido o expirado',
         'Enter your email to receive a recovery code.': 'Ingrese su correo para recibir un código de recuperación.',
+        'Your recovery code has expired.': 'Su código de recuperación expiró.',
+        'Request a new code and we will email it to you.': 'Solicite un nuevo código y se lo enviaremos por correo.',
+        'Send new code': 'Enviar nuevo código',
+        'A new recovery code was sent to your email.': 'Se envió un nuevo código de recuperación a su correo.',
         
         // General
         'Loading...': 'Cargando...',
