@@ -3,10 +3,8 @@ export const BASE_ORIGIN = window.location.protocol === 'file:' ? 'http://localh
 export const API_URL = `${BASE_ORIGIN}/api/v1`;
 
 /**
- * Age-verification + Terms & Conditions version.
+ * Age-verification + Terms & Conditions version (for future legal gate).
  * MUST stay in sync with config/appConfig.js -> terms.version on the backend.
- * Bumping this re-triggers the acceptance gate for everyone (the stored
- * localStorage acceptance no longer matches and the popup is shown again).
  */
 export const TERMS_VERSION = '2026-06-18';
 

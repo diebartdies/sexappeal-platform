@@ -19,7 +19,7 @@ const ActivityLogSchema = new mongoose.Schema({
     type: String,
     index: true
   },
-  /** Highlight rows in admin UI (e.g. registration abandon after accepting terms). */
+  /** Highlight rows in admin UI (e.g. flagged events). */
   highlight: {
     type: Boolean,
     default: false,

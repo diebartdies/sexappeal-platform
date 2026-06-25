@@ -5,7 +5,6 @@ import { t, applyStaticTranslations } from './i18n.js';
 import { openInlinePasswordRecovery, initRecoverPage, bindForgotPasswordTriggers } from './passwordRecovery.js';
 import { pushReturnPoint, logoutToEntrance } from './navReturn.js';
 import { needsProfessionalCategorySetup } from './professionalSetup.js';
-import { hasAcceptedTerms, openAgeGateAcceptance } from './terms.js';
 
 function whenDomReady(fn) {
     if (document.readyState === 'loading') {
@@ -248,17 +247,7 @@ function bindAgeGateButtons() {
         enterBtn.dataset.bound = '1';
         enterBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            // Ask once per browser for the current terms version. If already
-            // accepted, enter directly; otherwise show the acceptance popup and
-            // only proceed once the checkbox is ticked and confirmed.
-            if (hasAcceptedTerms()) {
-                handleAgeGateEnter(enterBtn);
-                return;
-            }
-            openAgeGateAcceptance({
-                onAccept: () => handleAgeGateEnter(enterBtn),
-                onCancel: () => resetLandingEnterButton()
-            });
+            handleAgeGateEnter(enterBtn);
         });
     }
 

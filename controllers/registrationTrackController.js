@@ -37,13 +37,12 @@ exports.trackRegistration = async (req, res) => {
       return res.status(200).json({ success: true, skipped: true });
     }
 
-    const { event, reason, termsAccepted, hadFormData } = req.body || {};
+    const { event, reason, hadFormData } = req.body || {};
     const clientIp = getClientIp(req);
     if (isPrivateOrLocalIp(clientIp) && event !== 'visit') {
       // Still allow local testing for visit events.
     }
 
-    const terms = parseBool(termsAccepted);
     const formData = parseBool(hadFormData);
     const normalizedEvent = String(event || '').trim().toLowerCase();
 
@@ -66,22 +65,18 @@ exports.trackRegistration = async (req, res) => {
     }
 
     if (normalizedEvent === 'abandon') {
-      const regretTerms = terms;
-      const highlight = regretTerms;
       await ActivityLog.create({
         action: 'registration_abandon',
         actorType: 'registration_visitor',
         isGuest: !user,
         professional: user?._id,
-        highlight,
+        highlight: false,
         ipAddress: clientIp,
         userAgent: req.headers['user-agent'] ? String(req.headers['user-agent']).slice(0, 500) : undefined,
         details: {
           event: 'abandon',
           reason: String(reason || 'unknown').slice(0, 80),
-          termsAccepted: terms,
           hadFormData: formData,
-          regretTerms,
           userId: user?._id,
           userEmail: user?.email
         }

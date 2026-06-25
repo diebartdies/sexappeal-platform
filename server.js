@@ -397,10 +397,10 @@ const supportController = require('./controllers/supportController');
 
 app.get('/api/v1/public/launch-curtain', launchCurtainController.getPublicLaunchCurtainStatus);
 
-// Age-verification + Terms & Conditions acceptance (public; optional auth)
-const termsController = require('./controllers/termsController');
+// Terms acceptance deferred — re-enable POST /api/v1/terms/accept when legal flow ships
+// const termsController = require('./controllers/termsController');
+// app.post('/api/v1/terms/accept', termsController.acceptTerms);
 const registrationTrackController = require('./controllers/registrationTrackController');
-app.post('/api/v1/terms/accept', termsController.acceptTerms);
 app.post('/api/v1/public/registration-track', registrationTrackController.trackRegistration);
 
 // Support message queue

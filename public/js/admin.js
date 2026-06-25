@@ -1251,9 +1251,6 @@ function formatLogActionCell(log) {
     if (reason) {
         html += ` <span style="color:#aaa;font-size:0.8rem;">(${escapeHtml(reason)})</span>`;
     }
-    if (log.highlight || log.details?.regretTerms) {
-        html += ` <span style="color:#ffc107;font-weight:bold;">⚠ ${escapeHtml(t('Terms regret'))}</span>`;
-    }
     return html;
 }
 
@@ -1261,7 +1258,7 @@ function formatLogActor(log) {
     if (log.action && log.action.startsWith('registration_')) {
         const email = log.details?.userEmail || log.professional?.email;
         const base = email ? `${t('Registration visitor')} (${email})` : t('Registration visitor');
-        return log.highlight || log.details?.regretTerms ? `${base} ⚠` : base;
+        return base;
     }
 
     const homeAdmin = log.adminIpLabel === 'ho' || log.isAdminHomeIp
@@ -1491,7 +1488,7 @@ export async function loadActivityLogs() {
                 const actorName = formatLogActor(log);
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid #333';
-                if (log.highlight || log.details?.regretTerms) {
+                if (log.highlight) {
                     tr.style.background = 'rgba(255, 193, 7, 0.12)';
                     tr.style.borderLeft = '3px solid #ffc107';
                 }
