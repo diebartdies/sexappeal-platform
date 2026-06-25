@@ -180,6 +180,8 @@ const translations = {
         'Register again': 'Registrarse de nuevo',
         'No pending registration found. Please register again.': 'No hay registro pendiente. Vuelva a registrarse.',
         'We could not send the verification email. Your registration was not saved — please try again and check spam/junk.': 'No pudimos enviar el correo de verificación. Su registro no se guardó — intente de nuevo y revise spam/correo no deseado.',
+        'Already browsing as a guest? You can register here as a professional with the same email.': '¿Ya navega como invitada? Puede registrarse aquí como profesional con el mismo correo.',
+        'This email is already registered as a professional. Please sign in.': 'Este correo ya está registrado como profesional. Inicie sesión.',
         'Please enter the 6-digit code sent to your email. Check spam/junk if you do not see it.': 'Ingrese el código de 6 dígitos enviado a su correo. Revise spam/correo no deseado si no lo ve.',
         
         // General

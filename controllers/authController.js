@@ -8,7 +8,7 @@ const { getClientIp } = require('../utils/clientIp');
 const { recordAdminLoginIp, HOME_LABEL } = require('../utils/adminKnownIps');
 const Specialty = require('../models/Specialty');
 const { normalizeRegistrationMobilePhone } = require('../utils/professionalInviteMessage');
-const { rollbackPendingUser, purgeExpiredUnverifiedUsers, isEmailFullyRegistered } = require('../utils/pendingRegistration');
+const { rollbackPendingUser, purgeExpiredUnverifiedUsers, isEmailFullyRegistered, hasVerifiedGuestAccount } = require('../utils/pendingRegistration');
 const { OAuth2Client } = require('google-auth-library');
 
 function ageFromBirthDate(dateStr) {
@@ -41,6 +41,106 @@ async function generateExpressAlias(phone, mail) {
 }
 
 const PROFESSIONAL_QUALITIES = ['Standard', 'Silver', 'Gold', 'Premium', 'Elite'];
+
+async function syncProfessionalSpecialties(user) {
+  if (user.role !== 'professional' || !user.professionalProfile?.services?.length) return;
+  await Specialty.deleteMany({ user: user._id });
+  const specialtyDocs = user.professionalProfile.services.map((s) => ({
+    user: user._id,
+    specialty: s
+  }));
+  await Specialty.insertMany(specialtyDocs).catch((err) => console.error('Failed to sync specialties table:', err.message));
+}
+
+async function logProfessionalRegistered(user, req, details = {}) {
+  const clientIp = getClientIp(req);
+  await ActivityLog.create({
+    professional: user._id,
+    action: 'register',
+    actorType: 'professional',
+    ipAddress: clientIp,
+    userAgent: req.headers['user-agent'],
+    details
+  }).catch((err) => console.error('Failed to log professional registration:', err.message));
+}
+
+async function notifyProfessionalRegistered(user, email, { upgradedFromGuest = false, viaGoogle = false } = {}) {
+  try {
+    const adminEmail = config.payment?.adminEmail || 'admin@drsrv.net.ar';
+    const prof = user.professionalProfile || {};
+    const express = prof.expressRegistration || user.registrationMode === 'express';
+    const prefix = upgradedFromGuest ? 'Guest upgraded to professional' : (viaGoogle ? 'Express registration via Google' : 'Express registration verified');
+    await sendEmail({
+      email: adminEmail,
+      subject: 'SexAppeal - New Professional Registration',
+      message: express
+        ? `${prefix}: ${email}\nPhone: ${prof.mobilePhone || '—'}\nAlias (temp): ${prof.alias || '—'}\n\nComplete profile and upload gallery photos in Admin before approving.`
+        : `A new professional registered: ${email}\nVerification Status: ${user.verificationStatus}`
+    });
+  } catch (err) {
+    console.error('Failed to notify admin:', err.message);
+  }
+}
+
+async function upgradeGuestToProfessional(existingUser, {
+  password,
+  professionalProfile,
+  verificationDocuments,
+  verificationGesture,
+  isExpressRegistration,
+  req
+}) {
+  existingUser.password = password;
+  existingUser.role = 'professional';
+  existingUser.registrationMode = isExpressRegistration ? 'express' : undefined;
+  existingUser.professionalProfile = professionalProfile;
+  existingUser.verificationDocuments = verificationDocuments;
+  existingUser.verificationStatus = 'pending';
+  existingUser.verificationGesture = verificationGesture;
+  existingUser.isVerified = false;
+  existingUser.isEmailVerified = true;
+  existingUser.emailVerificationCode = undefined;
+  existingUser.emailVerificationCodeExpire = undefined;
+  await existingUser.save();
+  await syncProfessionalSpecialties(existingUser);
+  await logProfessionalRegistered(existingUser, req, {
+    registrationMode: isExpressRegistration ? 'express' : 'full',
+    upgradedFromGuest: true
+  });
+  await notifyProfessionalRegistered(existingUser, existingUser.email, { upgradedFromGuest: true });
+  return existingUser;
+}
+
+async function upgradeGuestToProfessionalViaGoogle(user, req, name) {
+  const email = user.email;
+  const alias = await generateExpressAlias('', email);
+  const evaluationQuality = PROFESSIONAL_QUALITIES[Math.floor(Math.random() * PROFESSIONAL_QUALITIES.length)];
+  const firstName = String(name).trim().split(/\s+/)[0] || alias;
+
+  user.role = 'professional';
+  user.registrationMode = 'express';
+  user.name = undefined;
+  user.professionalProfile = {
+    firstName,
+    alias,
+    bio: '',
+    expressRegistration: true,
+    quality: evaluationQuality,
+    isEvaluationPeriod: true
+  };
+  user.verificationStatus = 'pending';
+  user.isVerified = false;
+  user.isEmailVerified = true;
+  await user.save();
+  await logProfessionalRegistered(user, req, {
+    alias,
+    registrationMode: 'express',
+    viaGoogle: true,
+    upgradedFromGuest: true
+  });
+  await notifyProfessionalRegistered(user, email, { upgradedFromGuest: true, viaGoogle: true });
+  return user;
+}
 
 // @desc    Register user
 // @route   POST /api/v1/auth/register
@@ -161,13 +261,26 @@ exports.register = async (req, res, next) => {
       expressRegistration: isExpressRegistration
     } : undefined;
 
-    // Only fully verified emails block a new registration
+    // Block only verified professionals/admins; verified guests may upgrade to professional
     const existingUser = await User.findOne({ email });
     if (existingUser?.isEmailVerified) {
+      if (role === 'professional' && existingUser.role === 'user') {
+        const upgraded = await upgradeGuestToProfessional(existingUser, {
+          password,
+          professionalProfile,
+          verificationDocuments,
+          verificationGesture,
+          isExpressRegistration,
+          req
+        });
+        return sendTokenResponse(upgraded, 200, res);
+      }
       return res.status(409).json({
         success: false,
         code: 'EMAIL_ALREADY_REGISTERED',
-        error: 'This email is already registered. Please sign in.'
+        error: existingUser.role === 'professional'
+          ? 'This email is already registered as a professional. Please sign in.'
+          : 'This email is already registered. Please sign in.'
       });
     }
     if (existingUser && !existingUser.isEmailVerified) {
@@ -385,36 +498,14 @@ exports.verifyEmail = async (req, res, next) => {
     const clientIp = getClientIp(req);
 
     if (user.role === 'professional' && user.professionalProfile?.services?.length > 0) {
-      const specialtyDocs = user.professionalProfile.services.map((s) => ({
-        user: user._id,
-        specialty: s
-      }));
-      await Specialty.insertMany(specialtyDocs).catch((err) => console.error('Failed to sync specialties table:', err.message));
+      await syncProfessionalSpecialties(user);
     }
 
     if (user.role === 'professional') {
-      await ActivityLog.create({
-        professional: user._id,
-        action: 'register',
-        actorType: 'professional',
-        ipAddress: clientIp,
-        userAgent: req.headers['user-agent']
-      }).catch((err) => console.error('Failed to log professional registration:', err.message));
-
-      try {
-        const adminEmail = config.payment?.adminEmail || 'admin@drsrv.net.ar';
-        const prof = user.professionalProfile || {};
-        const express = prof.expressRegistration || user.registrationMode === 'express';
-        await sendEmail({
-          email: adminEmail,
-          subject: 'SexAppeal - New Professional Registration',
-          message: express
-            ? `Express registration verified: ${email}\nPhone: ${prof.mobilePhone || '—'}\nAlias (temp): ${prof.alias || '—'}\n\nComplete profile and upload gallery photos in Admin before approving.`
-            : `A new professional verified their email: ${email}\nVerification Status: ${user.verificationStatus}`
-        });
-      } catch (err) {
-        console.error('Failed to notify admin:', err.message);
-      }
+      await logProfessionalRegistered(user, req, {
+        registrationMode: user.registrationMode || 'full'
+      });
+      await notifyProfessionalRegistered(user, email);
     } else if (user.role === 'user' && user.registrationMode === 'guest') {
       await ActivityLog.create({
         professional: user._id,
@@ -510,6 +601,7 @@ exports.checkEmailRegistered = async (req, res) => {
     }
     await purgeExpiredUnverifiedUsers(email);
     const registered = await isEmailFullyRegistered(email);
+    const guestAccount = await hasVerifiedGuestAccount(email);
     const pendingVerification = Boolean(await User.exists({
       email,
       isEmailVerified: false,
@@ -517,7 +609,7 @@ exports.checkEmailRegistered = async (req, res) => {
     }));
     return res.status(200).json({
       success: true,
-      data: { registered, pendingVerification }
+      data: { registered, guestAccount, pendingVerification }
     });
   } catch (error) {
     return res.status(500).json({ success: false, error: error.message });
@@ -791,6 +883,10 @@ exports.googleAuth = async (req, res) => {
         user.emailVerificationCode = undefined;
         user.emailVerificationCodeExpire = undefined;
         await user.save();
+      }
+      if (registrationIntent === 'professional' && user.role === 'user') {
+        user = await upgradeGuestToProfessionalViaGoogle(user, req, name);
+        return sendTokenResponse(user, 200, res);
       }
     } else if (registrationIntent === 'professional') {
       const alias = await generateExpressAlias('', email);

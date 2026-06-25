@@ -26,11 +26,26 @@ async function purgeExpiredUnverifiedUsers(email = null) {
 async function isEmailFullyRegistered(email) {
   if (!email) return false;
   await purgeExpiredUnverifiedUsers(email);
-  return Boolean(await User.exists({ email, isEmailVerified: true }));
+  return Boolean(await User.exists({
+    email,
+    isEmailVerified: true,
+    role: { $in: ['professional', 'admin'] }
+  }));
+}
+
+async function hasVerifiedGuestAccount(email) {
+  if (!email) return false;
+  await purgeExpiredUnverifiedUsers(email);
+  return Boolean(await User.exists({
+    email,
+    isEmailVerified: true,
+    role: 'user'
+  }));
 }
 
 module.exports = {
   rollbackPendingUser,
   purgeExpiredUnverifiedUsers,
-  isEmailFullyRegistered
+  isEmailFullyRegistered,
+  hasVerifiedGuestAccount
 };

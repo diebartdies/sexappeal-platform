@@ -36,6 +36,7 @@ async function isEmailAlreadyRegistered(email) {
     if (!trimmed || !/.+@.+\..+/.test(trimmed)) return false;
     const res = await fetch(`${API_URL}/auth/check-email?email=${encodeURIComponent(trimmed)}`);
     const data = await res.json();
+    // Verified professionals/admins block registration; verified guests may upgrade
     return Boolean(data.success && data.data?.registered);
 }
 
@@ -590,6 +591,7 @@ function setupInstructions(type = currentRegistrationType || 'professional') {
     host.innerHTML = `
         <h3 class="gold-text" style="margin-top:0;">${t('Quick registration')}</h3>
         <p style="font-size:0.95rem;line-height:1.5;margin:0 0 12px;">${t('Use Google for instant access (no verification code), or fill in email, phone and birth date below. Our team completes your profile and uploads your photos.')}</p>
+        <p style="font-size:0.88rem;line-height:1.5;margin:0 0 12px;color:#8fdfb0;">${t('Already browsing as a guest? You can register here as a professional with the same email.')}</p>
         <ol style="font-size:0.9rem;margin:0 0 0 20px;line-height:1.6;padding:0;">
             <li>${t('Sign in with Google, or fill in the fields below.')}</li>
             <li>${t('If you used email: confirm with the 6-digit code we send you.')}</li>
@@ -651,7 +653,15 @@ export function initProfessionalRegistration() {
             const res = await fetch(`${API_URL}/auth/register`, { method: 'POST', body: formData });
             const data = await res.json();
             if (data.success) {
-                window.location.href = `${appPath('verify.html')}?email=${encodeURIComponent(emailValue)}`;
+                if (data.token) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('is18Plus', 'true');
+                    sessionStorage.setItem('valid_entry', 'true');
+                    if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
+                    redirectAfterLogin(data.user || {});
+                } else {
+                    window.location.href = `${appPath('verify.html')}?email=${encodeURIComponent(emailValue)}`;
+                }
             } else if (data.code === 'EMAIL_SEND_FAILED' || data.code === 'EMAIL_NOT_CONFIGURED') {
                 showAlert(alert, t(data.error || 'We could not send the verification email. Your registration was not saved — please try again.'));
             } else if (data.code === 'EMAIL_ALREADY_REGISTERED') {
