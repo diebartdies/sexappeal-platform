@@ -7,7 +7,31 @@ import { PHONE_COUNTRIES, defaultPhoneCountry, buildFullPhoneNumber, getPhoneCou
 import { mountGoogleSignIn } from './googleAuth.js';
 import { redirectAfterLogin } from './authFlows.js';
 
-function isAdminSession() {
+function isInAppBrowser() {
+    const ua = navigator.userAgent || '';
+    return /WhatsApp|Instagram|FBAN|FBAV|Line\//i.test(ua);
+}
+
+function showInAppBrowserTipIfNeeded() {
+    const tip = document.getElementById('regInAppBrowserTip');
+    if (!tip || tip.dataset.bound === '1') return;
+    if (!isInAppBrowser()) return;
+    tip.dataset.bound = '1';
+    tip.classList.remove('hidden');
+    tip.textContent = t('For Google sign-in, open this page in Chrome or Safari (WhatsApp browser often blocks it). Use the menu ⋮ → Open in browser.');
+}
+
+function markGoogleProfileCompletionPending() {
+    sessionStorage.setItem('reg_google_pending_complete', '1');
+}
+
+function clearGoogleProfileCompletionPending() {
+    sessionStorage.removeItem('reg_google_pending_complete');
+}
+
+function isGoogleProfileCompletionPending() {
+    return sessionStorage.getItem('reg_google_pending_complete') === '1';
+}
     try {
         const raw = localStorage.getItem('user');
         if (!raw) return false;
@@ -253,6 +277,8 @@ function showRegistrationForm(type) {
         intent: type === 'guest' ? 'guest' : 'professional',
         dividerKey: 'or register with email'
     });
+
+    showInAppBrowserTipIfNeeded();
 
     if (!isAdminSession() && !sessionStorage.getItem('regVisitTracked')) {
         sessionStorage.setItem('regVisitTracked', '1');
@@ -606,21 +632,76 @@ function validateRegistrationForm(form) {
 }
 
 function handleGoogleRegistrationSuccess(user, data = {}) {
-    if (data.needsProfileCompletion && !isGuestRegistrationType()) {
+    const needsCompletion = data.needsProfileCompletion === true || userNeedsGoogleProfileCompletion(user);
+    if (needsCompletion && !isGuestRegistrationType()) {
+        markGoogleProfileCompletionPending();
         showGoogleProfileCompletionUI(user);
         return;
     }
+    clearGoogleProfileCompletionPending();
     redirectAfterLogin(user);
 }
 
-function showGoogleProfileCompletionUI() {
+function userNeedsGoogleProfileCompletion(user) {
+    if (!user || user.role !== 'professional') return false;
+    const prof = user.professionalProfile || {};
+    const hasPhone = Boolean(String(prof.mobilePhone || prof.whatsappNumber || '').trim());
+    const hasBirth = Boolean(prof.birthDate) || (Number.isFinite(prof.age) && prof.age >= 18);
+    return !hasPhone || !hasBirth;
+}
+
+async function resumeAuthenticatedRegistration() {
+    if (isGuestRegistrationType()) return;
+
+    const token = localStorage.getItem('token');
+    const pendingGoogle = isGoogleProfileCompletionPending();
+    if (!token && !pendingGoogle) return;
+
+    if (token && pendingGoogle) {
+        showGoogleProfileCompletionUI(JSON.parse(localStorage.getItem('user') || '{}'));
+    }
+
+    if (!token) return;
+
+    try {
+        const res = await fetch(`${API_URL}/professionals/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+            credentials: 'include'
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success || !data.data) return;
+
+        const user = data.data;
+        localStorage.setItem('user', JSON.stringify(user));
+
+        if (user.role === 'professional' && userNeedsGoogleProfileCompletion(user)) {
+            markGoogleProfileCompletionPending();
+            showGoogleProfileCompletionUI(user);
+            return;
+        }
+
+        clearGoogleProfileCompletionPending();
+        if (user.role === 'professional' || user.role === 'user') {
+            redirectAfterLogin(user);
+        }
+    } catch {
+        /* keep manual registration available if session check fails */
+    }
+}
+
+function showGoogleProfileCompletionUI(user = {}) {
     const form = document.getElementById('registerForm');
     if (!form) return;
 
     form.dataset.googleComplete = '1';
+    document.body.classList.add('register-google-complete');
     document.getElementById('regGoogleCompleteIntro')?.classList.remove('hidden');
     applyStaticTranslations(document.getElementById('regGoogleCompleteIntro'));
     document.getElementById('regInstructions')?.classList.add('hidden');
+    document.getElementById('regNoPaymentNote')?.classList.add('hidden');
+
+    const emailEl = document.getElementById('regEmail');
+    if (emailEl && user.email) emailEl.value = user.email;
 
     const intro = document.getElementById('regFormIntro');
     if (intro) {
@@ -640,6 +721,7 @@ function showGoogleProfileCompletionUI() {
     const alert = document.getElementById('registerAlert');
     showAlert(alert, t('Signed in with Google. Please add your WhatsApp and birth date below.'), false);
     revealRegisterAlert(alert);
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
     document.getElementById('regMobilePhone')?.focus({ preventScroll: true });
 }
 
@@ -695,6 +777,7 @@ async function submitGoogleProfileCompletion(form) {
         if (data.success && data.user) {
             if (data.token) localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
+            clearGoogleProfileCompletionPending();
             showAlert(alert, t('Registration complete! Redirecting to your panel...'), false);
             revealRegisterAlert(alert);
             if (submitBtn) submitBtn.textContent = t('Registration saved');
@@ -717,6 +800,7 @@ async function submitGoogleProfileCompletion(form) {
 function setupInstructions(type = currentRegistrationType || 'professional') {
     const host = document.getElementById('regInstructions');
     if (!host) return;
+    host.classList.remove('hidden');
 
     if (type === 'guest') {
         host.innerHTML = `
@@ -757,6 +841,13 @@ export function initProfessionalRegistration() {
     setupPhoneCountrySelect();
     setupRegistrationLeaveGuard(form);
     attachPasswordToggles(form);
+    resumeAuthenticatedRegistration();
+
+    window.addEventListener('pageshow', (event) => {
+        if (event.persisted || isGoogleProfileCompletionPending()) {
+            resumeAuthenticatedRegistration();
+        }
+    });
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();

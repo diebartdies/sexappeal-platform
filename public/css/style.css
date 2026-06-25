@@ -1918,7 +1918,12 @@ textarea:focus:not(:focus-visible) {
 #registerForm[data-google-complete="1"] .reg-google-email-fields,
 #registerForm[data-google-complete="1"] #regGoogleMount,
 #registerForm[data-google-complete="1"] .google-signin-divider,
-#registerForm[data-google-complete="1"] .reg-guest-only {
+#registerForm[data-google-complete="1"] .reg-guest-only,
+#registerForm[data-google-complete="1"] #regInstructions {
+    display: none !important;
+}
+
+body.register-google-complete #regNoPaymentNote {
     display: none !important;
 }
 

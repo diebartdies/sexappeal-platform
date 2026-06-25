@@ -1,4 +1,4 @@
-/* SexAppeal - Mobile & tablet responsive layer (v8.10) */
+/* SexAppeal - Mobile & tablet responsive layer (v8.11) */
 
 html {
     -webkit-text-size-adjust: 100%;
@@ -362,6 +362,58 @@ body.landing-page .landing-frame-auth {
 
 body.landing-page .landing-pro-links {
     margin-bottom: max(72px, calc(56px + env(safe-area-inset-bottom)));
+}
+
+/* Registration — instructions + Google above email on mobile */
+@media (max-width: 768px) {
+    body.register-page #regNoPaymentNote {
+        display: none;
+    }
+
+    body.register-page .reg-logo-block {
+        margin-bottom: 12px !important;
+    }
+
+    body.register-page .reg-logo-block img {
+        height: 52px !important;
+    }
+
+    body.register-page .brand-services-tagline {
+        font-size: 0.78rem;
+        line-height: 1.35;
+    }
+
+    #regInstructions.reg-instructions-panel {
+        padding: 14px 12px;
+        margin-bottom: 16px;
+    }
+
+    #regInstructions.reg-instructions-panel h3 {
+        font-size: 1.05rem;
+    }
+
+    #regInstructions.reg-instructions-panel ol {
+        margin-left: 18px;
+        padding-left: 0;
+    }
+
+    #regInstructions.reg-instructions-panel li {
+        margin-bottom: 6px;
+    }
+
+    .google-signin-mount,
+    .google-signin-block {
+        margin-bottom: 12px;
+    }
+
+    .google-signin-label {
+        font-size: 0.82rem;
+    }
+
+    .google-signin-divider {
+        margin: 12px 0 14px;
+        font-size: 0.82rem;
+    }
 }
 
 body:not(.landing-page) {

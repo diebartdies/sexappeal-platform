@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="alternate icon" href="/favicon.ico">
     <title>SexAppeal - Model Registration</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/style.css?v=8.22">
-    <link rel="stylesheet" href="/css/responsive.css?v=8.10">
+    <link rel="stylesheet" href="/css/style.css?v=8.23">
+    <link rel="stylesheet" href="/css/responsive.css?v=8.11">
     <style>
         .reg-page { max-width: 520px; margin: 0 auto; padding-bottom: max(120px, calc(96px + env(safe-area-inset-bottom))); }
         .form-group { margin-bottom: 16px; }
@@ -23,7 +23,8 @@
         .reg-field-error { border-color: var(--accent-red) !important; box-shadow: 0 0 0 2px rgba(139,0,0,0.35); }
         .reg-check-label { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; cursor: pointer; color: #ddd; }
         .reg-check-label input { width: auto; margin-top: 4px; }
-        #regInstructions { background: rgba(212,175,55,0.08); border: 1px solid rgba(212,175,55,0.35); border-radius: 8px; padding: 18px; margin-bottom: 24px; }
+        #regInstructions { background: rgba(212,175,55,0.08); border: 1px solid rgba(212,175,55,0.35); border-radius: 8px; padding: 18px; margin-bottom: 20px; }
+        #regInstructions.hidden { display: none !important; }
         body.register-page .reg-page { padding-top: 8px; }
         .reg-back-btn {
             display: inline-flex; align-items: center; gap: 6px;
@@ -147,6 +148,32 @@
             box-sizing: border-box;
         }
         .reg-type-picker.hidden, .reg-form-panel.hidden, .reg-pro-only.hidden, .reg-guest-only.hidden { display: none !important; }
+        /* Post-Google mini-form — inline so mobile cache cannot keep old style.css */
+        #registerForm[data-google-complete="1"] .reg-google-email-fields,
+        #registerForm[data-google-complete="1"] #regGoogleMount,
+        #registerForm[data-google-complete="1"] .google-signin-divider,
+        #registerForm[data-google-complete="1"] .reg-guest-only,
+        #registerForm[data-google-complete="1"] #regInstructions {
+            display: none !important;
+        }
+        body.register-google-complete #regNoPaymentNote,
+        body.register-google-complete #regInstructions {
+            display: none !important;
+        }
+        #registerForm[data-google-complete="1"] .reg-google-profile-fields {
+            display: block !important;
+        }
+        .reg-inapp-browser-tip {
+            margin: 0 0 16px;
+            padding: 12px 14px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 193, 7, 0.55);
+            background: rgba(255, 193, 7, 0.12);
+            color: #ffe082;
+            font-size: 0.86rem;
+            line-height: 1.45;
+        }
+        .reg-inapp-browser-tip.hidden { display: none !important; }
     </style>
     <meta name="robots" content="noindex, nofollow">
     <meta name="theme-color" content="#B8922E">
@@ -174,9 +201,7 @@
 
         <section>
             <div class="card">
-                <div id="regInstructions"></div>
-
-                <div style="text-align: center; margin-bottom: 25px;" class="reg-logo-block brand-logo-block">
+                <div style="text-align: center; margin-bottom: 20px;" class="reg-logo-block brand-logo-block">
                     <img src="/SexAppeal_logo_black.png" alt="SexAppeal Logo" style="height: 70px; width: auto; background-color: #000; border-radius: 8px; padding: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.5);">
                     <p class="brand-services-tagline">Companions, Virtual Connection, Multimedia Content, Online Chat</p>
                 </div>
@@ -186,6 +211,10 @@
                     <input type="hidden" id="regRegistrationMode" value="express">
                     <button type="button" id="regBackToEntrance" class="reg-back-btn">&#8592; Back</button>
                     <div id="registerAlert" class="alert hidden"></div>
+
+                    <div id="regInstructions" class="reg-instructions-panel" aria-live="polite"></div>
+
+                    <div id="regInAppBrowserTip" class="reg-inapp-browser-tip hidden" role="status"></div>
 
                     <div id="regGoogleCompleteIntro" class="reg-google-complete-intro hidden" role="status">
                         <h3 class="gold-text" style="margin:0 0 8px;font-size:1.05rem;">Almost done</h3>
@@ -258,7 +287,7 @@
         </section>
         </div>
     </main>
-    <script src="/js/app.js?v=8.18" type="module"></script>
+    <script src="/js/app.js?v=8.27" type="module"></script>
     <script src="/js/adminHome.js?v=1" defer></script>
 </body>
 </html>

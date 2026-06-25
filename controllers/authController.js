@@ -1073,6 +1073,8 @@ const sendTokenResponse = (user, statusCode, res, options = {}) => {
   };
   if (options.needsProfileCompletion === true) {
     payload.needsProfileCompletion = true;
+  } else if (options.needsProfileCompletion === false) {
+    payload.needsProfileCompletion = false;
   }
 
   res

@@ -458,6 +458,9 @@ const PORT = config.port;
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`\nServer running in ${config.env} mode on port ${PORT}`);
   console.log(`Access the application at http://localhost:${PORT}\n`);
+  if (!process.env.GOOGLE_CLIENT_ID && !config.google?.clientId) {
+    console.warn('[Auth] GOOGLE_CLIENT_ID is not set — Google sign-in buttons will stay hidden on login/register.');
+  }
 
   // Auto-reconnect the platform WhatsApp (Tulio) client from its saved session so
   // a restart/rebuild restores sending without a manual re-registration.
