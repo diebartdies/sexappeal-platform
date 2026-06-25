@@ -1,8 +1,16 @@
 import { API_URL } from './globals.js';
 import { logoutToEntrance } from './navReturn.js';
 
-/** Inactivity limit for non-admin sessions (ms). */
-export const SESSION_IDLE_MS = 60 * 1000;
+/** Inactivity limit for non-admin sessions (ms). Minimum 10 minutes. */
+export const SESSION_IDLE_MS = 10 * 60 * 1000;
+
+const PUBLIC_AUTH_PAGES = new Set(['login.html', 'register.html', 'verify.html', 'recover.html']);
+
+function isPublicAuthPage() {
+    const segment = window.location.pathname.split('/').pop();
+    const page = !segment || segment === '/' ? 'index.html' : segment;
+    return PUBLIC_AUTH_PAGES.has(page);
+}
 
 const ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keydown', 'touchstart', 'scroll', 'click', 'wheel'];
 
@@ -32,6 +40,7 @@ export function isAdminSession() {
 }
 
 export function shouldEnforceSessionIdle() {
+    if (isPublicAuthPage()) return false;
     return hasAuthToken() && !isAdminSession();
 }
 
@@ -130,8 +139,8 @@ function onVisibilityChange() {
 }
 
 export function initSessionIdleTimeout() {
-    if (started) {
-        if (!shouldEnforceSessionIdle()) {
+    if (!shouldEnforceSessionIdle()) {
+        if (started) {
             started = false;
             loggingOut = false;
             if (idleTimer) clearTimeout(idleTimer);
@@ -140,7 +149,7 @@ export function initSessionIdleTimeout() {
         }
         return;
     }
-    if (!shouldEnforceSessionIdle()) return;
+    if (started) return;
 
     started = true;
     loggingOut = false;

@@ -1437,6 +1437,62 @@ textarea:focus:not(:focus-visible) {
     margin: 0 auto;
 }
 
+.brand-logo-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.brand-services-tagline {
+    margin: 10px 0 0;
+    padding: 0 10px;
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(0.65rem, 1.8vw, 0.78rem);
+    font-style: italic;
+    font-weight: 400;
+    line-height: 1.45;
+    color: rgba(212, 175, 55, 0.88);
+    letter-spacing: 0.02em;
+    max-width: 300px;
+}
+
+.categories-frame-left .brand-services-tagline {
+    font-size: 0.62rem;
+    max-width: 100%;
+    margin-top: 8px;
+    line-height: 1.35;
+}
+
+.reg-logo-block .brand-services-tagline {
+    font-size: 0.68rem;
+    max-width: 260px;
+    margin-top: 8px;
+}
+
+.treasure-virtual-badge {
+    position: absolute;
+    z-index: 4;
+    left: -4%;
+    top: 36%;
+    width: 58%;
+    padding: 5px 6px;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.96), rgba(168, 132, 32, 0.92));
+    color: #141008;
+    font-family: sans-serif;
+    font-size: clamp(0.58rem, 2.1vw, 0.72rem);
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: center;
+    transform: rotate(-32deg);
+    transform-origin: 0% 50%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+    pointer-events: none;
+    line-height: 1.1;
+}
+
 .landing-age-gate {
     width: 100%;
     max-width: 320px;

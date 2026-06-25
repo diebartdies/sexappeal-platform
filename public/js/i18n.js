@@ -9,6 +9,8 @@ const translations = {
         'Exit': 'Salir',
         'Elegance Defined': 'Elegancia Definida',
         'Discover our veiled collection of Living Treasures.': 'Descubra nuestra colección velada de Tesoros Vivos.',
+        'Companions, Virtual Connection, Multimedia Content, Online Chat': 'Acompañantes, Conexión Virtual, Contenido Multimedia, Chat en línea',
+        'Virtual': 'Virtual',
         'Entrance': 'Entrada',
         'You must be 18 years or older to enter this sanctuary.': 'Debe ser mayor de 18 años para ingresar a este santuario.',
 

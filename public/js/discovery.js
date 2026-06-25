@@ -15,6 +15,13 @@ import {
 
 const TREASURE_CATEGORY_ORDER = ['Elite', 'Premium', 'Gold', 'Silver', 'Standard'];
 
+function profileOffersVirtualConnection(services) {
+    return (services || []).some((s) => {
+        const name = String(s || '').trim().toLowerCase();
+        return name === 'virtual connection' || name === 'conexión virtual';
+    });
+}
+
 // Detect the logged-in admin the same way the rest of the frontend does
 // (adminHome.js / admin.js): read the cached `user` object from localStorage
 // and check `role === 'admin'`. Any failure (missing/corrupt value, no role)
@@ -99,6 +106,14 @@ function renderTreasureCategorySection(grid, cat, items, eagerImages = false) {
             img.src = '/images/no-photo.svg';
         };
         imgContainer.appendChild(img);
+
+        if (profileOffersVirtualConnection(prof.services)) {
+            const virtualBadge = document.createElement('span');
+            virtualBadge.className = 'treasure-virtual-badge';
+            virtualBadge.textContent = t('Virtual');
+            virtualBadge.setAttribute('aria-hidden', 'true');
+            imgContainer.appendChild(virtualBadge);
+        }
 
         // Foot-of-photo caption: alias, barrio/ciudad and primary specialty.
         // White italic text, left-aligned with a small left padding, sitting on
