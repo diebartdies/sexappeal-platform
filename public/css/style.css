@@ -1644,6 +1644,23 @@ textarea:focus:not(:focus-visible) {
     text-align: left;
 }
 
+.google-signin-block {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.google-signin-divider {
+    font-size: 0.88rem;
+    color: #999;
+    margin: 16px 0 12px;
+    text-align: center;
+}
+
+.google-signin-wrapper {
+    display: flex;
+    justify-content: center;
+}
+
 #loginAlert .login-error-actions {
     display: flex;
     flex-wrap: wrap;

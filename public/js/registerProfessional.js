@@ -4,6 +4,8 @@ import { t, applyStaticTranslations } from './i18n.js';
 import { confirmDialog, wireFormLabel, setFieldInvalid } from './a11y.js';
 import { navigateWithReturn } from './navReturn.js';
 import { PHONE_COUNTRIES, defaultPhoneCountry, buildFullPhoneNumber, getPhoneCountryFlagUrl, getPhoneCountryName } from './phoneCountryCodes.js';
+import { mountGoogleSignIn } from './googleAuth.js';
+import { redirectAfterLogin } from './authFlows.js';
 
 function isAdminSession() {
     try {
@@ -208,6 +210,14 @@ function showRegistrationForm(type) {
     setupInstructions(type);
     bindRegistrationFooterLinks();
     setupEmailExistsGuard();
+
+    mountGoogleSignIn({
+        insertBefore: document.getElementById('registerForm'),
+        alertEl: document.getElementById('registerAlert'),
+        onSuccess: redirectAfterLogin,
+        intent: type === 'guest' ? 'guest' : 'professional',
+        dividerKey: 'or register with email'
+    });
 
     if (!isAdminSession() && !sessionStorage.getItem('regVisitTracked')) {
         sessionStorage.setItem('regVisitTracked', '1');
@@ -567,11 +577,11 @@ function setupInstructions(type = currentRegistrationType || 'professional') {
     if (type === 'guest') {
         host.innerHTML = `
         <h3 class="gold-text" style="margin-top:0;">${t('Guest signup')}</h3>
-        <p style="font-size:0.95rem;line-height:1.5;margin:0 0 12px;">${t('Email only — optional name. We send a verification code; check Spam if needed.')}</p>
+        <p style="font-size:0.95rem;line-height:1.5;margin:0 0 12px;">${t('Use Google for instant access (no verification code), or register with email. Email signup sends a 6-digit code — check Spam if needed.')}</p>
         <ol style="font-size:0.9rem;margin:0 0 0 20px;line-height:1.6;padding:0;">
-            <li>${t('Enter your email (alias optional).')}</li>
-            <li>${t('Confirm your email with the 6-digit code we send you.')}</li>
-            <li>${t('Sign in with the password we email you and browse the collection.')}</li>
+            <li>${t('Sign in with Google, or enter your email (alias optional).')}</li>
+            <li>${t('If you used email: confirm with the 6-digit code we send you.')}</li>
+            <li>${t('Browse the collection once signed in.')}</li>
         </ol>`;
         applyStaticTranslations(host);
         return;
@@ -579,16 +589,16 @@ function setupInstructions(type = currentRegistrationType || 'professional') {
 
     host.innerHTML = `
         <h3 class="gold-text" style="margin-top:0;">${t('Quick registration')}</h3>
-        <p style="font-size:0.95rem;line-height:1.5;margin:0 0 12px;">${t('Leave your email, phone and birth date. Our team completes your profile and uploads your photos — you do not need to do it alone.')}</p>
+        <p style="font-size:0.95rem;line-height:1.5;margin:0 0 12px;">${t('Use Google for instant access (no verification code), or fill in email, phone and birth date below. Our team completes your profile and uploads your photos.')}</p>
         <ol style="font-size:0.9rem;margin:0 0 0 20px;line-height:1.6;padding:0;">
-            <li>${t('Fill in the fields below.')}</li>
-            <li>${t('Confirm your email with the 6-digit code we send you.')}</li>
+            <li>${t('Sign in with Google, or fill in the fields below.')}</li>
+            <li>${t('If you used email: confirm with the 6-digit code we send you.')}</li>
             <li>${t('We contact you on WhatsApp and finish the rest together.')}</li>
         </ol>
         <p style="font-size:0.88rem;margin:12px 0 0;color:#8fdfb0;line-height:1.5;">${t('We never ask you to register a payment method — no card, no automatic debit.')}</p>
         <div id="regEmailSpamWarning" style="margin-top:14px;padding:12px;background:rgba(255,193,7,0.12);border:1px solid #ffc107;border-radius:6px;">
             <strong style="color:#ffc107;">⚠️ ${t('Important — check your email')}</strong>
-            <p style="font-size:0.9rem;margin:8px 0 0;color:#eee;">${t('When you submit, we send a 6-digit verification code to your email. It may arrive in Spam or Junk.')}</p>
+            <p style="font-size:0.9rem;margin:8px 0 0;color:#eee;">${t('Manual email registration sends a 6-digit verification code. It may arrive in Spam or Junk. Google sign-in skips this step.')}</p>
         </div>`;
     applyStaticTranslations(host);
 }

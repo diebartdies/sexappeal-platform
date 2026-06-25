@@ -265,6 +265,7 @@ const { protect, authorize } = require('./middleware/auth');
 app.post('/api/v1/auth/register', upload.array('verificationDocuments', 3), authController.register);
 app.post('/api/v1/auth/verify-email', authController.verifyEmail);
 app.post('/api/v1/auth/login', authController.login);
+app.post('/api/v1/auth/google', authController.googleAuth);
 app.get('/api/v1/auth/check-email', authController.checkEmailRegistered);
 app.post('/api/v1/auth/logout', authController.logout);
 app.post('/api/v1/auth/guest-login', authController.guestLogin);
@@ -396,6 +397,15 @@ const launchCurtainController = require('./controllers/launchCurtainController')
 const supportController = require('./controllers/supportController');
 
 app.get('/api/v1/public/launch-curtain', launchCurtainController.getPublicLaunchCurtainStatus);
+
+app.get('/api/v1/public/client-config', (req, res) => {
+  res.status(200).json({
+    success: true,
+    data: {
+      googleClientId: config.google?.clientId || process.env.GOOGLE_CLIENT_ID || ''
+    }
+  });
+});
 
 // Terms acceptance deferred — re-enable POST /api/v1/terms/accept when legal flow ships
 // const termsController = require('./controllers/termsController');

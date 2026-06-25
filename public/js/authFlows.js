@@ -5,6 +5,7 @@ import { t, applyStaticTranslations } from './i18n.js';
 import { openInlinePasswordRecovery, initRecoverPage, bindForgotPasswordTriggers } from './passwordRecovery.js';
 import { pushReturnPoint, logoutToEntrance } from './navReturn.js';
 import { needsProfessionalCategorySetup } from './professionalSetup.js';
+import { mountGoogleSignIn } from './googleAuth.js';
 
 function whenDomReady(fn) {
     if (document.readyState === 'loading') {
@@ -20,7 +21,7 @@ function revealLoginAlert(alert) {
     alert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function redirectAfterLogin(user = {}) {
+export function redirectAfterLogin(user = {}) {
     let intended = sessionStorage.getItem('intended_destination');
     sessionStorage.removeItem('intended_destination');
 
@@ -290,6 +291,14 @@ export function initAuthForms() {
                 </p>
             `;
             loginForm.parentNode.insertBefore(blogReminder, loginForm);
+
+            mountGoogleSignIn({
+                insertBefore: loginForm,
+                alertEl: document.getElementById('loginAlert'),
+                onSuccess: redirectAfterLogin,
+                intent: 'login',
+                dividerKey: 'or sign in with email'
+            });
         }
 
         document.getElementById('landingFocusLogin')?.addEventListener('click', () => {

@@ -97,6 +97,10 @@ const config = {
     registerUrl: process.env.PLATFORM_REGISTER_URL || 'https://sexappeal.drsrv.net.ar/register.html'
   },
 
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID || ''
+  },
+
   // Age-verification + Terms & Conditions acceptance.
   // Bump TERMS_VERSION (env or here) whenever the legal text materially changes;
   // every user/visitor will then be asked to accept again. Keep this value in

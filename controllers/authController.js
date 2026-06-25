@@ -8,6 +8,7 @@ const { getClientIp } = require('../utils/clientIp');
 const { recordAdminLoginIp, HOME_LABEL } = require('../utils/adminKnownIps');
 const Specialty = require('../models/Specialty');
 const { normalizeRegistrationMobilePhone } = require('../utils/professionalInviteMessage');
+const { OAuth2Client } = require('google-auth-library');
 
 function ageFromBirthDate(dateStr) {
   if (!dateStr) return null;
@@ -19,6 +20,26 @@ function ageFromBirthDate(dateStr) {
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) years -= 1;
   return years;
 }
+
+async function generateExpressAlias(phone, mail) {
+  const digits = String(phone || '').replace(/\D/g, '').slice(-4);
+  const mailLocal = String(mail || '').split('@')[0].replace(/\W/g, '').slice(0, 12);
+  const base = (mailLocal || `treasure${digits || 'new'}`).toLowerCase();
+  let candidate = base;
+  let suffix = 0;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const taken = await User.findOne({
+      role: 'professional',
+      'professionalProfile.alias': { $regex: new RegExp(`^${candidate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+    });
+    if (!taken) return candidate;
+    suffix += 1;
+    candidate = `${base}${suffix}`;
+  }
+}
+
+const PROFESSIONAL_QUALITIES = ['Standard', 'Silver', 'Gold', 'Premium', 'Elite'];
 
 // @desc    Register user
 // @route   POST /api/v1/auth/register
@@ -105,24 +126,6 @@ exports.register = async (req, res, next) => {
       }
       if (!req.files || req.files.length < 3) {
         return res.status(400).json({ success: false, error: 'All three verification photos are required.' });
-      }
-    }
-
-    async function generateExpressAlias(phone, mail) {
-      const digits = String(phone || '').replace(/\D/g, '').slice(-4);
-      const mailLocal = String(mail || '').split('@')[0].replace(/\W/g, '').slice(0, 12);
-      const base = (mailLocal || `treasure${digits || 'new'}`).toLowerCase();
-      let candidate = base;
-      let suffix = 0;
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        const taken = await User.findOne({
-          role: 'professional',
-          'professionalProfile.alias': { $regex: new RegExp(`^${candidate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
-        });
-        if (!taken) return candidate;
-        suffix += 1;
-        candidate = `${base}${suffix}`;
       }
     }
 
@@ -610,6 +613,129 @@ exports.resetPassword = async (req, res, next) => {
     sendTokenResponse(user, 200, res);
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Google Sign-in — existing account, or new guest/professional (email verified by Google, no code)
+// @route   POST /api/v1/auth/google
+// @access  Public
+exports.googleAuth = async (req, res) => {
+  try {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      return res.status(503).json({ success: false, error: 'Google sign-in is not configured.' });
+    }
+
+    const { token, intent } = req.body;
+    if (!token) {
+      return res.status(400).json({ success: false, error: 'No Google token provided' });
+    }
+
+    const client = new OAuth2Client(clientId);
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: clientId
+    });
+
+    const payload = ticket.getPayload();
+    const email = String(payload.email || '').toLowerCase().trim();
+    const name = payload.name || email.split('@')[0];
+    const emailVerified = payload.email_verified;
+    const registrationIntent = String(intent || 'login').toLowerCase();
+
+    if (!email) {
+      return res.status(400).json({ success: false, error: 'Google account has no email.' });
+    }
+    if (!emailVerified) {
+      return res.status(400).json({ success: false, error: 'Google email is not verified.' });
+    }
+
+    let user = await User.findOne({ email });
+
+    if (user) {
+      if (!user.isEmailVerified) {
+        user.isEmailVerified = true;
+        user.emailVerificationCode = undefined;
+        user.emailVerificationCodeExpire = undefined;
+        await user.save();
+      }
+    } else if (registrationIntent === 'professional') {
+      const alias = await generateExpressAlias('', email);
+      const evaluationQuality = PROFESSIONAL_QUALITIES[Math.floor(Math.random() * PROFESSIONAL_QUALITIES.length)];
+      const firstName = String(name).trim().split(/\s+/)[0] || alias;
+
+      user = await User.create({
+        email,
+        password: crypto.randomBytes(16).toString('hex'),
+        role: 'professional',
+        registrationMode: 'express',
+        isVerified: false,
+        isEmailVerified: true,
+        verificationStatus: 'pending',
+        professionalProfile: {
+          firstName,
+          alias,
+          bio: '',
+          expressRegistration: true,
+          quality: evaluationQuality,
+          isEvaluationPeriod: true
+        }
+      });
+
+      const clientIp = getClientIp(req);
+      await ActivityLog.create({
+        professional: user._id,
+        action: 'register',
+        actorType: 'professional',
+        ipAddress: clientIp,
+        userAgent: req.headers['user-agent'],
+        details: { alias, registrationMode: 'express', viaGoogle: true }
+      }).catch((err) => console.error('Failed to log Google professional registration:', err.message));
+
+      try {
+        const adminEmail = config.payment?.adminEmail || 'admin@drsrv.net.ar';
+        await sendEmail({
+          email: adminEmail,
+          subject: 'SexAppeal - New Professional Registration (Google)',
+          message: `Express registration via Google: ${email}\nAlias (temp): ${alias}\n\nComplete profile and upload gallery photos in Admin before approving.`
+        });
+      } catch (err) {
+        console.error('Failed to notify admin:', err.message);
+      }
+    } else {
+      const guestAlias = String(name).trim().slice(0, config.maxAliasLength || 50)
+        || String(email).split('@')[0].replace(/\W/g, '').slice(0, config.maxAliasLength || 50)
+        || 'guest';
+
+      user = await User.create({
+        name: guestAlias,
+        email,
+        password: crypto.randomBytes(16).toString('hex'),
+        role: 'user',
+        registrationMode: 'guest',
+        isVerified: true,
+        isEmailVerified: true,
+        verificationStatus: 'approved'
+      });
+
+      const clientIp = getClientIp(req);
+      await ActivityLog.create({
+        professional: user._id,
+        action: 'register',
+        actorType: 'guest',
+        isGuest: true,
+        ipAddress: clientIp,
+        userAgent: req.headers['user-agent'],
+        details: { alias: guestAlias, registrationMode: 'guest', viaGoogle: true }
+      }).catch((err) => console.error('Failed to log Google guest registration:', err.message));
+    }
+
+    sendTokenResponse(user, 200, res);
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      error: 'Google authentication failed: ' + error.message
+    });
   }
 };
 
