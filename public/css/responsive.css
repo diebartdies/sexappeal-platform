@@ -1,4 +1,4 @@
-/* SexAppeal - Mobile & tablet responsive layer (v7.4) */
+/* SexAppeal - Mobile & tablet responsive layer (v8.10) */
 
 html {
     -webkit-text-size-adjust: 100%;
@@ -345,6 +345,25 @@ table {
     max-width: calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right));
 }
 
+/* Reserve space so fixed privacy badge does not cover primary actions */
+body.register-page .reg-page,
+body.register-page main .container {
+    padding-bottom: max(148px, calc(112px + env(safe-area-inset-bottom))) !important;
+}
+
+body.password-recovery-page main,
+body.password-recovery-page .container {
+    padding-bottom: max(120px, calc(88px + env(safe-area-inset-bottom)));
+}
+
+body.landing-page .landing-frame-auth {
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+}
+
+body.landing-page .landing-pro-links {
+    margin-bottom: max(72px, calc(56px + env(safe-area-inset-bottom)));
+}
+
 body:not(.landing-page) {
     padding-top: max(55px, calc(55px + env(safe-area-inset-top)));
 }
@@ -515,6 +534,28 @@ body.has-global-topbar {
         font-size: 0.8rem;
     }
 
+    #privacyShield.privacy-shield--form-page {
+        left: auto !important;
+        right: max(10px, env(safe-area-inset-right)) !important;
+        max-width: min(188px, calc(46vw - 8px)) !important;
+    }
+
+    #privacyShield.privacy-shield--expanded {
+        max-width: min(280px, calc(100vw - 20px - env(safe-area-inset-left) - env(safe-area-inset-right))) !important;
+        max-height: min(36vh, 220px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    body.register-page .reg-page,
+    body.register-page main .container {
+        padding-bottom: max(168px, calc(128px + env(safe-area-inset-bottom))) !important;
+    }
+
+    body.landing-page .landing-pro-links {
+        margin-bottom: max(88px, calc(64px + env(safe-area-inset-bottom)));
+    }
+
     .five-column-grid:not(.admin-prof-grid) {
         grid-template-columns: repeat(2, 1fr);
     }
@@ -591,20 +632,93 @@ body.has-global-topbar {
         padding-bottom: 48px;
     }
 
+    body.launch-curtain-active:not(.categories-page) .treasure-grid-slot .launch-curtain-stage {
+        margin-top: 24px;
+    }
+
     .launch-curtain-stage {
-        min-height: clamp(220px, 36vh, 380px);
+        min-height: clamp(260px, 40vh, 420px);
+    }
+
+    .launch-curtain-panel {
+        width: 30%;
     }
 
     .launch-curtain-center {
-        padding: 28px 14px;
+        padding: max(108px, calc(clamp(56px, 12vh, 104px) + 32px)) 12px 28px;
+    }
+
+    .launch-curtain-kicker {
+        font-size: 0.68rem;
+        letter-spacing: 0.22em;
+    }
+
+    .launch-curtain-title {
+        font-size: clamp(1.2rem, 5.5vw, 1.75rem);
+        line-height: 1.2;
+    }
+
+    .launch-curtain-subtitle {
+        font-size: 0.86rem;
+        margin-bottom: 18px;
+        padding: 0 6px;
     }
 
     .launch-curtain-countdown {
-        gap: 10px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        width: 100%;
+        max-width: min(100%, 280px);
+        margin-left: auto;
+        margin-right: auto;
     }
 
     .launch-curtain-unit {
-        min-width: 64px;
-        padding: 10px 8px;
+        min-width: 0;
+        width: 100%;
+        padding: 8px 6px;
+    }
+
+    .launch-curtain-value {
+        font-size: clamp(1.2rem, 5.5vw, 1.55rem);
+    }
+
+    .launch-curtain-label {
+        font-size: 0.62rem;
+        margin-top: 4px;
+    }
+
+    .launch-curtain-footnote {
+        font-size: 0.78rem;
+        padding: 0 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .launch-curtain-panel {
+        width: 24%;
+    }
+
+    .launch-curtain-center {
+        padding: max(96px, calc(18vw + 68px)) 8px 22px;
+    }
+
+    .launch-curtain-countdown {
+        max-width: min(100%, 240px);
+        gap: 6px;
+    }
+
+    .launch-curtain-unit {
+        padding: 6px 4px;
+    }
+
+    .launch-curtain-value {
+        font-size: 1.15rem;
+    }
+
+    .launch-curtain-label {
+        font-size: 0.56rem;
+        letter-spacing: 0.08em;
     }
 }

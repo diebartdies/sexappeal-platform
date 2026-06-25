@@ -16,7 +16,7 @@ function ensureResponsiveCss() {
     const link = document.createElement('link');
     link.id = 'sexappeal-responsive-css';
     link.rel = 'stylesheet';
-    link.href = '/css/responsive.css?v=7.5';
+    link.href = '/css/responsive.css?v=8.10';
     document.head.appendChild(link);
 
     const viewport = document.querySelector('meta[name="viewport"]');
@@ -317,6 +317,14 @@ export function initPrivacyShield() {
 
     const shield = document.createElement('div');
     shield.id = 'privacyShield';
+    shield.className = 'privacy-shield';
+    if (
+        document.body.classList.contains('register-page')
+        || (document.body.classList.contains('login-page') && !document.body.classList.contains('landing-page'))
+        || document.body.classList.contains('password-recovery-page')
+    ) {
+        shield.classList.add('privacy-shield--form-page');
+    }
     Object.assign(shield.style, {
         position: 'fixed', bottom: '20px', left: '20px',
         backgroundColor: 'rgba(10, 10, 10, 0.95)', border: '1px solid var(--primary-gold)',
@@ -344,11 +352,13 @@ export function initPrivacyShield() {
         shield.querySelector('.shield-text').style.display = 'inline';
         shield.querySelector('.shield-preview').style.display = 'none';
         shield.style.maxWidth = '350px';
+        shield.classList.add('privacy-shield--expanded');
     };
     const collapse = () => {
         shield.querySelector('.shield-text').style.display = 'none';
         shield.querySelector('.shield-preview').style.display = 'inline';
         shield.style.maxWidth = '240px';
+        shield.classList.remove('privacy-shield--expanded');
     };
 
     shield.addEventListener('mouseenter', expand);

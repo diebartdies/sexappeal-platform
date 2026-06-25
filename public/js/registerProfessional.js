@@ -249,7 +249,7 @@ function showRegistrationForm(type) {
     mountGoogleSignIn({
         mountEl: document.getElementById('regGoogleMount'),
         alertEl: document.getElementById('registerAlert'),
-        onSuccess: redirectAfterLogin,
+        onSuccess: handleGoogleRegistrationSuccess,
         intent: type === 'guest' ? 'guest' : 'professional',
         dividerKey: 'or register with email'
     });
@@ -605,6 +605,115 @@ function validateRegistrationForm(form) {
     return true;
 }
 
+function handleGoogleRegistrationSuccess(user, data = {}) {
+    if (data.needsProfileCompletion && !isGuestRegistrationType()) {
+        showGoogleProfileCompletionUI(user);
+        return;
+    }
+    redirectAfterLogin(user);
+}
+
+function showGoogleProfileCompletionUI() {
+    const form = document.getElementById('registerForm');
+    if (!form) return;
+
+    form.dataset.googleComplete = '1';
+    document.getElementById('regGoogleCompleteIntro')?.classList.remove('hidden');
+    applyStaticTranslations(document.getElementById('regGoogleCompleteIntro'));
+    document.getElementById('regInstructions')?.classList.add('hidden');
+
+    const intro = document.getElementById('regFormIntro');
+    if (intro) {
+        intro.textContent = t('Google sign-in complete. Add your WhatsApp and birth date to finish.');
+    }
+
+    ['regEmail', 'regPassword', 'regPasswordConfirm'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.required = false;
+    });
+    document.getElementById('regMobilePhone')?.setAttribute('required', 'required');
+    document.getElementById('regBirthDate')?.setAttribute('required', 'required');
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.textContent = t('Finish registration');
+
+    const alert = document.getElementById('registerAlert');
+    showAlert(alert, t('Signed in with Google. Please add your WhatsApp and birth date below.'), false);
+    revealRegisterAlert(alert);
+    document.getElementById('regMobilePhone')?.focus({ preventScroll: true });
+}
+
+function validateGoogleProfileCompletionForm(form) {
+    clearFieldErrors(form);
+    const alert = document.getElementById('registerAlert');
+
+    const phoneEl = document.getElementById('regMobilePhone');
+    if (!phoneEl || !String(phoneEl.value || '').trim()) {
+        highlightField(phoneEl, true);
+        showAlert(alert, `${t('Required field missing:')} ${t('Mobile phone')}`, true, 'regMobilePhone');
+        return false;
+    }
+
+    const birthEl = document.getElementById('regBirthDate');
+    const birthValue = getBirthDateIsoValue();
+    const ageYears = birthValue ? computeAgeFromBirthDate(birthValue) : null;
+    if (!birthValue || ageYears === null || ageYears < 18 || ageYears > 99) {
+        highlightField(birthEl, true);
+        showAlert(alert, t('You must be at least 18 years old to register as a model.'), true, 'regBirthDate');
+        return false;
+    }
+
+    return true;
+}
+
+async function submitGoogleProfileCompletion(form) {
+    const alert = document.getElementById('registerAlert');
+    if (!validateGoogleProfileCompletionForm(form)) return;
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn?.textContent || t('Finish registration');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = t('Submitting...');
+    }
+
+    const token = localStorage.getItem('token');
+    try {
+        const res = await fetch(`${API_URL}/auth/google/complete-profile`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                mobilePhone: buildFullMobilePhone(),
+                birthDate: getBirthDateIsoValue()
+            })
+        });
+        const data = await res.json();
+        if (data.success && data.user) {
+            if (data.token) localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            showAlert(alert, t('Registration complete! Redirecting to your panel...'), false);
+            revealRegisterAlert(alert);
+            if (submitBtn) submitBtn.textContent = t('Registration saved');
+            window.setTimeout(() => redirectAfterLogin(data.user), 800);
+            return;
+        }
+        showAlert(alert, t(data.error || 'Registration failed'));
+        revealRegisterAlert(alert);
+    } catch {
+        showAlert(alert, t('Server connection error'));
+        revealRegisterAlert(alert);
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+    }
+}
+
 function setupInstructions(type = currentRegistrationType || 'professional') {
     const host = document.getElementById('regInstructions');
     if (!host) return;
@@ -652,6 +761,12 @@ export function initProfessionalRegistration() {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const alert = document.getElementById('registerAlert');
+
+        if (form.dataset.googleComplete === '1') {
+            await submitGoogleProfileCompletion(form);
+            return;
+        }
+
         if (!validateRegistrationForm(form)) return;
 
         const submitBtn = form.querySelector('button[type="submit"]');
