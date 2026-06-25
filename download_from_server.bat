@@ -6,7 +6,7 @@ echo ===================================================
 echo.
 
 echo [1/4] Compressing production files on the server...
-ssh root@91.208.206.35 "cd /root/SexAppeal-platform && tar -czvf download_package.tar.gz --exclude=node_modules --exclude=.git --exclude=public/uploads --exclude=.cache --exclude=download_package.tar.gz ."
+ssh root@91.208.206.35 "cd /root/SexAppeal-platform && tar -czf download_package.tar.gz --exclude=node_modules --exclude=.git --exclude=public/uploads --exclude=.cache --exclude=.wwebjs_auth --exclude=download_package.tar.gz ."
 
 echo.
 echo [2/4] Downloading package to local machine...

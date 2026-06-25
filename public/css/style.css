@@ -536,6 +536,61 @@ textarea:focus:not(:focus-visible) {
         0 0 28px rgba(var(--gold-rgb), 0.16);
 }
 
+.welcome-guide-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.welcome-guide-title {
+    margin: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.welcome-guide-dismiss {
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px 12px;
+    background: transparent;
+    border: 1px solid var(--primary-gold);
+    color: var(--primary-gold);
+    font-size: 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.welcome-guide-dismiss:hover,
+.welcome-guide-dismiss:focus-visible {
+    background: rgba(212, 175, 55, 0.12);
+    outline: none;
+}
+
+.welcome-guide-list {
+    line-height: 1.6;
+    color: #ccc;
+    margin: 0 0 0 20px;
+    padding: 0;
+    font-size: 0.95rem;
+}
+
+.welcome-guide-list li {
+    margin-bottom: 10px;
+}
+
+.welcome-guide-list li:last-child {
+    margin-bottom: 0;
+}
+
 @media (max-width: 768px) {
     .fileteado-section.admin-prof-category,
     .fileteado-section.discovery-cat-section {

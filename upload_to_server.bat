@@ -20,7 +20,7 @@ powershell -NoProfile -Command "$paths=@('%~dp0scripts\deploy-extract.sh','%~dp0
 if errorlevel 1 goto line_endings_failed
 
 echo [2/7] Compressing project files locally (ignoring heavy cache files)...
-tar -czvf upload_package.tar.gz --exclude=node_modules --exclude=.git --exclude=.cache --exclude=upload_package.tar.gz --exclude=docker-compose.override.yml --exclude=.env --exclude=*.archive --exclude=*.tar.gz --exclude=certbot --exclude=app_bak.js --exclude=sexappeal_local_after_embed.archive .
+tar -czf upload_package.tar.gz --exclude=node_modules --exclude=.git --exclude=.cache --exclude=.wwebjs_auth --exclude=upload_package.tar.gz --exclude=docker-compose.override.yml --exclude=.env --exclude=*.archive --exclude=*.tar.gz --exclude=certbot --exclude=app_bak.js --exclude=sexappeal_local_after_embed.archive .
 if errorlevel 1 goto archive_failed
 
 echo.

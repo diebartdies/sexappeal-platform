@@ -26,6 +26,7 @@ docker-compose.override.yml
 
 # Puppeteer / Chrome cache to prevent GitHub large file errors
 .cache/
+.wwebjs_auth/
 
 # Auto-generated SEO location registry (scripts/generate-seo-locations.js)
 utils/seo-locations.generated.json

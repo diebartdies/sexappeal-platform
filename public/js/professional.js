@@ -135,12 +135,13 @@ export function injectProfessionalDashboardGuides(content, data, insertRef) {
         welcomeSection.style.marginBottom = '20px';
         welcomeSection.style.background = 'rgba(212, 175, 55, 0.05)';
         welcomeSection.style.border = '1px solid rgba(212, 175, 55, 0.4)';
-        welcomeSection.style.position = 'relative';
 
         welcomeSection.innerHTML = `
-            <button id="dismissWelcomeBtn" style="position: absolute; top: 15px; right: 15px; background: transparent; border: 1px solid var(--primary-gold); color: var(--primary-gold); padding: 4px 8px; font-size: 0.8rem; border-radius: 4px; cursor: pointer; transition: background 0.3s;" onmouseover="this.style.background='rgba(212,175,55,0.1)'" onmouseout="this.style.background='transparent'">${t('Dismiss')}</button>
-            <h3 class="gold-text" style="margin-bottom: 15px;">📖 ${t('Welcome Guide & How It Works')}</h3>
-            <ul style="line-height: 1.6; color: #ccc; margin-left: 20px; font-size: 0.95rem;">
+            <div class="welcome-guide-header">
+                <h3 class="gold-text welcome-guide-title">📖 ${t('Welcome Guide & How It Works')}</h3>
+                <button type="button" id="dismissWelcomeBtn" class="welcome-guide-dismiss">${t('Dismiss')}</button>
+            </div>
+            <ul class="welcome-guide-list">
                 <li style="margin-bottom: 10px;"><strong>${t('Free evaluation month:')}</strong> ${t('Your first 30 days are free. During this period your profile appears in a random category so you can experience how visibility works.')}</li>
                 <li style="margin-bottom: 10px;"><strong>${t('Your chosen category:')}</strong> ${t('After approval, choose your category and specialties in your model dashboard. After your first validated payment, you move to that category rate.')}</li>
                 <li style="margin-bottom: 10px;"><strong>${t('Vacations:')}</strong> ${t('While on vacation your profile shows as inactive. Up to 15 vacation days per month are discounted from your monthly balance.')}</li>
