@@ -146,18 +146,7 @@
             max-height: 46px;
             box-sizing: border-box;
         }
-        .reg-type-picker { margin-bottom: 24px; }
         .reg-type-picker.hidden, .reg-form-panel.hidden, .reg-pro-only.hidden, .reg-guest-only.hidden { display: none !important; }
-        .reg-type-options { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
-        .reg-type-btn {
-            width: 100%; padding: 16px 18px; text-align: left;
-            background: rgba(212,175,55,0.08); border: 1px solid rgba(212,175,55,0.45);
-            border-radius: 8px; color: #eee; cursor: pointer;
-            transition: background 0.2s, border-color 0.2s;
-        }
-        .reg-type-btn:hover { background: rgba(212,175,55,0.16); border-color: rgba(212,175,55,0.75); }
-        .reg-type-btn strong { display: block; color: var(--primary-gold); font-size: 1rem; margin-bottom: 4px; }
-        .reg-type-btn span { display: block; font-size: 0.88rem; color: #aaa; line-height: 1.4; }
     </style>
     <meta name="robots" content="noindex, nofollow">
     <meta name="theme-color" content="#B8922E">
@@ -174,22 +163,7 @@
 </head>
 <body class="register-page">
     <main id="registerMain" class="container reg-page">
-        <section id="regTypePicker" class="reg-type-picker card" style="padding:24px;">
-            <h1 class="gold-text" style="text-align:center;font-size:1.5rem;margin:0 0 8px;">Create an account</h1>
-            <p style="text-align:center;color:#aaa;font-size:0.95rem;margin:0;line-height:1.5;">Choose how you want to join SexAppeal.</p>
-            <div class="reg-type-options">
-                <button type="button" class="reg-type-btn" data-reg-type="guest">
-                    <strong>Guest registration</strong>
-                    <span>Browse the collection — email only, optional display name.</span>
-                </button>
-                <button type="button" class="reg-type-btn" data-reg-type="professional">
-                    <strong>Professional registration</strong>
-                    <span>Publish your profile — quick signup; we help you finish photos and details.</span>
-                </button>
-            </div>
-        </section>
-
-        <div id="regFormPanel" class="reg-form-panel hidden">
+        <div id="regFormPanel" class="reg-form-panel">
         <h1 id="regFormTitle" class="gold-text" style="text-align:center;font-size:1.6rem;margin:0 0 8px;">Professional Registration</h1>
         <p id="regFormIntro" style="text-align:center;color:#aaa;font-size:0.95rem;margin:0 0 8px;line-height:1.5;">
             Quick signup — only what you need to get started. We will help you complete your profile and photos.
@@ -276,7 +250,7 @@
         </section>
         </div>
     </main>
-    <script src="/js/app.js?v=8.14" type="module"></script>
+    <script src="/js/app.js?v=8.15" type="module"></script>
     <script src="/js/adminHome.js?v=1" defer></script>
 </body>
 </html>

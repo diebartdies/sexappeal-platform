@@ -165,11 +165,6 @@ function confirmLeaveRegistration(form) {
 }
 
 function goToRegistrationEntrance() {
-    if (document.getElementById('regTypePicker')) {
-        showRegistrationTypePicker();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
-    }
     sessionStorage.setItem('ancestor_code', 'index.html');
     window.location.href = appPath('index.html');
 }
@@ -178,21 +173,12 @@ let currentRegistrationType = null;
 
 function getRegistrationTypeFromUrl() {
     const type = new URLSearchParams(window.location.search).get('type');
-    return type === 'guest' || type === 'professional' ? type : null;
+    if (type === 'guest') return 'guest';
+    return 'professional';
 }
 
 function isGuestRegistrationType() {
     return currentRegistrationType === 'guest';
-}
-
-function showRegistrationTypePicker() {
-    currentRegistrationType = null;
-    document.getElementById('regTypePicker')?.classList.remove('hidden');
-    document.getElementById('regFormPanel')?.classList.add('hidden');
-    const roleEl = document.getElementById('regRole');
-    const modeEl = document.getElementById('regRegistrationMode');
-    if (roleEl) roleEl.value = '';
-    if (modeEl) modeEl.value = '';
 }
 
 function setRegistrationFormFieldsRequired(type) {
@@ -206,7 +192,6 @@ function setRegistrationFormFieldsRequired(type) {
 
 function showRegistrationForm(type) {
     currentRegistrationType = type;
-    document.getElementById('regTypePicker')?.classList.add('hidden');
     document.getElementById('regFormPanel')?.classList.remove('hidden');
     document.getElementById('regRole').value = type === 'guest' ? 'user' : 'professional';
     document.getElementById('regRegistrationMode').value = type === 'guest' ? 'guest' : 'express';
@@ -230,45 +215,8 @@ function showRegistrationForm(type) {
     }
 }
 
-function applyTypePickerLabels() {
-    const picker = document.getElementById('regTypePicker');
-    if (!picker) return;
-    const h1 = picker.querySelector('h1');
-    const lead = picker.querySelector('p');
-    if (h1) h1.textContent = t('Create an account');
-    if (lead) lead.textContent = t('Choose how you want to join SexAppeal.');
-    const guestBtn = picker.querySelector('[data-reg-type="guest"]');
-    const proBtn = picker.querySelector('[data-reg-type="professional"]');
-    if (guestBtn) {
-        guestBtn.querySelector('strong').textContent = t('Guest registration');
-        guestBtn.querySelector('span').textContent = t('Browse the collection — email only, optional display name.');
-    }
-    if (proBtn) {
-        proBtn.querySelector('strong').textContent = t('Professional registration');
-        proBtn.querySelector('span').textContent = t('Publish your profile — quick signup; we help you finish photos and details.');
-    }
-}
-
-function setupRegistrationTypePicker() {
-    const picker = document.getElementById('regTypePicker');
-    if (!picker || picker.dataset.bound === '1') return;
-    picker.dataset.bound = '1';
-
-    applyTypePickerLabels();
-
-    picker.querySelectorAll('[data-reg-type]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-            const type = btn.getAttribute('data-reg-type');
-            if (type === 'guest' || type === 'professional') {
-                showRegistrationForm(type);
-            }
-        });
-    });
-
-    const preset = getRegistrationTypeFromUrl();
-    if (preset) {
-        showRegistrationForm(preset);
-    }
+function initRegistrationRoute() {
+    showRegistrationForm(getRegistrationTypeFromUrl());
 }
 
 function leaveRegistration(onLeave, reason = 'leave') {
@@ -649,7 +597,7 @@ export function initProfessionalRegistration() {
     const form = document.getElementById('registerForm');
     if (!form) return;
 
-    setupRegistrationTypePicker();
+    initRegistrationRoute();
     setupBirthDateField();
     setupPhoneCountrySelect();
     setupRegistrationLeaveGuard(form);
