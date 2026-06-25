@@ -1,0 +1,36 @@
+const User = require('../models/User');
+const Specialty = require('../models/Specialty');
+const ActivityLog = require('../models/ActivityLog');
+
+async function rollbackPendingUser(userId) {
+  if (!userId) return;
+  await Specialty.deleteMany({ user: userId });
+  await ActivityLog.deleteMany({ professional: userId });
+  await User.findByIdAndDelete(userId);
+}
+
+async function purgeExpiredUnverifiedUsers(email = null) {
+  const filter = {
+    isEmailVerified: false,
+    emailVerificationCodeExpire: { $lt: new Date() }
+  };
+  if (email) filter.email = email;
+
+  const stale = await User.find(filter).select('_id email');
+  for (const row of stale) {
+    await rollbackPendingUser(row._id);
+  }
+  return stale.length;
+}
+
+async function isEmailFullyRegistered(email) {
+  if (!email) return false;
+  await purgeExpiredUnverifiedUsers(email);
+  return Boolean(await User.exists({ email, isEmailVerified: true }));
+}
+
+module.exports = {
+  rollbackPendingUser,
+  purgeExpiredUnverifiedUsers,
+  isEmailFullyRegistered
+};

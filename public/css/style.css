@@ -1840,6 +1840,17 @@ textarea:focus:not(:focus-visible) {
     border: 1px solid var(--primary-gold);
 }
 
+.recovery-error-actions a {
+    font-size: 0.9rem;
+    padding: 8px 14px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: bold;
+    background: var(--primary-gold);
+    color: #000;
+    border: 1px solid var(--primary-gold);
+}
+
 .password-recovery-page input {
     width: 100%;
 }

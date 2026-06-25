@@ -172,6 +172,15 @@ const translations = {
         'Request a new code and we will email it to you.': 'Solicite un nuevo código y se lo enviaremos por correo.',
         'Send new code': 'Enviar nuevo código',
         'A new recovery code was sent to your email.': 'Se envió un nuevo código de recuperación a su correo.',
+        'Your verification code has expired.': 'Su código de verificación expiró.',
+        'Verification code sent. Please check your inbox and spam folder.': 'Código enviado. Revise su bandeja de entrada y la carpeta de spam.',
+        'We could not send the verification email. Check spam/junk or tap "Send new code" below.': 'No pudimos enviar el correo de verificación. Revise spam/correo no deseado o pulse "Enviar nuevo código" abajo.',
+        'Could not send email right now. Please try again in a few minutes.': 'No se pudo enviar el correo ahora. Intente de nuevo en unos minutos.',
+        'This registration was removed. Please sign up again.': 'Este registro fue eliminado. Vuelva a registrarse.',
+        'Register again': 'Registrarse de nuevo',
+        'No pending registration found. Please register again.': 'No hay registro pendiente. Vuelva a registrarse.',
+        'We could not send the verification email. Your registration was not saved — please try again and check spam/junk.': 'No pudimos enviar el correo de verificación. Su registro no se guardó — intente de nuevo y revise spam/correo no deseado.',
+        'Please enter the 6-digit code sent to your email. Check spam/junk if you do not see it.': 'Ingrese el código de 6 dígitos enviado a su correo. Revise spam/correo no deseado si no lo ve.',
         
         // General
         'Loading...': 'Cargando...',

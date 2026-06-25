@@ -652,6 +652,8 @@ export function initProfessionalRegistration() {
             const data = await res.json();
             if (data.success) {
                 window.location.href = `${appPath('verify.html')}?email=${encodeURIComponent(emailValue)}`;
+            } else if (data.code === 'EMAIL_SEND_FAILED' || data.code === 'EMAIL_NOT_CONFIGURED') {
+                showAlert(alert, t(data.error || 'We could not send the verification email. Your registration was not saved — please try again.'));
             } else if (data.code === 'EMAIL_ALREADY_REGISTERED') {
                 redirectToLogin(emailValue);
             } else {

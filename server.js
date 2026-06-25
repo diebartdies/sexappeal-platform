@@ -264,6 +264,7 @@ const { protect, authorize } = require('./middleware/auth');
 
 app.post('/api/v1/auth/register', upload.array('verificationDocuments', 3), authController.register);
 app.post('/api/v1/auth/verify-email', authController.verifyEmail);
+app.post('/api/v1/auth/resend-verification', authController.resendVerificationCode);
 app.post('/api/v1/auth/login', authController.login);
 app.post('/api/v1/auth/google', authController.googleAuth);
 app.get('/api/v1/auth/check-email', authController.checkEmailRegistered);

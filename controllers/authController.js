@@ -8,6 +8,7 @@ const { getClientIp } = require('../utils/clientIp');
 const { recordAdminLoginIp, HOME_LABEL } = require('../utils/adminKnownIps');
 const Specialty = require('../models/Specialty');
 const { normalizeRegistrationMobilePhone } = require('../utils/professionalInviteMessage');
+const { rollbackPendingUser, purgeExpiredUnverifiedUsers, isEmailFullyRegistered } = require('../utils/pendingRegistration');
 const { OAuth2Client } = require('google-auth-library');
 
 function ageFromBirthDate(dateStr) {
@@ -64,6 +65,8 @@ exports.register = async (req, res, next) => {
 
     // Normalize email to prevent case-sensitive duplicate accounts
     if (email) email = email.toLowerCase().trim();
+
+    await purgeExpiredUnverifiedUsers(email);
 
     if (isGuestRegistration) {
       if (!email || !String(email).trim()) {
@@ -158,21 +161,25 @@ exports.register = async (req, res, next) => {
       expressRegistration: isExpressRegistration
     } : undefined;
 
-    // Check if user already exists
-    let existingUser = await User.findOne({ email });
-    if (existingUser) {
+    // Only fully verified emails block a new registration
+    const existingUser = await User.findOne({ email });
+    if (existingUser?.isEmailVerified) {
       return res.status(409).json({
         success: false,
         code: 'EMAIL_ALREADY_REGISTERED',
         error: 'This email is already registered. Please sign in.'
       });
     }
+    if (existingUser && !existingUser.isEmailVerified) {
+      await rollbackPendingUser(existingUser._id);
+    }
 
-    // Check if Alias is already taken (case-insensitive)
+    // Check if Alias is already taken by a verified professional
     if (role === 'professional' && alias) {
-      let existingAlias = await User.findOne({ 
+      let existingAlias = await User.findOne({
         role: 'professional',
-        'professionalProfile.alias': { $regex: new RegExp('^' + alias.trim() + '$', 'i') } 
+        isEmailVerified: true,
+        'professionalProfile.alias': { $regex: new RegExp('^' + alias.trim() + '$', 'i') }
       });
       if (existingAlias) {
         return res.status(400).json({
@@ -215,52 +222,9 @@ exports.register = async (req, res, next) => {
       emailVerificationCodeExpire: verificationCodeExpire
     });
 
-    // Sync the new Specialties many-to-many junction table
-    if (role === 'professional' && professionalProfile && professionalProfile.services && professionalProfile.services.length > 0) {
-      const specialtyDocs = professionalProfile.services.map(s => ({
-        user: user._id,
-        specialty: s
-      }));
-      await Specialty.insertMany(specialtyDocs).catch(err => console.error('Failed to sync specialties table:', err.message));
-    }
+    // Sync specialties after email is verified (see verifyEmail)
 
-    if (role === 'professional') {
-      const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket.remoteAddress || req.ip);
-      await ActivityLog.create({
-        professional: user._id,
-        action: 'register',
-        actorType: 'professional',
-        ipAddress: clientIp,
-        userAgent: req.headers['user-agent']
-      });
-
-      // Notify Admin of new registration
-      try {
-        const adminEmail = config.payment && config.payment.adminEmail ? config.payment.adminEmail : 'admin@drsrv.net.ar';
-        await sendEmail({
-          email: adminEmail,
-          subject: 'SexAppeal - New Professional Registration',
-          message: isExpressRegistration
-            ? `Express registration (minimal signup): ${email}\nPhone: ${mobilePhone}\nBirth date: ${birthDate} (age ${age})\nAlias (temp): ${alias}\n\nComplete profile and upload gallery photos in Admin before approving.`
-            : `A new professional has registered: ${email}\nRole: ${role}\nVerification Status: ${user.verificationStatus}`
-        });
-      } catch (err) { console.error('Failed to notify admin:', err.message); }
-    }
-
-    if (isGuestRegistration) {
-      const clientIp = getClientIp(req);
-      await ActivityLog.create({
-        professional: user._id,
-        action: 'register',
-        actorType: 'guest',
-        isGuest: true,
-        ipAddress: clientIp,
-        userAgent: req.headers['user-agent'],
-        details: { alias, registrationMode: 'guest' }
-      }).catch((err) => console.error('Failed to log guest registration:', err.message));
-    }
-
-    // Craft a luxurious welcome message specifically for professionals
+    // Verification email must succeed — otherwise rollback pending account
     let emailSubject = 'SexAppeal Platform - Email Verification Code';
     let emailMessage = `Welcome to the SexAppeal Platform!\n\nYour verification code is: ${verificationCode}\n\nThis code will expire in ${config.verificationCodeExpireMinutes} minutes.`;
 
@@ -338,9 +302,13 @@ After verification you can browse the collection and participate as a guest.
         message: emailMessage
       });
     } catch (err) {
-      console.error('Email error:', err);
-      // In production, we might want to fail, but for now we just log it
-      // so the registration can proceed and we can test the rest of the flow.
+      console.error('Email error:', err.message || err);
+      await rollbackPendingUser(user._id);
+      return res.status(503).json({
+        success: false,
+        code: err.code === 'EMAIL_NOT_CONFIGURED' ? 'EMAIL_NOT_CONFIGURED' : 'EMAIL_SEND_FAILED',
+        error: 'We could not send the verification email. Your registration was not saved — please try again and check spam/junk.'
+      });
     }
 
     const responsePayload = {
@@ -374,25 +342,160 @@ exports.verifyEmail = async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'Please provide email and code' });
     }
 
-    const user = await User.findOne({ 
-      email,
-      emailVerificationCode: code,
-      emailVerificationCodeExpire: { $gt: Date.now() } // Ensure code is not expired
-    });
+    const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(400).json({ success: false, error: 'Invalid or expired verification code' });
+      return res.status(400).json({
+        success: false,
+        code: 'INVALID_VERIFY_CODE',
+        error: 'Invalid verification code'
+      });
     }
 
-    // Mark as verified, log them in, and clean up the database fields
+    if (user.isEmailVerified) {
+      return res.status(400).json({
+        success: false,
+        code: 'EMAIL_ALREADY_VERIFIED',
+        error: 'This email is already verified. You can sign in.'
+      });
+    }
+
+    if (!user.emailVerificationCode || user.emailVerificationCode !== String(code).trim()) {
+      return res.status(400).json({
+        success: false,
+        code: 'INVALID_VERIFY_CODE',
+        error: 'Invalid verification code'
+      });
+    }
+
+    if (!user.emailVerificationCodeExpire || user.emailVerificationCodeExpire.getTime() <= Date.now()) {
+      await rollbackPendingUser(user._id);
+      return res.status(400).json({
+        success: false,
+        code: 'VERIFY_CODE_EXPIRED',
+        error: 'Your verification code has expired. Please register again.'
+      });
+    }
+
     user.isEmailVerified = true;
     user.emailVerificationCode = undefined;
     user.emailVerificationCodeExpire = undefined;
     await user.save();
 
+    const clientIp = getClientIp(req);
+
+    if (user.role === 'professional' && user.professionalProfile?.services?.length > 0) {
+      const specialtyDocs = user.professionalProfile.services.map((s) => ({
+        user: user._id,
+        specialty: s
+      }));
+      await Specialty.insertMany(specialtyDocs).catch((err) => console.error('Failed to sync specialties table:', err.message));
+    }
+
+    if (user.role === 'professional') {
+      await ActivityLog.create({
+        professional: user._id,
+        action: 'register',
+        actorType: 'professional',
+        ipAddress: clientIp,
+        userAgent: req.headers['user-agent']
+      }).catch((err) => console.error('Failed to log professional registration:', err.message));
+
+      try {
+        const adminEmail = config.payment?.adminEmail || 'admin@drsrv.net.ar';
+        const prof = user.professionalProfile || {};
+        const express = prof.expressRegistration || user.registrationMode === 'express';
+        await sendEmail({
+          email: adminEmail,
+          subject: 'SexAppeal - New Professional Registration',
+          message: express
+            ? `Express registration verified: ${email}\nPhone: ${prof.mobilePhone || '—'}\nAlias (temp): ${prof.alias || '—'}\n\nComplete profile and upload gallery photos in Admin before approving.`
+            : `A new professional verified their email: ${email}\nVerification Status: ${user.verificationStatus}`
+        });
+      } catch (err) {
+        console.error('Failed to notify admin:', err.message);
+      }
+    } else if (user.role === 'user' && user.registrationMode === 'guest') {
+      await ActivityLog.create({
+        professional: user._id,
+        action: 'register',
+        actorType: 'guest',
+        isGuest: true,
+        ipAddress: clientIp,
+        userAgent: req.headers['user-agent'],
+        details: { alias: user.name, registrationMode: 'guest' }
+      }).catch((err) => console.error('Failed to log guest registration:', err.message));
+    }
+
     sendTokenResponse(user, 200, res);
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Resend email verification code
+// @route   POST /api/v1/auth/resend-verification
+// @access  Public
+exports.resendVerificationCode = async (req, res) => {
+  try {
+    let { email } = req.body;
+    if (email) email = email.toLowerCase().trim();
+
+    if (!email) {
+      return res.status(400).json({ success: false, error: 'Please provide an email address.' });
+    }
+
+    await purgeExpiredUnverifiedUsers(email);
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        code: 'REGISTRATION_NOT_FOUND',
+        error: 'No pending registration found. Please register again.'
+      });
+    }
+
+    if (user.isEmailVerified) {
+      return res.status(400).json({
+        success: false,
+        code: 'EMAIL_ALREADY_VERIFIED',
+        error: 'This email is already verified. You can sign in.'
+      });
+    }
+
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    user.emailVerificationCode = verificationCode;
+    user.emailVerificationCodeExpire = new Date(Date.now() + config.verificationCodeExpireMinutes * 60 * 1000);
+    await user.save({ validateBeforeSave: false });
+
+    const subject = user.role === 'professional'
+      ? 'SexAppeal — nuevo código de verificación'
+      : 'SexAppeal — verification code';
+    const message = `Your verification code is: ${verificationCode}
+
+This code expires in ${config.verificationCodeExpireMinutes} minutes.
+
+If you did not request this, you can ignore this email.`;
+
+    await sendEmail({
+      email: user.email,
+      subject,
+      message
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Verification code sent. Please check your inbox and spam folder.'
+    });
+  } catch (err) {
+    console.error('Resend verification error:', err.message || err);
+    return res.status(503).json({
+      success: false,
+      code: err.code === 'EMAIL_NOT_CONFIGURED' ? 'EMAIL_NOT_CONFIGURED' : 'EMAIL_SEND_FAILED',
+      error: 'Could not send email right now. Please try again in a few minutes.'
+    });
   }
 };
 
@@ -405,8 +508,17 @@ exports.checkEmailRegistered = async (req, res) => {
     if (!email || !/.+@.+\..+/.test(email)) {
       return res.status(400).json({ success: false, error: 'Please provide a valid email.' });
     }
-    const registered = Boolean(await User.exists({ email }));
-    return res.status(200).json({ success: true, data: { registered } });
+    await purgeExpiredUnverifiedUsers(email);
+    const registered = await isEmailFullyRegistered(email);
+    const pendingVerification = Boolean(await User.exists({
+      email,
+      isEmailVerified: false,
+      emailVerificationCodeExpire: { $gt: new Date() }
+    }));
+    return res.status(200).json({
+      success: true,
+      data: { registered, pendingVerification }
+    });
   } catch (error) {
     return res.status(500).json({ success: false, error: error.message });
   }

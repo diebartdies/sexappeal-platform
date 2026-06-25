@@ -313,6 +313,48 @@ export function initAuthForms() {
 // Register — handled in registerProfessional.js
 
 // Verify
+async function resendVerificationCode(email, alertEl) {
+    const res = await fetch(`${API_URL}/auth/resend-verification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+    });
+    let data = {};
+    try {
+        data = await res.json();
+    } catch {
+        showAlert(alertEl, t('Server connection error'));
+        return false;
+    }
+    if (!data.success) {
+        if (data.code === 'REGISTRATION_NOT_FOUND') {
+            showAlert(alertEl, t('No pending registration found. Please register again.'), true);
+            return false;
+        }
+        showAlert(alertEl, t(data.error || 'Could not send email right now. Please try again in a few minutes.'));
+        return false;
+    }
+    showAlert(alertEl, t('Verification code sent. Please check your inbox and spam folder.'), false);
+    const codeEl = document.getElementById('verifyCode');
+    if (codeEl) codeEl.value = '';
+    codeEl?.focus();
+    return true;
+}
+
+function showExpiredVerifyPrompt(alertEl, email) {
+    if (!alertEl) return;
+    alertEl.classList.remove('hidden');
+    alertEl.style.color = 'var(--accent-red)';
+    alertEl.innerHTML = `
+        <p><strong>${t('Your verification code has expired.')}</strong></p>
+        <p style="margin-top:8px;font-size:0.92rem;">${t('This registration was removed. Please sign up again.')}</p>
+        <div class="recovery-error-actions">
+            <a href="${appPath('register.html')}">${t('Register again')}</a>
+        </div>
+    `;
+    alertEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
 const verifyForm = document.getElementById('verifyForm');
 if (verifyForm) {
     // Extract email from URL parameters
@@ -324,6 +366,31 @@ if (verifyForm) {
     if (emailInput && emailFromUrl) {
         emailInput.value = emailFromUrl;
     }
+
+    if (urlParams.get('emailWarning') === '1') {
+        const alert = document.getElementById('verifyAlert');
+        showAlert(
+            alert,
+            t('We could not send the verification email. Check spam/junk or tap "Send new code" below.'),
+            true
+        );
+    }
+
+    document.getElementById('verifyResendBtn')?.addEventListener('click', async () => {
+        const alert = document.getElementById('verifyAlert');
+        const email = (emailInput && emailInput.value.trim()) || emailFromUrl || '';
+        if (!email) {
+            showAlert(alert, t('Please provide an email address'), true);
+            return;
+        }
+        const btn = document.getElementById('verifyResendBtn');
+        if (btn) btn.disabled = true;
+        try {
+            await resendVerificationCode(email, alert);
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    });
 
     verifyForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -374,8 +441,10 @@ if (verifyForm) {
                 } else {
                     window.location.replace('/categories.html');
                 }
+            } else if (data.code === 'VERIFY_CODE_EXPIRED') {
+                showExpiredVerifyPrompt(alert, email);
             } else {
-                showAlert(alert, data.error || 'Invalid code', true, 'verifyCode');
+                showAlert(alert, t(data.error || 'Invalid code'), true, 'verifyCode');
             }
         } catch (err) {
             showAlert(alert, 'Server connection error');

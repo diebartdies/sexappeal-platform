@@ -6,6 +6,15 @@ const connectDB = async (retries = 5, delay = 5000) => {
     try {
       const conn = await mongoose.connect(config.mongoUri);
       console.log(`MongoDB Connected: ${conn.connection.host}`);
+      try {
+        const { purgeExpiredUnverifiedUsers } = require('../utils/pendingRegistration');
+        const removed = await purgeExpiredUnverifiedUsers();
+        if (removed > 0) {
+          console.log(`Purged ${removed} expired unverified registration(s).`);
+        }
+      } catch (purgeErr) {
+        console.warn('Could not purge expired registrations:', purgeErr.message);
+      }
       return;
     } catch (error) {
       console.error(`Error connecting to MongoDB: ${error.message}`);
