@@ -1231,6 +1231,135 @@ export async function loadDashboard() {
 
 let currentLogFilters = {};
 let currentLogBaseFilters = {};
+let cachedActivityLogs = [];
+let selectedLogId = '';
+
+function formatLogShortWhen(value) {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
+    const now = new Date();
+    const sameDay = d.toDateString() === now.toDateString();
+    return sameDay
+        ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : d.toLocaleDateString();
+}
+
+function getFilteredActivityLogs() {
+    const q = (document.getElementById('logSearch')?.value || '').trim().toLowerCase();
+    if (!q) return cachedActivityLogs;
+    return cachedActivityLogs.filter((log) => {
+        const hay = [
+            formatLogActor(log),
+            log.action,
+            log.ipAddress,
+            log.userAgent,
+            log.details?.reason,
+            log.details?.userEmail,
+            log.professional?.email,
+            log.professional?.professionalProfile?.alias,
+            log.actorType
+        ].filter(Boolean).join(' ').toLowerCase();
+        return hay.includes(q);
+    });
+}
+
+function renderActivityLogList() {
+    const list = document.getElementById('logsThreadList');
+    if (!list) return;
+
+    const logs = getFilteredActivityLogs();
+    if (!logs.length) {
+        list.innerHTML = `<p class="wa-empty">${t('No logs found.')}</p>`;
+        return;
+    }
+
+    list.innerHTML = logs.map((log) => {
+        const id = String(log._id || '');
+        const actor = formatLogActor(log);
+        const action = log.action || '';
+        const active = id === String(selectedLogId) ? ' is-active' : '';
+        const highlight = log.highlight ? ' is-highlighted' : '';
+        const highlightBadge = log.highlight
+            ? `<span class="log-badge-highlight">${t('Highlighted')}</span>`
+            : '';
+        const actorBadge = log.actorType
+            ? `<span class="log-badge-actor">${escapeHtml(actorTypeLabel(log.actorType))}</span>`
+            : '';
+        return `<button type="button" class="wa-thread-item${active}${highlight}" data-log-id="${escapeHtml(id)}">
+            <div class="wa-thread-top">
+                <span class="wa-thread-name">${escapeHtml(actor)}</span>
+                <span class="wa-thread-time">${escapeHtml(formatLogShortWhen(log.createdAt))}</span>
+            </div>
+            <div class="wa-thread-preview">${escapeHtml(action)}</div>
+            ${highlightBadge}${actorBadge}
+        </button>`;
+    }).join('');
+
+    list.querySelectorAll('.wa-thread-item').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            selectedLogId = btn.dataset.logId || '';
+            renderActivityLogList();
+            renderActivityLogDetail();
+        });
+    });
+}
+
+function renderActivityLogDetail() {
+    const view = document.getElementById('logsThreadView');
+    if (!view) return;
+
+    const log = cachedActivityLogs.find((entry) => String(entry._id) === String(selectedLogId));
+    if (!log) {
+        view.innerHTML = `<div class="wa-thread-placeholder"><p>${t('Select a log entry to view details.')}</p></div>`;
+        return;
+    }
+
+    const actor = formatLogActor(log);
+    const when = new Date(log.createdAt).toLocaleString();
+    const reason = log.details?.reason;
+    let actionHtml = escapeHtml(log.action || '—');
+    if (reason) {
+        actionHtml += ` <span style="color:#8696a0;">(${escapeHtml(reason)})</span>`;
+    }
+
+    const detailsJson = log.details && Object.keys(log.details).length
+        ? `<div class="wa-msg wa-msg-in log-details-bubble">
+            <span class="log-detail-label">${t('Details')}</span>
+            <pre>${escapeHtml(JSON.stringify(log.details, null, 2))}</pre>
+        </div>`
+        : '';
+
+    const bubbleClass = log.action && log.action.startsWith('admin_') ? 'wa-msg-out' : 'wa-msg-in';
+    const metaParts = [actorTypeLabel(log.actorType)];
+    if (log.highlight) metaParts.push(t('Highlighted'));
+
+    view.innerHTML = `
+        <div class="wa-thread-header">
+            <h2>${escapeHtml(log.action || '—')}</h2>
+            <p>${escapeHtml(actor)} · ${escapeHtml(when)}</p>
+        </div>
+        <div class="wa-msg ${bubbleClass}">
+            <span class="log-detail-label">${t('Action')}</span>
+            <div>${actionHtml}</div>
+            <div class="wa-msg-meta">${escapeHtml(metaParts.filter(Boolean).join(' · '))}</div>
+        </div>
+        <div class="wa-msg wa-msg-in">
+            <span class="log-detail-label">${t('Actor')}</span>
+            <div>${escapeHtml(actor)}</div>
+        </div>
+        <div class="wa-msg wa-msg-in">
+            <span class="log-detail-label">${t('IP Address')}</span>
+            <div>${escapeHtml(log.ipAddress || 'N/A')}</div>
+        </div>
+        <div class="wa-msg wa-msg-in">
+            <span class="log-detail-label">${t('User Agent')}</span>
+            <div>${escapeHtml(log.userAgent || 'N/A')}</div>
+        </div>
+        ${detailsJson}`;
+
+    view.scrollTop = 0;
+}
 
 const LOG_ACTOR_TYPE_LABELS = {
     admin: 'Admin',
@@ -1365,70 +1494,77 @@ export async function openActivityLogsModal(title = 'Activity Logs', baseFilters
     let modal = document.getElementById('logsModal');
     currentLogBaseFilters = baseFilters;
     currentLogFilters = { ...baseFilters };
+    selectedLogId = '';
 
     if (!modal) {
         modal = document.createElement('div');
-        Object.assign(modal.style, {
-    
-            position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
-            backgroundColor: 'rgba(0,0,0,0.9)', zIndex: '3000', display: 'flex',
-            flexDirection: 'column', padding: '20px', overflowY: 'auto'
-        });
+        modal.id = 'logsModal';
+        modal.className = 'logs-modal-overlay';
 
         const closeBar = createAdminModalCloseBar({
             maxWidth: '1200px',
             onClick: () => closeAdminOverlay(modal)
         });
 
-        const container = document.createElement('div');
-        Object.assign(container.style, {
-            backgroundColor: 'var(--dark-bg, #1a1a1a)', padding: '20px',
-            borderRadius: '8px', color: 'white', maxWidth: '1200px', margin: '0 auto', width: '100%'
-        });
+        const panel = document.createElement('div');
+        panel.className = 'logs-modal-panel';
 
-        container.innerHTML = `
-            <h2 id="logsModalTitle" class="gold-text" style="margin-bottom: 20px;">${title}</h2>
-            <div style="display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;">
-                <select id="logFilterActor" style="padding: 8px; border-radius: 4px; border: 1px solid #333; background: #222; color: white; min-width: 160px;">
+        panel.innerHTML = `
+            <header class="wa-inbox-header">
+                <div class="wa-inbox-header-main">
+                    <h2 id="logsModalTitle">${escapeHtml(title)}</h2>
+                    <p id="logsModalSubtitle">${t('Activity trail for admins, professionals, guests and registration visitors.')}</p>
+                </div>
+                <div class="wa-inbox-header-actions">
+                    <button type="button" class="wa-btn" id="logsRefreshBtn">${t('Refresh')}</button>
+                </div>
+            </header>
+
+            <div id="logsModalAlert" class="wa-inbox-alert hidden" role="alert"></div>
+
+            <div class="wa-inbox-meta">
+                <p id="logFilterStats">—</p>
+            </div>
+
+            <div class="wa-inbox-toolbar">
+                <input type="search" id="logSearch" class="wa-inbox-search" placeholder="${t('Search actor, action, IP…')}" autocomplete="off">
+                <select id="logFilterActor" class="wa-inbox-select">
                     <option value="">${t('All actors')}</option>
                 </select>
-                <select id="logFilterAction" style="padding: 8px; border-radius: 4px; border: 1px solid #333; background: #222; color: white; min-width: 180px;">
+                <select id="logFilterAction" class="wa-inbox-select">
                     <option value="">${t('All actions')}</option>
                 </select>
-                <select id="logFilterIp" style="padding: 8px; border-radius: 4px; border: 1px solid #333; background: #222; color: white; min-width: 140px;">
+                <select id="logFilterIp" class="wa-inbox-select">
                     <option value="">${t('All IPs')}</option>
                 </select>
-                <select id="logFilterAgent" style="padding: 8px; border-radius: 4px; border: 1px solid #333; background: #222; color: white; min-width: 220px; max-width: 320px;">
+                <select id="logFilterAgent" class="wa-inbox-select">
                     <option value="">${t('All user agents')}</option>
                 </select>
-                <select id="logFilterHighlight" style="padding: 8px; border-radius: 4px; border: 1px solid #333; background: #222; color: white; min-width: 160px;">
+                <select id="logFilterHighlight" class="wa-inbox-select">
                     <option value="">${t('All rows')}</option>
                     <option value="true">${t('Highlighted only')}</option>
                     <option value="false">${t('Normal only')}</option>
                 </select>
-                <button id="applyLogFiltersBtn">${t('Apply Filters')}</button>
-                <button id="clearLogFiltersBtn">${t('Clear')}</button>
+                <div class="logs-toolbar-actions">
+                    <button type="button" class="wa-btn" id="applyLogFiltersBtn">${t('Apply Filters')}</button>
+                    <button type="button" class="wa-btn" id="clearLogFiltersBtn">${t('Clear')}</button>
+                </div>
             </div>
-            <p id="logFilterStats" style="color:#888;font-size:0.85rem;margin:0 0 16px;"></p>
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
-                    <thead>
-                        <tr style="border-bottom: 1px solid var(--primary-gold);">
-                            <th style="padding: 10px;">Date</th>
-                            <th style="padding: 10px;">${t('Actor')}</th>
-                            <th style="padding: 10px;">Action</th>
-                            <th style="padding: 10px;">IP Address</th>
-                            <th style="padding: 10px;">User Agent</th>
-                        </tr>
-                    </thead>
-                    <tbody id="logsTableBody">
-                    </tbody>
-                </table>
+
+            <div class="wa-inbox-layout logs-inbox-layout">
+                <aside class="wa-thread-list" id="logsThreadList" aria-label="${t('Activity logs')}">
+                    <p class="wa-empty">${t('Loading...')}</p>
+                </aside>
+                <main class="wa-thread-view" id="logsThreadView" aria-live="polite">
+                    <div class="wa-thread-placeholder">
+                        <p>${t('Select a log entry to view details.')}</p>
+                    </div>
+                </main>
             </div>
         `;
 
         modal.appendChild(closeBar);
-        modal.appendChild(container);
+        modal.appendChild(panel);
         document.body.appendChild(modal);
         applyStaticTranslations(modal);
 
@@ -1438,17 +1574,28 @@ export async function openActivityLogsModal(title = 'Activity Logs', baseFilters
         };
 
         document.getElementById('clearLogFiltersBtn').onclick = () => {
-            ['logFilterAction', 'logFilterActor', 'logFilterIp', 'logFilterAgent', 'logFilterHighlight'].forEach((id) => {
+            ['logFilterAction', 'logFilterActor', 'logFilterIp', 'logFilterAgent', 'logFilterHighlight', 'logSearch'].forEach((id) => {
                 const el = document.getElementById(id);
                 if (el) el.value = '';
             });
             currentLogFilters = { ...currentLogBaseFilters };
             loadActivityLogs();
         };
+
+        document.getElementById('logsRefreshBtn').onclick = () => loadActivityLogs();
+
+        document.getElementById('logSearch')?.addEventListener('input', () => {
+            const filtered = getFilteredActivityLogs();
+            if (selectedLogId && !filtered.some((log) => String(log._id) === String(selectedLogId))) {
+                selectedLogId = filtered[0]?._id ? String(filtered[0]._id) : '';
+            }
+            renderActivityLogList();
+            renderActivityLogDetail();
+        });
     } else {
         const titleEl = document.getElementById('logsModalTitle');
         if (titleEl) titleEl.textContent = title;
-        ['logFilterAction', 'logFilterActor', 'logFilterIp', 'logFilterAgent', 'logFilterHighlight'].forEach((id) => {
+        ['logFilterAction', 'logFilterActor', 'logFilterIp', 'logFilterAgent', 'logFilterHighlight', 'logSearch'].forEach((id) => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
@@ -1460,53 +1607,66 @@ export async function openActivityLogsModal(title = 'Activity Logs', baseFilters
 }
 
 export async function loadActivityLogs() {
-    const tbody = document.getElementById('logsTableBody');
-    tbody.innerHTML = '<tr><td colspan="5" style="padding: 10px; text-align: center;">Loading...</td></tr>';
-    
+    const list = document.getElementById('logsThreadList');
+    const alertEl = document.getElementById('logsModalAlert');
+    if (list) {
+        list.innerHTML = `<p class="wa-empty">${t('Loading...')}</p>`;
+    }
+    if (alertEl) alertEl.classList.add('hidden');
+
     try {
-        const token = localStorage.getItem('token');
         const url = new URL(`${API_URL}/admin/logs`);
-        Object.keys(currentLogFilters).forEach(key => {
+        url.searchParams.set('limit', '100');
+        Object.keys(currentLogFilters).forEach((key) => {
             if (currentLogFilters[key]) url.searchParams.append(key, currentLogFilters[key]);
         });
 
-        // Added credentials: 'include' to ensure auth cookie is sent
-        const res = await fetch(url, { 
+        const res = await fetch(url, {
             headers: authHeaders(),
             credentials: 'include'
         });
         const data = await parseAdminApiResponse(res);
 
         if (data.success) {
-            tbody.innerHTML = '';
-            if (data.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="padding: 10px; text-align: center;">No logs found.</td></tr>';
-                return;
+            cachedActivityLogs = data.data || [];
+            if (!selectedLogId || !cachedActivityLogs.some((log) => String(log._id) === String(selectedLogId))) {
+                selectedLogId = cachedActivityLogs[0]?._id ? String(cachedActivityLogs[0]._id) : '';
             }
-            
-            data.data.forEach(log => {
-                const actorName = formatLogActor(log);
-                const tr = document.createElement('tr');
-                tr.style.borderBottom = '1px solid #333';
-                if (log.highlight) {
-                    tr.style.background = 'rgba(255, 193, 7, 0.12)';
-                    tr.style.borderLeft = '3px solid #ffc107';
-                }
-                tr.innerHTML = `
-                    <td style="padding: 10px;">${new Date(log.createdAt).toLocaleString()}</td>
-                    <td style="padding: 10px;">${escapeHtml(actorName)}</td>
-                    <td style="padding: 10px;">${formatLogActionCell(log)}</td>
-                    <td style="padding: 10px;">${escapeHtml(log.ipAddress || 'N/A')}</td>
-                    <td style="padding: 10px;">${escapeHtml(log.userAgent || 'N/A')}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-            applyStaticTranslations(tbody);
+
+            const statsEl = document.getElementById('logFilterStats');
+            if (statsEl) {
+                const total = data.pagination?.total ?? cachedActivityLogs.length;
+                const shown = cachedActivityLogs.length;
+                const highlighted = cachedActivityLogs.filter((log) => log.highlight).length;
+                statsEl.textContent = `${total} ${t('entries')} · ${shown} ${t('loaded')} · ${highlighted} ${t('highlighted on page')}`;
+            }
+
+            renderActivityLogList();
+            renderActivityLogDetail();
+            applyStaticTranslations(document.getElementById('logsModal'));
         } else {
-            tbody.innerHTML = `<tr><td colspan="5" style="padding: 10px; color: var(--accent-red);">Error: ${data.error}</td></tr>`;
+            cachedActivityLogs = [];
+            selectedLogId = '';
+            if (list) {
+                list.innerHTML = `<p class="wa-empty">${escapeHtml(data.error || t('Could not load logs.'))}</p>`;
+            }
+            renderActivityLogDetail();
+            if (alertEl) {
+                alertEl.textContent = data.error || t('Could not load logs.');
+                alertEl.classList.remove('hidden');
+            }
         }
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="5" style="padding: 10px; color: var(--accent-red);">${err.message || t('Network Error')}</td></tr>`;
+        cachedActivityLogs = [];
+        selectedLogId = '';
+        if (list) {
+            list.innerHTML = `<p class="wa-empty">${escapeHtml(err.message || t('Network Error'))}</p>`;
+        }
+        renderActivityLogDetail();
+        if (alertEl) {
+            alertEl.textContent = err.message || t('Network Error');
+            alertEl.classList.remove('hidden');
+        }
     }
 }
 

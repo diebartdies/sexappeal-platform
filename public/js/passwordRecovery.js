@@ -78,7 +78,7 @@ function showLoginShell(shell) {
     shell.forgotBlock?.classList.remove('hidden');
     shell.proLinks?.classList.remove('hidden');
     inlinePanel?.classList.add('hidden');
-    if (shell.loginHeading) shell.loginHeading.textContent = t('Professional Login');
+    if (shell.loginHeading) shell.loginHeading.textContent = t('Model Login');
 }
 
 function ensureInlinePanel(shell) {

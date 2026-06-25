@@ -25,19 +25,53 @@ function registrationTrackingPayload(extra = {}) {
     };
 }
 
-function redirectToLogin(email) {
+function revealRegisterAlert(alert) {
+    if (!alert) return;
+    alert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function redirectToLogin(email, message) {
+    const alert = document.getElementById('registerAlert');
     const trimmed = String(email || '').trim();
     const q = trimmed ? `?email=${encodeURIComponent(trimmed)}` : '';
-    window.location.href = appPath(`login.html${q}`);
+    const destination = appPath(`login.html${q}`);
+
+    if (message && alert) {
+        showAlert(alert, message, false);
+        revealRegisterAlert(alert);
+        window.setTimeout(() => {
+            window.location.href = destination;
+        }, 1400);
+        return;
+    }
+    window.location.href = destination;
+}
+
+async function getEmailRegistrationStatus(email) {
+    const trimmed = String(email || '').trim().toLowerCase();
+    if (!trimmed || !/.+@.+\..+/.test(trimmed)) return null;
+    try {
+        const res = await fetch(`${API_URL}/auth/check-email?email=${encodeURIComponent(trimmed)}`);
+        const data = await res.json();
+        return data.success ? data.data : null;
+    } catch {
+        return null;
+    }
 }
 
 async function isEmailAlreadyRegistered(email) {
-    const trimmed = String(email || '').trim().toLowerCase();
-    if (!trimmed || !/.+@.+\..+/.test(trimmed)) return false;
-    const res = await fetch(`${API_URL}/auth/check-email?email=${encodeURIComponent(trimmed)}`);
-    const data = await res.json();
+    const status = await getEmailRegistrationStatus(email);
     // Verified professionals/admins block registration; verified guests may upgrade
-    return Boolean(data.success && data.data?.registered);
+    return Boolean(status?.registered);
+}
+
+function goToVerifyPage(email, alert, submitBtn, successMessage) {
+    showAlert(alert, successMessage, false);
+    revealRegisterAlert(alert);
+    if (submitBtn) submitBtn.textContent = t('Registration saved');
+    window.setTimeout(() => {
+        window.location.href = `${appPath('verify.html')}?email=${encodeURIComponent(email)}`;
+    }, 1200);
 }
 
 function setupEmailExistsGuard() {
@@ -289,16 +323,16 @@ function applyRegistrationPageLabels(type = currentRegistrationType || 'professi
     if (!main) return;
 
     const isGuest = type === 'guest';
-    document.title = `SexAppeal - ${t(isGuest ? 'Guest registration' : 'Professional Registration')}`;
+    document.title = `SexAppeal - ${t(isGuest ? 'Guest registration' : 'Model Registration')}`;
 
     const h1 = document.getElementById('regFormTitle') || main.querySelector('#regFormPanel > h1');
-    if (h1) h1.textContent = t(isGuest ? 'Guest registration' : 'Professional Registration');
+    if (h1) h1.textContent = t(isGuest ? 'Guest registration' : 'Model Registration');
 
     const intro = document.getElementById('regFormIntro') || main.querySelector('#regFormPanel > p');
     if (intro) {
         intro.textContent = t(isGuest
             ? 'Email only — optional display name. Confirm your email to browse.'
-            : 'Create your professional profile — first time only. If you already have an account, use Login.');
+            : 'Create your model profile — first time only. If you already have an account, use Login.');
     }
 
     const noPayNote = document.getElementById('regNoPaymentNote');
@@ -543,7 +577,7 @@ function validateRegistrationForm(form) {
     const ageYears = birthValue ? computeAgeFromBirthDate(birthValue) : null;
     if (!birthValue || ageYears === null || ageYears < 18 || ageYears > 99) {
         highlightField(birthEl, true);
-        showAlert(document.getElementById('registerAlert'), t('You must be at least 18 years old to register as a professional.'), true, 'regBirthDate');
+        showAlert(document.getElementById('registerAlert'), t('You must be at least 18 years old to register as a model.'), true, 'regBirthDate');
         return false;
     }
 
@@ -591,7 +625,7 @@ function setupInstructions(type = currentRegistrationType || 'professional') {
     host.innerHTML = `
         <h3 class="gold-text" style="margin-top:0;">${t('Quick registration')}</h3>
         <p style="font-size:0.95rem;line-height:1.5;margin:0 0 12px;">${t('Use Google for instant access (no verification code), or fill in email, phone and birth date below. Our team completes your profile and uploads your photos.')}</p>
-        <p style="font-size:0.88rem;line-height:1.5;margin:0 0 12px;color:#8fdfb0;">${t('Already browsing as a guest? You can register here as a professional with the same email.')}</p>
+        <p style="font-size:0.88rem;line-height:1.5;margin:0 0 12px;color:#8fdfb0;">${t('Already browsing as a guest? You can register here as a model with the same email.')}</p>
         <ol style="font-size:0.9rem;margin:0 0 0 20px;line-height:1.6;padding:0;">
             <li>${t('Sign in with Google, or fill in the fields below.')}</li>
             <li>${t('If you used email: confirm with the 6-digit code we send you.')}</li>
@@ -629,10 +663,18 @@ export function initProfessionalRegistration() {
         const emailValue = document.getElementById('regEmail').value.trim();
         formData.append('email', emailValue);
 
-        if (await isEmailAlreadyRegistered(emailValue)) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = originalText;
-            redirectToLogin(emailValue);
+        const emailStatus = await getEmailRegistrationStatus(emailValue);
+        if (emailStatus?.registered) {
+            redirectToLogin(emailValue, t('This email is already registered. Redirecting to sign in...'));
+            return;
+        }
+        if (emailStatus?.pendingVerification) {
+            goToVerifyPage(
+                emailValue,
+                alert,
+                submitBtn,
+                t('We already sent a verification code to this email. Taking you to verification...')
+            );
             return;
         }
 
@@ -649,31 +691,59 @@ export function initProfessionalRegistration() {
             formData.append('birthDate', getBirthDateIsoValue());
         }
 
+        let navigated = false;
         try {
             const res = await fetch(`${API_URL}/auth/register`, { method: 'POST', body: formData });
-            const data = await res.json();
+            let data = {};
+            try {
+                data = await res.json();
+            } catch {
+                showAlert(alert, t('Server connection error'));
+                revealRegisterAlert(alert);
+                return;
+            }
+
             if (data.success) {
                 if (data.token) {
+                    navigated = true;
                     localStorage.setItem('token', data.token);
                     localStorage.setItem('is18Plus', 'true');
                     sessionStorage.setItem('valid_entry', 'true');
                     if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
-                    redirectAfterLogin(data.user || {});
-                } else {
-                    window.location.href = `${appPath('verify.html')}?email=${encodeURIComponent(emailValue)}`;
+                    showAlert(alert, t('Registration complete! Redirecting to your panel...'), false);
+                    revealRegisterAlert(alert);
+                    submitBtn.textContent = t('Registration saved');
+                    window.setTimeout(() => redirectAfterLogin(data.user || {}), 800);
+                    return;
                 }
-            } else if (data.code === 'EMAIL_SEND_FAILED' || data.code === 'EMAIL_NOT_CONFIGURED') {
-                showAlert(alert, t(data.error || 'We could not send the verification email. Your registration was not saved — please try again.'));
+                navigated = true;
+                goToVerifyPage(
+                    emailValue,
+                    alert,
+                    submitBtn,
+                    t('Registration saved! Check your email for the 6-digit code (also spam/junk). Redirecting...')
+                );
+                return;
+            }
+
+            if (data.code === 'EMAIL_SEND_FAILED' || data.code === 'EMAIL_NOT_CONFIGURED') {
+                showAlert(alert, t(data.error || 'We could not send the verification email. Your registration was not saved — please try again and check spam/junk.'));
             } else if (data.code === 'EMAIL_ALREADY_REGISTERED') {
-                redirectToLogin(emailValue);
+                redirectToLogin(emailValue, t('This email is already registered. Redirecting to sign in...'));
+                navigated = true;
+                return;
             } else {
                 showAlert(alert, data.error || t('Registration failed'));
             }
+            revealRegisterAlert(alert);
         } catch {
             showAlert(alert, t('Server connection error'));
+            revealRegisterAlert(alert);
         } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = originalText;
+            if (!navigated) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
         }
     });
 

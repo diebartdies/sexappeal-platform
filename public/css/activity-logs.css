@@ -1,0 +1,130 @@
+/* Activity logs modal — same visual language as WhatsApp inbox */
+
+.logs-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    display: none;
+    flex-direction: column;
+    padding: 16px 20px 20px;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.92);
+    box-sizing: border-box;
+}
+
+.logs-modal-overlay.admin-overlay-modal {
+    display: flex;
+}
+
+.logs-modal-panel {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--wa-border, #2a3942);
+    background: var(--wa-bg, #0b141a);
+    color: var(--wa-text, #e9edef);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.logs-modal-panel .wa-inbox-header {
+    border-radius: 0;
+}
+
+.logs-modal-panel .wa-inbox-header h2 {
+    margin: 0 0 4px;
+    font-size: 1.35rem;
+    color: var(--wa-gold, #d4af37);
+    font-family: inherit;
+}
+
+.logs-inbox-layout {
+    min-height: min(560px, calc(100vh - 320px));
+    max-height: calc(100vh - 280px);
+}
+
+.logs-inbox-layout .wa-thread-list,
+.logs-inbox-layout .wa-thread-view {
+    max-height: calc(100vh - 280px);
+}
+
+.logs-modal-panel .wa-thread-item.is-highlighted:not(.is-active) {
+    border-left: 3px solid #ffc107;
+}
+
+.logs-modal-panel .wa-thread-item.is-highlighted.is-active {
+    border-left: 3px solid var(--wa-green, #25d366);
+    box-shadow: inset 3px 0 0 #ffc107;
+}
+
+.log-badge-highlight {
+    display: inline-block;
+    margin-top: 6px;
+    margin-right: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    background: rgba(255, 193, 7, 0.18);
+    color: #ffc107;
+}
+
+.log-badge-actor {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    background: rgba(212, 175, 55, 0.15);
+    color: var(--wa-gold, #d4af37);
+}
+
+.log-details-bubble pre {
+    margin: 8px 0 0;
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.25);
+    font-size: 0.78rem;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #cbd5e1;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.log-detail-label {
+    display: block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 4px;
+}
+
+.logs-toolbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+@media (max-width: 860px) {
+    .logs-modal-overlay {
+        padding: 8px;
+    }
+
+    .logs-inbox-layout {
+        min-height: auto;
+        max-height: none;
+    }
+
+    .logs-inbox-layout .wa-thread-list {
+        max-height: 220px;
+    }
+
+    .logs-inbox-layout .wa-thread-view {
+        max-height: none;
+        min-height: 320px;
+    }
+}

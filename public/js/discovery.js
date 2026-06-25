@@ -299,7 +299,7 @@ export async function loadTreasures(page = 1, append = false, options = {}) {
                 grid.innerHTML = `
                     <div class="card" style="grid-column: 1/-1; text-align: center;">
                         <h3 class="gold-text">${t('No Treasures Found')}</h3>
-                        <p style="margin-bottom: 20px;">${hasFilters ? t('No professionals match your current selection.') : t('No professionals have been revealed yet. Please check back later.')}</p>
+                        <p style="margin-bottom: 20px;">${hasFilters ? t('No models match your current selection.') : t('No models have been revealed yet. Please check back later.')}</p>
                         ${hasFilters ? `<button onclick="window.location.href='${appPath('categories.html')}'">${t('Filter Again')}</button>` : ''}
                     </div>
                 `;

@@ -142,7 +142,7 @@ export function injectProfessionalDashboardGuides(content, data, insertRef) {
             <h3 class="gold-text" style="margin-bottom: 15px;">📖 ${t('Welcome Guide & How It Works')}</h3>
             <ul style="line-height: 1.6; color: #ccc; margin-left: 20px; font-size: 0.95rem;">
                 <li style="margin-bottom: 10px;"><strong>${t('Free evaluation month:')}</strong> ${t('Your first 30 days are free. During this period your profile appears in a random category so you can experience how visibility works.')}</li>
-                <li style="margin-bottom: 10px;"><strong>${t('Your chosen category:')}</strong> ${t('After approval, choose your category and specialties in your professional dashboard. After your first validated payment, you move to that category rate.')}</li>
+                <li style="margin-bottom: 10px;"><strong>${t('Your chosen category:')}</strong> ${t('After approval, choose your category and specialties in your model dashboard. After your first validated payment, you move to that category rate.')}</li>
                 <li style="margin-bottom: 10px;"><strong>${t('Vacations:')}</strong> ${t('While on vacation your profile shows as inactive. Up to 15 vacation days per month are discounted from your monthly balance.')}</li>
                 <li style="margin-bottom: 10px;"><strong>${t('Monthly payment:')}</strong> ${t('Use Pago mensual to upload your receipt. Tap Cómo pagar for transfer details.')}</li>
                 <li style="margin-bottom: 10px;"><strong>${t('Privacy Guarantee:')}</strong> ${t('Our platform uses zero cookies and zero third-party trackers. Your identity and client interactions remain completely confidential.')}</li>

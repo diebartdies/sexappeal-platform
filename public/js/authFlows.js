@@ -61,10 +61,10 @@ function showLoginFailure(alert, data, email) {
     if (data.code === 'USER_NOT_FOUND') {
         alert.innerHTML = `
             <p><strong>${t('No account found with this email address.')}</strong></p>
-            <p style="margin-top:8px;font-size:0.92rem;">${t('Did you mistype your email? Check it and try again, or register as a professional.')}</p>
+            <p style="margin-top:8px;font-size:0.92rem;">${t('Did you mistype your email? Check it and try again, or register as a model.')}</p>
             <div class="login-error-actions">
                 <button type="button" data-login-retry="email">${t('Try again')}</button>
-                <a href="${appPath('register.html')}">${t('Professional Registration')}</a>
+                <a href="${appPath('register.html')}">${t('Model Registration')}</a>
             </div>
         `;
         alert.querySelector('[data-login-retry="email"]')?.addEventListener('click', () => {
@@ -267,6 +267,7 @@ export function setupLandingPageAgeGate() {
         document.documentElement.classList.remove('page-pending');
         resetLandingEnterButton();
         applyStaticTranslations(document.getElementById('landing') || document.body);
+        applyStaticTranslations(document.getElementById('landingAdvantages'));
     });
 
     whenDomReady(() => {
