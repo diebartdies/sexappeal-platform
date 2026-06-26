@@ -1305,6 +1305,23 @@ function renderActivityLogList() {
     });
 }
 
+function formatLogDetailsGrouped(details) {
+    if (!details || !Object.keys(details).length) return '';
+
+    const rows = Object.entries(details).map(([key, val]) => {
+        const display = typeof val === 'object' ? JSON.stringify(val) : String(val ?? '');
+        return `<div class="log-detail-field">
+            <span class="log-detail-label">${escapeHtml(key)}</span>
+            <div class="log-detail-value">${escapeHtml(display)}</div>
+        </div>`;
+    }).join('');
+
+    return `<div class="log-detail-section">
+        <span class="log-detail-section-title">${t('Details')}</span>
+        <div class="log-detail-grid log-detail-grid--compact">${rows}</div>
+    </div>`;
+}
+
 function renderActivityLogDetail() {
     const view = document.getElementById('logsThreadView');
     if (!view) return;
@@ -1323,14 +1340,6 @@ function renderActivityLogDetail() {
         actionHtml += ` <span style="color:#8696a0;">(${escapeHtml(reason)})</span>`;
     }
 
-    const detailsJson = log.details && Object.keys(log.details).length
-        ? `<div class="wa-msg wa-msg-in log-details-bubble">
-            <span class="log-detail-label">${t('Details')}</span>
-            <pre>${escapeHtml(JSON.stringify(log.details, null, 2))}</pre>
-        </div>`
-        : '';
-
-    const bubbleClass = log.action && log.action.startsWith('admin_') ? 'wa-msg-out' : 'wa-msg-in';
     const metaParts = [actorTypeLabel(log.actorType)];
     if (log.highlight) metaParts.push(t('Highlighted'));
 
@@ -1339,24 +1348,35 @@ function renderActivityLogDetail() {
             <h2>${escapeHtml(log.action || '—')}</h2>
             <p>${escapeHtml(actor)} · ${escapeHtml(when)}</p>
         </div>
-        <div class="wa-msg ${bubbleClass}">
-            <span class="log-detail-label">${t('Action')}</span>
-            <div>${actionHtml}</div>
-            <div class="wa-msg-meta">${escapeHtml(metaParts.filter(Boolean).join(' · '))}</div>
-        </div>
-        <div class="wa-msg wa-msg-in">
-            <span class="log-detail-label">${t('Actor')}</span>
-            <div>${escapeHtml(actor)}</div>
-        </div>
-        <div class="wa-msg wa-msg-in">
-            <span class="log-detail-label">${t('IP Address')}</span>
-            <div>${escapeHtml(log.ipAddress || 'N/A')}</div>
-        </div>
-        <div class="wa-msg wa-msg-in">
-            <span class="log-detail-label">${t('User Agent')}</span>
-            <div>${escapeHtml(log.userAgent || 'N/A')}</div>
-        </div>
-        ${detailsJson}`;
+        <div class="log-detail-card">
+            <div class="log-detail-grid">
+                <div class="log-detail-field log-detail-field--full">
+                    <span class="log-detail-label">${t('Action')}</span>
+                    <div class="log-detail-value log-detail-value--action">${actionHtml}</div>
+                </div>
+                <div class="log-detail-field">
+                    <span class="log-detail-label">${t('Actor')}</span>
+                    <div class="log-detail-value">${escapeHtml(actor)}</div>
+                </div>
+                <div class="log-detail-field">
+                    <span class="log-detail-label">${t('When')}</span>
+                    <div class="log-detail-value">${escapeHtml(when)}</div>
+                </div>
+                <div class="log-detail-field">
+                    <span class="log-detail-label">${t('Type')}</span>
+                    <div class="log-detail-value">${escapeHtml(metaParts.filter(Boolean).join(' · '))}</div>
+                </div>
+                <div class="log-detail-field">
+                    <span class="log-detail-label">${t('IP Address')}</span>
+                    <div class="log-detail-value log-detail-mono">${escapeHtml(log.ipAddress || 'N/A')}</div>
+                </div>
+                <div class="log-detail-field log-detail-field--full">
+                    <span class="log-detail-label">${t('User Agent')}</span>
+                    <div class="log-detail-value log-detail-muted log-detail-wrap">${escapeHtml(log.userAgent || 'N/A')}</div>
+                </div>
+            </div>
+            ${formatLogDetailsGrouped(log.details)}
+        </div>`;
 
     view.scrollTop = 0;
 }
@@ -1502,12 +1522,13 @@ export async function openActivityLogsModal(title = 'Activity Logs', baseFilters
         modal.className = 'logs-modal-overlay';
 
         const closeBar = createAdminModalCloseBar({
-            maxWidth: '1200px',
+            maxWidth: '1400px',
             onClick: () => closeAdminOverlay(modal)
         });
 
         const panel = document.createElement('div');
         panel.className = 'logs-modal-panel';
+        panel.setAttribute('data-modal-panel', '');
 
         panel.innerHTML = `
             <header class="wa-inbox-header">

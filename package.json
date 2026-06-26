@@ -21,7 +21,8 @@
     "clean:users": "node scripts/clean-users.js --confirm",
     "clean:users:dry-run": "node scripts/clean-users.js",
     "clean:users:prod": "node scripts/clean-users.js --confirm --prod",
-    "approve:pending": "node scripts/approve-pending-professionals.js"
+    "approve:pending": "node scripts/approve-pending-professionals.js",
+    "crearQR": "node scripts/crearQR.js"
   },
   "keywords": [],
   "author": "",

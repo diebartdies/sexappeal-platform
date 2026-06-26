@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR — Diego Carloni (LinkedIn)</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0b141a;
+            color: #e9edef;
+            padding: 24px;
+        }
+        .card {
+            width: min(420px, 100%);
+            text-align: center;
+            background: #111b21;
+            border: 1px solid #2a3942;
+            border-radius: 12px;
+            padding: 28px 24px 24px;
+        }
+        h1 {
+            margin: 0 0 8px;
+            font-size: 1.2rem;
+            color: #d4af37;
+        }
+        p {
+            margin: 0 0 20px;
+            font-size: 0.88rem;
+            color: #8696a0;
+            word-break: break-all;
+        }
+        canvas, img {
+            display: block;
+            margin: 0 auto 20px;
+            border-radius: 8px;
+            background: #fff;
+            padding: 12px;
+            max-width: 100%;
+        }
+        .actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        button, a.btn {
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 1px solid #2a3942;
+            background: #202c33;
+            color: #e9edef;
+            text-decoration: none;
+            cursor: pointer;
+            font-size: 0.92rem;
+        }
+        button:hover, a.btn:hover { border-color: #d4af37; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>QR LinkedIn — Diego Carloni</h1>
+        <p id="targetUrl"></p>
+        <canvas id="qr" width="512" height="512" aria-label="Código QR"></canvas>
+        <div class="actions">
+            <button type="button" id="downloadBtn">Descargar PNG</button>
+            <a class="btn" id="openLink" href="#" target="_blank" rel="noopener">Abrir perfil</a>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+    <script>
+        const url = 'https://www.linkedin.com/in/diego-carloni-b374634';
+        const canvas = document.getElementById('qr');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const openLink = document.getElementById('openLink');
+
+        document.getElementById('targetUrl').textContent = url;
+        openLink.href = url;
+
+        QRCode.toCanvas(canvas, url, {
+            width: 512,
+            margin: 2,
+            errorCorrectionLevel: 'M',
+            color: { dark: '#000000', light: '#ffffff' }
+        }, (err) => {
+            if (err) {
+                document.querySelector('.card').innerHTML = '<p>Error generando QR: ' + err.message + '</p>';
+            }
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'qr-linkedin-diego-carloni.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+    </script>
+</body>
+</html>

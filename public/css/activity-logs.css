@@ -1,4 +1,4 @@
-/* Activity logs modal — same visual language as WhatsApp inbox */
+/* Activity logs modal — scroll the whole page, not fixed viewport panes */
 
 .logs-modal-overlay {
     position: fixed;
@@ -6,8 +6,11 @@
     z-index: 3000;
     display: none;
     flex-direction: column;
-    padding: 16px 20px 20px;
+    align-items: stretch;
+    padding: 12px 16px 24px;
+    overflow-x: hidden;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     background: rgba(0, 0, 0, 0.92);
     box-sizing: border-box;
 }
@@ -18,10 +21,10 @@
 
 .logs-modal-panel {
     width: 100%;
-    max-width: 1200px;
+    max-width: min(1400px, 98vw);
     margin: 0 auto;
     border-radius: 10px;
-    overflow: hidden;
+    overflow: visible;
     border: 1px solid var(--wa-border, #2a3942);
     background: var(--wa-bg, #0b141a);
     color: var(--wa-text, #e9edef);
@@ -40,13 +43,32 @@
 }
 
 .logs-inbox-layout {
-    min-height: min(560px, calc(100vh - 320px));
-    max-height: calc(100vh - 280px);
+    display: grid;
+    grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+    align-items: start;
 }
 
-.logs-inbox-layout .wa-thread-list,
-.logs-inbox-layout .wa-thread-view {
-    max-height: calc(100vh - 280px);
+/* Override whatsapp-inbox.css viewport-capped scroll panes */
+.logs-modal-panel .logs-inbox-layout .wa-thread-list,
+.logs-modal-panel .logs-inbox-layout .wa-thread-view {
+    max-height: none !important;
+    height: auto !important;
+    min-height: 0;
+    overflow: visible !important;
+}
+
+.logs-modal-panel .wa-thread-item {
+    padding: 14px 16px;
+}
+
+.logs-modal-panel .wa-thread-preview {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    line-height: 1.35;
 }
 
 .logs-modal-panel .wa-thread-item.is-highlighted:not(.is-active) {
@@ -79,6 +101,69 @@
     color: var(--wa-gold, #d4af37);
 }
 
+.log-detail-card {
+    max-width: 100%;
+    margin: 0;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: var(--wa-panel, #111b21);
+    border: 1px solid var(--wa-border, #2a3942);
+}
+
+.log-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 20px;
+}
+
+.log-detail-grid--compact {
+    margin-top: 10px;
+    padding-top: 12px;
+    border-top: 1px solid var(--wa-border, #2a3942);
+}
+
+.log-detail-field {
+    min-width: 0;
+}
+
+.log-detail-field--full {
+    grid-column: 1 / -1;
+}
+
+.log-detail-section-title {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--wa-gold, #d4af37);
+}
+
+.log-detail-value {
+    font-size: 0.92rem;
+    line-height: 1.45;
+    word-break: break-word;
+}
+
+.log-detail-value--action {
+    font-weight: 600;
+}
+
+.log-detail-mono {
+    font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+    font-size: 0.86rem;
+}
+
+.log-detail-muted {
+    color: var(--wa-muted, #8696a0);
+    font-size: 0.84rem;
+}
+
+.log-detail-wrap {
+    white-space: normal;
+}
+
 .log-details-bubble pre {
     margin: 8px 0 0;
     padding: 10px 12px;
@@ -89,8 +174,6 @@
     white-space: pre-wrap;
     word-break: break-word;
     color: #cbd5e1;
-    max-height: 220px;
-    overflow-y: auto;
 }
 
 .log-detail-label {
@@ -109,22 +192,33 @@
     align-items: center;
 }
 
+.logs-modal-panel .wa-thread-view {
+    padding: 16px 20px;
+}
+
+.logs-modal-panel .wa-thread-view .wa-msg {
+    max-width: 100%;
+}
+
+.logs-modal-panel .wa-thread-header {
+    position: static;
+}
+
 @media (max-width: 860px) {
     .logs-modal-overlay {
-        padding: 8px;
+        padding: 8px 8px 20px;
     }
 
     .logs-inbox-layout {
-        min-height: auto;
-        max-height: none;
+        grid-template-columns: 1fr;
     }
 
-    .logs-inbox-layout .wa-thread-list {
-        max-height: 220px;
+    .logs-modal-panel .logs-inbox-layout .wa-thread-list {
+        border-right: none;
+        border-bottom: 1px solid var(--wa-border, #2a3942);
     }
 
-    .logs-inbox-layout .wa-thread-view {
-        max-height: none;
-        min-height: 320px;
+    .log-detail-grid {
+        grid-template-columns: 1fr;
     }
 }
