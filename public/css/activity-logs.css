@@ -48,6 +48,52 @@
     align-items: start;
 }
 
+.logs-inbox-layout--inline {
+    grid-template-columns: 1fr;
+}
+
+.logs-thread-list-full {
+    border-right: none;
+}
+
+.log-list-row {
+    border-bottom: 1px solid var(--wa-border, #2a3942);
+}
+
+.log-list-row .wa-thread-item {
+    border-bottom: none;
+}
+
+.log-list-row.is-expanded .wa-thread-item {
+    background: var(--wa-panel-2, #202c33);
+}
+
+.log-detail-inline {
+    padding: 0 16px 16px;
+    background: #0a1014;
+    border-top: 1px solid var(--wa-border, #2a3942);
+}
+
+.log-detail-inline-header {
+    padding: 12px 0 10px;
+}
+
+.log-detail-inline-header h3 {
+    margin: 0 0 4px;
+    font-size: 1rem;
+    color: var(--wa-gold, #d4af37);
+}
+
+.log-detail-inline-header p {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--wa-muted, #8696a0);
+}
+
+.log-detail-inline .log-detail-card {
+    margin-top: 0;
+}
+
 /* Override whatsapp-inbox.css viewport-capped scroll panes */
 .logs-modal-panel .logs-inbox-layout .wa-thread-list,
 .logs-modal-panel .logs-inbox-layout .wa-thread-view {

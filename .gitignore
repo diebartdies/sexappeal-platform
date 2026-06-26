@@ -23,6 +23,7 @@ Thumbs.db
 
 # Local Docker overrides
 docker-compose.override.yml
+.tmp/
 
 # Puppeteer / Chrome cache to prevent GitHub large file errors
 .cache/

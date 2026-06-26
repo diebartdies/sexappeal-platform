@@ -1,5 +1,6 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
+if not defined INSTALL_TWILIO set "INSTALL_TWILIO=1"
 
 echo ===================================================
 echo Rebuilding Local SexAppeal Environment...
@@ -35,10 +36,25 @@ if errorlevel 1 (
 
 echo.
 echo [4/4] Building and starting containers...
-docker-compose build
+
+rem Compose on Windows can fail AFTER a successful image build when writing
+rem .tmp-compose-build-metadataFile under %TEMP% (Access is denied). Use a
+rem project-local temp dir and disable bake/provenance attestation.
+if not exist "%~dp0.tmp" mkdir "%~dp0.tmp"
+set "TMP=%~dp0.tmp"
+set "TEMP=%~dp0.tmp"
+set COMPOSE_BAKE=false
+set BUILDX_NO_DEFAULT_ATTESTATIONS=1
+set DOCKER_BUILDKIT=1
+
+docker-compose build --progress=plain
 if errorlevel 1 (
-    echo ERROR: docker-compose build failed.
-    goto end
+    echo WARN: docker-compose build failed — retrying with docker build...
+    docker build -t sexappeal-platform-app --build-arg "INSTALL_TWILIO=%INSTALL_TWILIO%" .
+    if errorlevel 1 (
+        echo ERROR: docker build failed.
+        goto end
+    )
 )
 docker-compose up -d
 if errorlevel 1 (

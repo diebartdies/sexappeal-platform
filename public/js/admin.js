@@ -1264,74 +1264,7 @@ function getFilteredActivityLogs() {
     });
 }
 
-function renderActivityLogList() {
-    const list = document.getElementById('logsThreadList');
-    if (!list) return;
-
-    const logs = getFilteredActivityLogs();
-    if (!logs.length) {
-        list.innerHTML = `<p class="wa-empty">${t('No logs found.')}</p>`;
-        return;
-    }
-
-    list.innerHTML = logs.map((log) => {
-        const id = String(log._id || '');
-        const actor = formatLogActor(log);
-        const action = log.action || '';
-        const active = id === String(selectedLogId) ? ' is-active' : '';
-        const highlight = log.highlight ? ' is-highlighted' : '';
-        const highlightBadge = log.highlight
-            ? `<span class="log-badge-highlight">${t('Highlighted')}</span>`
-            : '';
-        const actorBadge = log.actorType
-            ? `<span class="log-badge-actor">${escapeHtml(actorTypeLabel(log.actorType))}</span>`
-            : '';
-        return `<button type="button" class="wa-thread-item${active}${highlight}" data-log-id="${escapeHtml(id)}">
-            <div class="wa-thread-top">
-                <span class="wa-thread-name">${escapeHtml(actor)}</span>
-                <span class="wa-thread-time">${escapeHtml(formatLogShortWhen(log.createdAt))}</span>
-            </div>
-            <div class="wa-thread-preview">${escapeHtml(action)}</div>
-            ${highlightBadge}${actorBadge}
-        </button>`;
-    }).join('');
-
-    list.querySelectorAll('.wa-thread-item').forEach((btn) => {
-        btn.addEventListener('click', () => {
-            selectedLogId = btn.dataset.logId || '';
-            renderActivityLogList();
-            renderActivityLogDetail();
-        });
-    });
-}
-
-function formatLogDetailsGrouped(details) {
-    if (!details || !Object.keys(details).length) return '';
-
-    const rows = Object.entries(details).map(([key, val]) => {
-        const display = typeof val === 'object' ? JSON.stringify(val) : String(val ?? '');
-        return `<div class="log-detail-field">
-            <span class="log-detail-label">${escapeHtml(key)}</span>
-            <div class="log-detail-value">${escapeHtml(display)}</div>
-        </div>`;
-    }).join('');
-
-    return `<div class="log-detail-section">
-        <span class="log-detail-section-title">${t('Details')}</span>
-        <div class="log-detail-grid log-detail-grid--compact">${rows}</div>
-    </div>`;
-}
-
-function renderActivityLogDetail() {
-    const view = document.getElementById('logsThreadView');
-    if (!view) return;
-
-    const log = cachedActivityLogs.find((entry) => String(entry._id) === String(selectedLogId));
-    if (!log) {
-        view.innerHTML = `<div class="wa-thread-placeholder"><p>${t('Select a log entry to view details.')}</p></div>`;
-        return;
-    }
-
+function buildActivityLogDetailHtml(log) {
     const actor = formatLogActor(log);
     const when = new Date(log.createdAt).toLocaleString();
     const reason = log.details?.reason;
@@ -1343,9 +1276,9 @@ function renderActivityLogDetail() {
     const metaParts = [actorTypeLabel(log.actorType)];
     if (log.highlight) metaParts.push(t('Highlighted'));
 
-    view.innerHTML = `
-        <div class="wa-thread-header">
-            <h2>${escapeHtml(log.action || '—')}</h2>
+    return `
+        <div class="log-detail-inline-header">
+            <h3>${escapeHtml(log.action || '—')}</h3>
             <p>${escapeHtml(actor)} · ${escapeHtml(when)}</p>
         </div>
         <div class="log-detail-card">
@@ -1377,8 +1310,89 @@ function renderActivityLogDetail() {
             </div>
             ${formatLogDetailsGrouped(log.details)}
         </div>`;
+}
 
-    view.scrollTop = 0;
+function scrollExpandedLogDetailIntoView() {
+    const row = document.querySelector('#logsThreadList .log-list-row.is-expanded');
+    if (!row) return;
+    const target = row.querySelector('.log-detail-inline') || row;
+    requestAnimationFrame(() => {
+        target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+}
+
+function renderActivityLogList(scrollToSelection = false) {
+    const list = document.getElementById('logsThreadList');
+    if (!list) return;
+
+    const logs = getFilteredActivityLogs();
+    if (!logs.length) {
+        list.innerHTML = `<p class="wa-empty">${t('No logs found.')}</p>`;
+        return;
+    }
+
+    list.innerHTML = logs.map((log) => {
+        const id = String(log._id || '');
+        const actor = formatLogActor(log);
+        const action = log.action || '';
+        const isSelected = id === String(selectedLogId);
+        const active = isSelected ? ' is-active' : '';
+        const expanded = isSelected ? ' is-expanded' : '';
+        const highlight = log.highlight ? ' is-highlighted' : '';
+        const highlightBadge = log.highlight
+            ? `<span class="log-badge-highlight">${t('Highlighted')}</span>`
+            : '';
+        const actorBadge = log.actorType
+            ? `<span class="log-badge-actor">${escapeHtml(actorTypeLabel(log.actorType))}</span>`
+            : '';
+        const detailHtml = isSelected
+            ? `<div class="log-detail-inline" id="logDetailInline">${buildActivityLogDetailHtml(log)}</div>`
+            : '';
+
+        return `<div class="log-list-row${expanded}${highlight ? ' has-highlight' : ''}">
+            <button type="button" class="wa-thread-item${active}${highlight}" data-log-id="${escapeHtml(id)}" aria-expanded="${isSelected ? 'true' : 'false'}">
+                <div class="wa-thread-top">
+                    <span class="wa-thread-name">${escapeHtml(actor)}</span>
+                    <span class="wa-thread-time">${escapeHtml(formatLogShortWhen(log.createdAt))}</span>
+                </div>
+                <div class="wa-thread-preview">${escapeHtml(action)}</div>
+                ${highlightBadge}${actorBadge}
+            </button>
+            ${detailHtml}
+        </div>`;
+    }).join('');
+
+    list.querySelectorAll('.wa-thread-item').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            selectedLogId = btn.dataset.logId || '';
+            renderActivityLogList(true);
+        });
+    });
+
+    if (scrollToSelection) {
+        scrollExpandedLogDetailIntoView();
+    }
+}
+
+function renderActivityLogDetail() {
+    renderActivityLogList(false);
+}
+
+function formatLogDetailsGrouped(details) {
+    if (!details || !Object.keys(details).length) return '';
+
+    const rows = Object.entries(details).map(([key, val]) => {
+        const display = typeof val === 'object' ? JSON.stringify(val) : String(val ?? '');
+        return `<div class="log-detail-field">
+            <span class="log-detail-label">${escapeHtml(key)}</span>
+            <div class="log-detail-value">${escapeHtml(display)}</div>
+        </div>`;
+    }).join('');
+
+    return `<div class="log-detail-section">
+        <span class="log-detail-section-title">${t('Details')}</span>
+        <div class="log-detail-grid log-detail-grid--compact">${rows}</div>
+    </div>`;
 }
 
 const LOG_ACTOR_TYPE_LABELS = {
@@ -1572,15 +1586,10 @@ export async function openActivityLogsModal(title = 'Activity Logs', baseFilters
                 </div>
             </div>
 
-            <div class="wa-inbox-layout logs-inbox-layout">
-                <aside class="wa-thread-list" id="logsThreadList" aria-label="${t('Activity logs')}">
+            <div class="wa-inbox-layout logs-inbox-layout logs-inbox-layout--inline">
+                <div class="wa-thread-list logs-thread-list-full" id="logsThreadList" aria-label="${t('Activity logs')}">
                     <p class="wa-empty">${t('Loading...')}</p>
-                </aside>
-                <main class="wa-thread-view" id="logsThreadView" aria-live="polite">
-                    <div class="wa-thread-placeholder">
-                        <p>${t('Select a log entry to view details.')}</p>
-                    </div>
-                </main>
+                </div>
             </div>
         `;
 
@@ -1610,8 +1619,7 @@ export async function openActivityLogsModal(title = 'Activity Logs', baseFilters
             if (selectedLogId && !filtered.some((log) => String(log._id) === String(selectedLogId))) {
                 selectedLogId = filtered[0]?._id ? String(filtered[0]._id) : '';
             }
-            renderActivityLogList();
-            renderActivityLogDetail();
+            renderActivityLogList(!!selectedLogId);
         });
     } else {
         const titleEl = document.getElementById('logsModalTitle');
@@ -1662,8 +1670,7 @@ export async function loadActivityLogs() {
                 statsEl.textContent = `${total} ${t('entries')} · ${shown} ${t('loaded')} · ${highlighted} ${t('highlighted on page')}`;
             }
 
-            renderActivityLogList();
-            renderActivityLogDetail();
+            renderActivityLogList(!!selectedLogId);
             applyStaticTranslations(document.getElementById('logsModal'));
         } else {
             cachedActivityLogs = [];
@@ -1671,7 +1678,6 @@ export async function loadActivityLogs() {
             if (list) {
                 list.innerHTML = `<p class="wa-empty">${escapeHtml(data.error || t('Could not load logs.'))}</p>`;
             }
-            renderActivityLogDetail();
             if (alertEl) {
                 alertEl.textContent = data.error || t('Could not load logs.');
                 alertEl.classList.remove('hidden');
@@ -1683,7 +1689,6 @@ export async function loadActivityLogs() {
         if (list) {
             list.innerHTML = `<p class="wa-empty">${escapeHtml(err.message || t('Network Error'))}</p>`;
         }
-        renderActivityLogDetail();
         if (alertEl) {
             alertEl.textContent = err.message || t('Network Error');
             alertEl.classList.remove('hidden');
