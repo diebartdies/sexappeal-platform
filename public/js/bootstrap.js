@@ -2,6 +2,7 @@ import { appPath } from './globals.js';
 import { t, applyStaticTranslations } from './i18n.js';
 import { initA11y, syncDocumentLang } from './a11y.js';
 import { injectGlobalStyles, injectPlausible, initGlobalTopBar, initPrivacyShield } from './ui.js';
+import { initAwarenessCampaigns } from './awarenessCampaigns.js';
 import { attachPasswordToggles } from './uiHelpers.js';
 import { setupLocationDropdowns } from './helpers.js';
 import { pushReturnPoint, applyPendingScrollRestore } from './navReturn.js';
@@ -55,7 +56,7 @@ export function initBootstrap() {
         const isProfilePath = window.location.pathname.startsWith('/perfil/');
         const effectivePage = isProfilePath ? 'treasure.html' : currentPage;
 
-        const publicPages = ['index.html', 'login.html', 'register.html', 'verify.html', 'recover.html'];
+        const publicPages = ['index.html', 'login.html', 'register.html', 'verify.html', 'recover.html', 'detalles.html', 'conciencia-vih.html', 'conciencia-cancer-mama.html'];
         const isPublicPage = publicPages.includes(effectivePage);
         const is18Plus = localStorage.getItem('is18Plus');
         const hasToken = localStorage.getItem('token');
@@ -182,6 +183,7 @@ export function initBootstrap() {
         initPrivacyShield();
         injectGlobalStyles();
         injectPlausible();
+        initAwarenessCampaigns();
         initA11y();
         applyStaticTranslations();
         applyPendingScrollRestore();

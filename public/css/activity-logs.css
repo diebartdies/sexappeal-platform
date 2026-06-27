@@ -1,4 +1,4 @@
-/* Activity logs modal — scroll the whole page, not fixed viewport panes */
+/* Activity logs modal — list + detail side-by-side, page scroll, sticky detail panel */
 
 .logs-modal-overlay {
     position: fixed;
@@ -48,59 +48,26 @@
     align-items: start;
 }
 
-.logs-inbox-layout--inline {
-    grid-template-columns: 1fr;
-}
-
-.logs-thread-list-full {
-    border-right: none;
-}
-
-.log-list-row {
-    border-bottom: 1px solid var(--wa-border, #2a3942);
-}
-
-.log-list-row .wa-thread-item {
-    border-bottom: none;
-}
-
-.log-list-row.is-expanded .wa-thread-item {
-    background: var(--wa-panel-2, #202c33);
-}
-
-.log-detail-inline {
-    padding: 0 16px 16px;
-    background: #0a1014;
-    border-top: 1px solid var(--wa-border, #2a3942);
-}
-
-.log-detail-inline-header {
-    padding: 12px 0 10px;
-}
-
-.log-detail-inline-header h3 {
-    margin: 0 0 4px;
-    font-size: 1rem;
-    color: var(--wa-gold, #d4af37);
-}
-
-.log-detail-inline-header p {
-    margin: 0;
-    font-size: 0.82rem;
-    color: var(--wa-muted, #8696a0);
-}
-
-.log-detail-inline .log-detail-card {
-    margin-top: 0;
-}
-
-/* Override whatsapp-inbox.css viewport-capped scroll panes */
-.logs-modal-panel .logs-inbox-layout .wa-thread-list,
-.logs-modal-panel .logs-inbox-layout .wa-thread-view {
+/* List grows with all records; page scrolls via overlay */
+.logs-modal-panel .logs-inbox-layout .wa-thread-list {
     max-height: none !important;
     height: auto !important;
-    min-height: 0;
     overflow: visible !important;
+    border-right: 1px solid var(--wa-border, #2a3942);
+}
+
+/* Detail stays visible beside the list while scrolling (row 300 fix) */
+.logs-modal-panel .logs-inbox-layout .logs-detail-panel {
+    position: sticky;
+    top: 12px;
+    align-self: start;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 16px 20px;
+    background: #0a1014;
+    background-image: radial-gradient(circle at 20% 20%, rgba(37, 211, 102, 0.04), transparent 40%);
+    border-left: 1px solid var(--wa-border, #2a3942);
 }
 
 .logs-modal-panel .wa-thread-item {
@@ -210,18 +177,6 @@
     white-space: normal;
 }
 
-.log-details-bubble pre {
-    margin: 8px 0 0;
-    padding: 10px 12px;
-    border-radius: 6px;
-    background: rgba(0, 0, 0, 0.25);
-    font-size: 0.78rem;
-    line-height: 1.45;
-    white-space: pre-wrap;
-    word-break: break-word;
-    color: #cbd5e1;
-}
-
 .log-detail-label {
     display: block;
     font-size: 0.72rem;
@@ -238,16 +193,24 @@
     align-items: center;
 }
 
-.logs-modal-panel .wa-thread-view {
-    padding: 16px 20px;
-}
-
-.logs-modal-panel .wa-thread-view .wa-msg {
-    max-width: 100%;
-}
-
-.logs-modal-panel .wa-thread-header {
+.logs-modal-panel .logs-detail-panel .wa-thread-header {
     position: static;
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    background: var(--wa-panel, #111b21);
+    border: 1px solid var(--wa-border, #2a3942);
+    border-radius: 8px;
+}
+
+.logs-modal-panel .logs-detail-panel .wa-thread-header h2 {
+    margin: 0 0 4px;
+    font-size: 1.05rem;
+}
+
+.logs-modal-panel .logs-detail-panel .wa-thread-header p {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--wa-muted, #8696a0);
 }
 
 @media (max-width: 860px) {
@@ -262,6 +225,13 @@
     .logs-modal-panel .logs-inbox-layout .wa-thread-list {
         border-right: none;
         border-bottom: 1px solid var(--wa-border, #2a3942);
+    }
+
+    .logs-modal-panel .logs-inbox-layout .logs-detail-panel {
+        position: sticky;
+        top: 0;
+        border-left: none;
+        border-top: 1px solid var(--wa-border, #2a3942);
     }
 
     .log-detail-grid {

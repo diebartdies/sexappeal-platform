@@ -1,0 +1,141 @@
+/* Annual awareness ribbons beside SexAppeal logo */
+
+.awareness-logo-cluster {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(10px, 2.5vw, 18px);
+    flex-wrap: wrap;
+}
+
+.brand-logo-with-awareness {
+    gap: 10px;
+}
+
+.awareness-ribbon-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.awareness-ribbon-stack--topbar {
+    margin-left: 4px;
+}
+
+.awareness-ribbon-stack--topbar .awareness-ribbon-svg {
+    width: 18px;
+    height: 26px;
+}
+
+.awareness-ribbon-stack--topbar .awareness-ribbon-caption {
+    font-size: 0.58rem;
+    max-width: 72px;
+    line-height: 1.15;
+}
+
+.awareness-ribbon-stack--landing .awareness-ribbon-svg {
+    width: clamp(28px, 5vw, 40px);
+    height: clamp(40px, 7vw, 56px);
+}
+
+.awareness-ribbon-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: transform 0.2s ease, filter 0.2s ease;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+}
+
+.awareness-ribbon-link:hover,
+.awareness-ribbon-link:focus-visible {
+    transform: scale(1.06);
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+}
+
+.awareness-ribbon-link--aids {
+    color: #f8f8f8;
+}
+
+.awareness-ribbon-link--breast {
+    color: #f472b6;
+}
+
+.awareness-ribbon-caption {
+    display: block;
+    font-size: clamp(0.62rem, 1.6vw, 0.72rem);
+    line-height: 1.25;
+    text-align: center;
+    color: rgba(212, 175, 55, 0.82);
+    max-width: 110px;
+}
+
+#globalTopBar .awareness-ribbon-caption {
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.awareness-info-page .awareness-info-ribbon {
+    width: 48px;
+    height: 68px;
+    margin-bottom: 12px;
+}
+
+.awareness-info-page .awareness-info-ribbon--aids {
+    color: #f0f0f0;
+}
+
+.awareness-info-page .awareness-info-ribbon--breast {
+    color: #f472b6;
+}
+
+.awareness-info-lead {
+    font-size: 1.05rem;
+    line-height: 1.65;
+    color: #ccc;
+    margin: 0 0 24px;
+}
+
+.awareness-info-section {
+    margin-bottom: 28px;
+}
+
+.awareness-info-section h2 {
+    color: var(--primary-gold, #d4af37);
+    font-size: 1.15rem;
+    margin: 0 0 10px;
+}
+
+.awareness-info-section p,
+.awareness-info-section li {
+    color: #ccc;
+    line-height: 1.65;
+    font-size: 0.95rem;
+}
+
+.awareness-info-section ul {
+    margin: 0;
+    padding-left: 1.2rem;
+}
+
+.awareness-info-note {
+    margin-top: 32px;
+    padding: 14px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    background: rgba(212, 175, 55, 0.06);
+    font-size: 0.88rem;
+    color: #aaa;
+    line-height: 1.55;
+}
+
+@media (max-width: 600px) {
+    .awareness-ribbon-stack--topbar .awareness-ribbon-caption {
+        display: none;
+    }
+
+    .brand-logo-with-awareness .brand-text {
+        display: none;
+    }
+}
