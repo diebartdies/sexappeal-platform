@@ -1017,6 +1017,23 @@ const translations = {
         'Guests: support the people you meet with respect; health conversations belong in appropriate, consensual contexts only.': 'Invitados: acompañá con respeto; los temas de salud corresponden solo en contextos adecuados y consensuados.',
         'Everyone: encourage the women and trans men in your life to keep up with the controls their doctor recommends.': 'Todos: alentá a las mujeres y hombres trans de tu entorno a mantener los controles que indique su médico.',
         'This page is for general awareness only. It does not replace medical advice or a personalised screening plan. Consult your doctor or gynaecologist. In Argentina you can also contact your nearest hospital, CAPS or oncology services in your province.': 'Esta página es solo concientización general. No reemplaza consejo médico ni un plan de cribado personalizado. Consultá a tu médico o ginecólogo. En Argentina también podés contactar tu hospital, CAPS o servicios de oncología de tu provincia.',
+
+        'IP intelligence': 'Inteligencia de IP',
+        'No public IP data yet — lookup runs automatically in the background.': 'Sin datos de IP pública aún — la consulta corre automáticamente en segundo plano.',
+        'Lookup failed': 'Consulta fallida',
+        'Location': 'Ubicación',
+        'Coordinates': 'Coordenadas',
+        'ISP': 'ISP',
+        'Organization': 'Organización',
+        'ASN': 'ASN',
+        'Reverse DNS': 'DNS inverso',
+        'Timezone': 'Zona horaria',
+        'Flags': 'Indicadores',
+        'Last lookup': 'Última consulta',
+        'View on map': 'Ver en mapa',
+        'Mobile': 'Móvil',
+        'Proxy/VPN': 'Proxy/VPN',
+        'Hosting/DC': 'Hosting/datacenter'
     }
 };
 

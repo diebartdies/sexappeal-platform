@@ -40,4 +40,16 @@ const ActivityLogSchema = new mongoose.Schema({
   }
 });
 
+ActivityLogSchema.post('save', (doc) => {
+  if (!doc?.ipAddress) return;
+  setImmediate(() => {
+    try {
+      const { scheduleIpEnrichment } = require('../services/ipIntelService');
+      scheduleIpEnrichment(doc.ipAddress);
+    } catch (err) {
+      console.error('[ActivityLog] ip enrichment schedule failed:', err.message);
+    }
+  });
+});
+
 module.exports = mongoose.model('ActivityLog', ActivityLogSchema);

@@ -17,6 +17,7 @@ const smsNotifications = require('../services/smsNotifications');
 const { getClientIp, isTrustedAdminIp } = require('../utils/clientIp');
 const { loadKnownAdminIps, resolveAdminIpLabel } = require('../utils/adminKnownIps');
 const { ACTOR_TYPES, resolveActorType, buildActorTypeQuery } = require('../utils/activityLogMeta');
+const { attachIpIntelBatch } = require('../services/ipIntelService');
 
 function adminLogDetails(req, extra = {}) {
   return {
@@ -42,7 +43,7 @@ async function enrichActivityLogs(logs) {
   const adminMap = new Map(admins.map((admin) => [admin._id.toString(), admin.toObject()]));
   const trustedIps = await loadKnownAdminIps();
 
-  return Promise.all(logs.map(async (log) => {
+  const enriched = await Promise.all(logs.map(async (log) => {
     const obj = log.toObject ? log.toObject() : { ...log };
     const adminId = obj.details && obj.details.adminId ? String(obj.details.adminId) : '';
     if (adminId && adminMap.has(adminId)) {
@@ -55,6 +56,8 @@ async function enrichActivityLogs(logs) {
     obj.actorType = resolveActorType(obj, trustedIps);
     return obj;
   }));
+
+  return attachIpIntelBatch(enriched);
 }
 
 // Best-effort removal of an uploaded asset that lives under /public.

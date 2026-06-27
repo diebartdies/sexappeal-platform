@@ -1264,6 +1264,73 @@ function getFilteredActivityLogs() {
     });
 }
 
+function formatLogDetailsGrouped(details) {
+    if (!details || !Object.keys(details).length) return '';
+
+    const rows = Object.entries(details).map(([key, val]) => {
+        const display = typeof val === 'object' ? JSON.stringify(val) : String(val ?? '');
+        return `<div class="log-detail-field">
+            <span class="log-detail-label">${escapeHtml(key)}</span>
+            <div class="log-detail-value">${escapeHtml(display)}</div>
+        </div>`;
+    }).join('');
+
+    return `<div class="log-detail-section">
+        <span class="log-detail-section-title">${t('Details')}</span>
+        <div class="log-detail-grid log-detail-grid--compact">${rows}</div>
+    </div>`;
+}
+
+function formatIpIntelGrouped(intel) {
+    if (!intel) {
+        return `<div class="log-detail-section">
+            <span class="log-detail-section-title">${t('IP intelligence')}</span>
+            <p class="log-detail-value log-detail-muted">${t('No public IP data yet — lookup runs automatically in the background.')}</p>
+        </div>`;
+    }
+    if (intel.status !== 'success') {
+        return `<div class="log-detail-section">
+            <span class="log-detail-section-title">${t('IP intelligence')}</span>
+            <p class="log-detail-value log-detail-muted">${escapeHtml(intel.lookupError || t('Lookup failed'))}</p>
+        </div>`;
+    }
+
+    const location = [intel.city, intel.regionName, intel.country].filter(Boolean).join(', ');
+    const coords = (intel.lat != null && intel.lon != null)
+        ? `${intel.lat}, ${intel.lon}`
+        : '—';
+    const flags = [
+        intel.mobile ? t('Mobile') : '',
+        intel.proxy ? t('Proxy/VPN') : '',
+        intel.hosting ? t('Hosting/DC') : ''
+    ].filter(Boolean).join(' · ') || '—';
+
+    const rows = [
+        ['Location', location || '—'],
+        ['Coordinates', coords],
+        ['ISP', intel.isp || '—'],
+        ['Organization', intel.org || '—'],
+        ['ASN', intel.as ? `${intel.as} (${intel.asname || '—'})` : '—'],
+        ['Reverse DNS', intel.reverse || '—'],
+        ['Timezone', intel.timezone ? `${intel.timezone} (UTC${intel.offset != null ? intel.offset / 3600 : '?'})` : '—'],
+        ['Flags', flags],
+        ['Last lookup', intel.lastLookupAt ? new Date(intel.lastLookupAt).toLocaleString() : '—']
+    ].map(([label, value]) => `<div class="log-detail-field">
+        <span class="log-detail-label">${escapeHtml(t(label))}</span>
+        <div class="log-detail-value">${escapeHtml(value)}</div>
+    </div>`).join('');
+
+    const mapLink = (intel.lat != null && intel.lon != null)
+        ? `<p style="margin:10px 0 0;"><a href="https://www.openstreetmap.org/?mlat=${encodeURIComponent(intel.lat)}&amp;mlon=${encodeURIComponent(intel.lon)}#map=12/${encodeURIComponent(intel.lat)}/${encodeURIComponent(intel.lon)}" target="_blank" rel="noopener noreferrer" style="color:var(--primary-gold);">${t('View on map')}</a></p>`
+        : '';
+
+    return `<div class="log-detail-section">
+        <span class="log-detail-section-title">${t('IP intelligence')}</span>
+        <div class="log-detail-grid log-detail-grid--compact">${rows}</div>
+        ${mapLink}
+    </div>`;
+}
+
 function buildActivityLogDetailHtml(log) {
     const actor = formatLogActor(log);
     const when = new Date(log.createdAt).toLocaleString();
@@ -1308,6 +1375,7 @@ function buildActivityLogDetailHtml(log) {
                     <div class="log-detail-value log-detail-muted log-detail-wrap">${escapeHtml(log.userAgent || 'N/A')}</div>
                 </div>
             </div>
+            ${formatIpIntelGrouped(log.ipIntel)}
             ${formatLogDetailsGrouped(log.details)}
         </div>`;
 }
@@ -1364,23 +1432,6 @@ function renderActivityLogDetail() {
     }
 
     view.innerHTML = buildActivityLogDetailHtml(log);
-}
-
-function formatLogDetailsGrouped(details) {
-    if (!details || !Object.keys(details).length) return '';
-
-    const rows = Object.entries(details).map(([key, val]) => {
-        const display = typeof val === 'object' ? JSON.stringify(val) : String(val ?? '');
-        return `<div class="log-detail-field">
-            <span class="log-detail-label">${escapeHtml(key)}</span>
-            <div class="log-detail-value">${escapeHtml(display)}</div>
-        </div>`;
-    }).join('');
-
-    return `<div class="log-detail-section">
-        <span class="log-detail-section-title">${t('Details')}</span>
-        <div class="log-detail-grid log-detail-grid--compact">${rows}</div>
-    </div>`;
 }
 
 const LOG_ACTOR_TYPE_LABELS = {
