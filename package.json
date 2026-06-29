@@ -24,7 +24,9 @@
     "approve:pending": "node scripts/approve-pending-professionals.js",
     "crearQR": "node scripts/crearQR.js",
     "ip:enrich": "node scripts/enrich-ip.js",
-    "ip:backfill": "node scripts/enrich-ip.js --backfill"
+    "ip:backfill": "node scripts/enrich-ip.js --backfill",
+    "docker:build-timings": "node scripts/parse-docker-build-timings.js",
+    "awareness:ribbons": "node scripts/generate-awareness-ribbons.js"
   },
   "keywords": [],
   "author": "",

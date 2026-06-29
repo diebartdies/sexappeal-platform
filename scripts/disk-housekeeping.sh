@@ -4,7 +4,7 @@
 #
 # Usage:
 #   bash scripts/disk-housekeeping.sh [/root/SexAppeal-platform]
-#   AGGRESSIVE=1 bash scripts/disk-housekeeping.sh   # also prune unused images
+#   AGGRESSIVE=1 bash scripts/disk-housekeeping.sh   # also prune unused images + build cache
 #   MIN_FREE_GB=5 bash scripts/disk-housekeeping.sh  # warn/abort thresholds
 #
 # Installed weekly via: bash scripts/install-housekeeping-cron.sh
@@ -36,8 +36,17 @@ if command -v docker >/dev/null 2>&1; then
   docker system df 2>/dev/null || true
 
   echo ""
-  echo "Pruning Docker build cache..."
-  docker builder prune -af 2>/dev/null || true
+  avail_before="$(free_gb)"
+  if [ "$AGGRESSIVE" = "1" ] || [ "$avail_before" -lt "$MIN_FREE_GB" ]; then
+    if [ "$AGGRESSIVE" = "1" ]; then
+      echo "Pruning Docker build cache (AGGRESSIVE)..."
+    else
+      echo "Pruning Docker build cache (disk below ${MIN_FREE_GB}GB — need space for build)..."
+    fi
+    docker builder prune -af 2>/dev/null || true
+  else
+    echo "Keeping Docker build cache (Chromium layer ~20min to rebuild). Use AGGRESSIVE=1 to force prune."
+  fi
 
   echo "Pruning stopped containers..."
   docker container prune -f 2>/dev/null || true

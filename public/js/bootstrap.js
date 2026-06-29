@@ -189,44 +189,6 @@ export function initBootstrap() {
         applyPendingScrollRestore();
         syncDocumentLang();
 
-        // #region agent log
-        if (document.getElementById('landing')) {
-            requestAnimationFrame(() => {
-                const bodyStyle = getComputedStyle(document.body);
-                const container = document.querySelector('.landing-container');
-                const containerStyle = container ? getComputedStyle(container) : null;
-                const responsiveLinks = [...document.querySelectorAll('link[href*="responsive.css"]')].map((l) => l.getAttribute('href'));
-                const payload = {
-                    sessionId: '153bbd',
-                    runId: 'landing-layout',
-                    hypothesisId: 'A',
-                    location: 'bootstrap.js:landing-layout',
-                    message: 'landing computed layout',
-                    data: {
-                        hostname: location.hostname,
-                        bodyPaddingTop: bodyStyle.paddingTop,
-                        bodyOverflowX: bodyStyle.overflowX,
-                        containerPaddingBottom: containerStyle?.paddingBottom,
-                        responsiveLinkCount: responsiveLinks.length,
-                        responsiveLinks,
-                        docScrollHeight: document.documentElement.scrollHeight,
-                        docClientHeight: document.documentElement.clientHeight
-                    }
-                };
-                fetch('http://127.0.0.1:7819/ingest/50abb356-7840-42ca-afd1-c4e9de46cff0', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '153bbd' },
-                    body: JSON.stringify({ ...payload, timestamp: Date.now() })
-                }).catch(() => {});
-                fetch('/api/v1/public/client-debug', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                }).catch(() => {});
-            });
-        }
-        // #endregion
-
         if (document.getElementById('registerForm')) {
             initProfessionalRegistration();
         }

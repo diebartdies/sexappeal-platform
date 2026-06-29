@@ -7,31 +7,6 @@ import { PHONE_COUNTRIES, defaultPhoneCountry, buildFullPhoneNumber, getPhoneCou
 import { mountGoogleSignIn } from './googleAuth.js';
 import { redirectAfterLogin } from './authFlows.js';
 
-function debugRegLog(location, message, data = {}, hypothesisId = '') {
-    const payload = {
-        sessionId: '153bbd',
-        location,
-        message,
-        data,
-        hypothesisId,
-        timestamp: Date.now(),
-        host: window.location.host,
-        path: window.location.pathname
-    };
-    // #region agent log
-    fetch('http://127.0.0.1:7819/ingest/50abb356-7840-42ca-afd1-c4e9de46cff0', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '153bbd' },
-        body: JSON.stringify(payload)
-    }).catch(() => {});
-    fetch(`${API_URL}/public/client-debug`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    }).catch(() => {});
-    // #endregion
-}
-
 function isInAppBrowser() {
     const ua = navigator.userAgent || '';
     return /WhatsApp|Instagram|FBAN|FBAV|Line\//i.test(ua);
@@ -280,9 +255,6 @@ function setRegistrationFormFieldsRequired(type) {
 
 function showRegistrationForm(type) {
     currentRegistrationType = type;
-    // #region agent log
-    debugRegLog('registerProfessional.js:showRegistrationForm', 'showRegistrationForm called', { type }, 'H5');
-    // #endregion
     document.getElementById('regFormPanel')?.classList.remove('hidden');
     document.getElementById('regRole').value = type === 'guest' ? 'user' : 'professional';
     document.getElementById('regRegistrationMode').value = type === 'guest' ? 'guest' : 'express';
@@ -685,14 +657,6 @@ async function resumeAuthenticatedRegistration() {
 
     const token = localStorage.getItem('token');
     const pendingGoogle = isGoogleProfileCompletionPending();
-    // #region agent log
-    debugRegLog('registerProfessional.js:resumeAuthenticatedRegistration:entry', 'resume auth check', {
-        hasToken: Boolean(token),
-        pendingGoogle,
-        bodyClass: document.body.className,
-        formGoogleComplete: document.getElementById('registerForm')?.dataset?.googleComplete || ''
-    }, 'H3');
-    // #endregion
     if (!token && !pendingGoogle) return;
 
     if (token && pendingGoogle) {
@@ -730,13 +694,6 @@ async function resumeAuthenticatedRegistration() {
 function showGoogleProfileCompletionUI(user = {}) {
     const form = document.getElementById('registerForm');
     if (!form) return;
-
-    // #region agent log
-    debugRegLog('registerProfessional.js:showGoogleProfileCompletionUI', 'switching to google mini-form (hides instructions)', {
-        userRole: user?.role || 'unknown',
-        hasEmail: Boolean(user?.email)
-    }, 'H3');
-    // #endregion
 
     form.dataset.googleComplete = '1';
     document.body.classList.add('register-google-complete');
@@ -844,14 +801,6 @@ async function submitGoogleProfileCompletion(form) {
 
 function setupInstructions(type = currentRegistrationType || 'professional') {
     const host = document.getElementById('regInstructions');
-    // #region agent log
-    debugRegLog('registerProfessional.js:setupInstructions:entry', 'setupInstructions entry', {
-        type,
-        hostFound: Boolean(host),
-        hostHiddenBefore: host?.classList.contains('hidden'),
-        hostHtmlLenBefore: host?.innerHTML?.length || 0
-    }, 'H1');
-    // #endregion
     if (!host) return;
     host.classList.remove('hidden');
 
@@ -865,13 +814,6 @@ function setupInstructions(type = currentRegistrationType || 'professional') {
             <li>${t('Browse the collection once signed in.')}</li>
         </ol>`;
         applyStaticTranslations(host);
-        // #region agent log
-        debugRegLog('registerProfessional.js:setupInstructions:exit', 'setupInstructions populated (guest)', {
-            type,
-            htmlLen: host.innerHTML.length,
-            hostHiddenAfter: host.classList.contains('hidden')
-        }, 'H2');
-        // #endregion
         return;
     }
 
@@ -890,24 +832,10 @@ function setupInstructions(type = currentRegistrationType || 'professional') {
             <p style="font-size:0.9rem;margin:8px 0 0;color:#eee;">${t('Manual email registration sends a 6-digit verification code. It may arrive in Spam or Junk. Google sign-in skips this step.')}</p>
         </div>`;
     applyStaticTranslations(host);
-    // #region agent log
-    debugRegLog('registerProfessional.js:setupInstructions:exit', 'setupInstructions populated', {
-        type,
-        htmlLen: host.innerHTML.length,
-        hostHiddenAfter: host.classList.contains('hidden'),
-        display: host.offsetParent === null ? 'none-or-detached' : 'visible'
-    }, 'H2');
-    // #endregion
 }
 
 export function initProfessionalRegistration() {
     const form = document.getElementById('registerForm');
-    // #region agent log
-    debugRegLog('registerProfessional.js:initProfessionalRegistration', 'init called', {
-        formFound: Boolean(form),
-        appJsVersion: document.querySelector('script[src*="app.js"]')?.getAttribute('src') || ''
-    }, 'H1');
-    // #endregion
     if (!form) return;
 
     initRegistrationRoute();

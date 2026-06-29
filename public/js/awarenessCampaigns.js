@@ -59,17 +59,22 @@ export function getActiveAwarenessCampaign(now = new Date()) {
     return null;
 }
 
-const RIBBON_SVG = `<svg class="awareness-ribbon-svg" viewBox="0 0 36 52" aria-hidden="true" focusable="false">
-    <path d="M18 2 C10 2 4 9 4 17 C4 28 18 50 18 50 C18 50 32 28 32 17 C32 9 26 2 18 2 Z" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/>
-    <path d="M18 8 C13 8 9 12 9 17 C9 24 18 42 18 42 C18 42 27 24 27 17 C27 12 23 8 18 8 Z" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="0.75"/>
-</svg>`;
+const RIBBON_IMAGES = {
+    aids: '/images/awareness-ribbon-aids.png',
+    breast: '/images/awareness-ribbon-breast.png'
+};
+
+function ribbonMarkup(campaignId) {
+    const src = RIBBON_IMAGES[campaignId] || RIBBON_IMAGES.aids;
+    return `<img class="awareness-ribbon-img" src="${src}" alt="" width="48" height="48" decoding="async">`;
+}
 
 function ensureAwarenessStyles() {
     if (document.getElementById('sexappeal-awareness-css')) return;
     const link = document.createElement('link');
     link.id = 'sexappeal-awareness-css';
     link.rel = 'stylesheet';
-    link.href = '/css/awareness-campaigns.css?v=2';
+    link.href = '/css/awareness-campaigns.css?v=3';
     document.head.appendChild(link);
 }
 
@@ -82,7 +87,7 @@ function buildRibbonStack(campaign, variant = 'default') {
     link.className = `awareness-ribbon-link ${campaign.ribbonClass}`;
     link.setAttribute('aria-label', t(campaign.ariaLabelKey));
     link.title = t(campaign.ariaLabelKey);
-    link.innerHTML = RIBBON_SVG;
+    link.innerHTML = ribbonMarkup(campaign.id);
 
     const caption = document.createElement('span');
     caption.className = 'awareness-ribbon-caption';

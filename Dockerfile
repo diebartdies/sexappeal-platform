@@ -7,6 +7,7 @@ WORKDIR /app
 # Chromium + runtime libs for whatsapp-web.js / puppeteer on Alpine (musl).
 # Puppeteer's bundled Chromium download does not run on Alpine, so we install
 # the system chromium package and point puppeteer at it.
+# Keep this RUN early and stable — only changes here invalidate the ~20min layer.
 RUN apk add --no-cache \
     chromium \
     nss \
@@ -14,7 +15,8 @@ RUN apk add --no-cache \
     freetype-dev \
     harfbuzz \
     ca-certificates \
-    ttf-freefont
+    ttf-freefont \
+    && apk upgrade --no-cache
 
 # Skip puppeteer's own Chromium download (set before npm install so the
 # postinstall step honors it) and use the system chromium at runtime. The path
@@ -37,9 +39,6 @@ RUN if [ "$INSTALL_TWILIO" = "1" ]; then \
     else \
       echo "Twilio package skipped (INSTALL_TWILIO=0). SMS disabled until you rebuild with INSTALL_TWILIO=1."; \
     fi
-
-# Upgrade Alpine packages to fix any lingering OS-level vulnerabilities
-RUN apk upgrade --no-cache
 
 # Copy the rest of the application code
 COPY . .

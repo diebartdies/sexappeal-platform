@@ -112,6 +112,12 @@ if ! $DC build app 2>&1 | tee "$BUILD_LOG"; then
   exit 1
 fi
 
+if [ -f "$DEPLOY_DIR/scripts/parse-docker-build-timings.js" ]; then
+  echo ""
+  echo "=== Docker build timing summary ==="
+  node "$DEPLOY_DIR/scripts/parse-docker-build-timings.js" "$BUILD_LOG" || true
+fi
+
 if ! replace_app_container; then
   echo "WARN: first app replace failed — retrying after Docker restart..."
   systemctl restart docker.socket docker 2>/dev/null || systemctl restart docker
