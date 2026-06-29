@@ -390,6 +390,7 @@ app.post('/api/v1/admin/outreach/sms/targeted', protect, authorize('admin'), out
 app.get('/api/v1/admin/outreach/bulk-sms/status', protect, authorize('admin'), outreachController.getBulkSmsStatus);
 app.get('/api/v1/admin/potential-professionals', protect, authorize('admin'), potentialProfessionalController.getPotentialProfessionals);
 app.put('/api/v1/admin/potential-professionals/:id', protect, authorize('admin'), potentialProfessionalController.updatePotentialProfessional);
+app.post('/api/v1/admin/potential-professionals/block-phone', protect, authorize('admin'), potentialProfessionalController.blockPhone);
 app.post('/api/v1/admin/notifications/mail/broadcast', protect, authorize('admin'), adminController.sendBroadcastEmail);
 app.post('/api/v1/admin/notifications/mail/targeted', protect, authorize('admin'), adminController.sendTargetedEmail);
 

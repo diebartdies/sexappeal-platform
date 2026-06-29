@@ -1,4 +1,5 @@
 const PotentialProfessional = require('../models/PotentialProfessional');
+const { OUTREACH_ALLOWED_FILTER } = require('../utils/outreachPhone');
 const platformService = require('./whatsappPlatformService');
 const config = require('../config/appConfig');
 const {
@@ -26,6 +27,7 @@ const SEND_TIMEOUT_MS = Number(cfg.sendTimeoutMs) || 60000;
 const BRAND_IMAGE = cfg.brandImagePath || BRAND_IMAGE_PATH;
 
 const PENDING_WA_QUERY = {
+  doNotContact: { $ne: true },
   $or: [
     { status: 'pending' },
     { status: { $exists: false } },

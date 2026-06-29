@@ -74,15 +74,34 @@ exports.getPotentialProfessionals = async (req, res, next) => {
 // @access  Private/Admin
 exports.updatePotentialProfessional = async (req, res, next) => {
   try {
-    const { status } = req.body;
+    const { status, doNotContact, doNotContactReason } = req.body;
 
-    if (!['pending', 'contacted', 'joined', 'rejected'].includes(status)) {
+    const updates = {};
+    if (status !== undefined) {
+      if (!['pending', 'contacted', 'joined', 'rejected', 'failed'].includes(status)) {
         return res.status(400).json({ success: false, error: 'Invalid status' });
+      }
+      updates.status = status;
+    }
+    if (doNotContact !== undefined) {
+      updates.doNotContact = Boolean(doNotContact);
+      if (updates.doNotContact) {
+        updates.doNotContactAt = new Date();
+        updates.doNotContactReason = String(doNotContactReason || 'Blocked in admin').trim().slice(0, 500);
+        if (!updates.status) updates.status = 'rejected';
+      } else {
+        updates.doNotContactReason = '';
+        updates.doNotContactAt = null;
+      }
+    }
+
+    if (!Object.keys(updates).length) {
+      return res.status(400).json({ success: false, error: 'No valid fields to update' });
     }
 
     const potential = await PotentialProfessional.findByIdAndUpdate(
       req.params.id,
-      { status },
+      updates,
       { new: true, runValidators: true }
     );
 
@@ -93,6 +112,62 @@ exports.updatePotentialProfessional = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: potential
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Block outreach to all leads matching a phone (any alias / duplicate import)
+// @route   POST /api/v1/admin/potential-professionals/block-phone
+// @access  Private/Admin
+exports.blockPhone = async (req, res, next) => {
+  try {
+    const { phone, reason } = req.body || {};
+    if (!phone) {
+      return res.status(400).json({ success: false, error: 'phone is required' });
+    }
+
+    const { buildPhoneInQuery, expandPhoneVariants } = require('../utils/outreachPhone');
+    const query = buildPhoneInQuery(phone);
+    if (!query) {
+      return res.status(400).json({ success: false, error: 'Invalid phone number' });
+    }
+
+    const note = String(reason || 'Blocked in admin').trim().slice(0, 500);
+    const now = new Date();
+    const result = await PotentialProfessional.updateMany(query, {
+      $set: {
+        doNotContact: true,
+        doNotContactReason: note,
+        doNotContactAt: now
+      }
+    });
+
+    let created = null;
+    if (result.matchedCount === 0) {
+      const variants = expandPhoneVariants(phone);
+      created = await PotentialProfessional.create({
+        phone: variants[0],
+        status: 'rejected',
+        doNotContact: true,
+        doNotContactReason: note,
+        doNotContactAt: now,
+        sourceUrl: 'manual:admin-block-phone'
+      });
+    }
+
+    const matches = await PotentialProfessional.find(query);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        variants: expandPhoneVariants(phone),
+        matched: result.matchedCount,
+        modified: result.modifiedCount,
+        createdId: created?._id || null,
+        leads: matches
+      }
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });

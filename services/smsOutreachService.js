@@ -1,4 +1,5 @@
 const PotentialProfessional = require('../models/PotentialProfessional');
+const { OUTREACH_ALLOWED_FILTER, isOutreachBlocked } = require('../utils/outreachPhone');
 const config = require('../config/appConfig');
 const smsService = require('./smsService');
 const { inviteSms } = require('../utils/smsTemplates');
@@ -11,6 +12,7 @@ const BUSY_PHASES = new Set(['sending', 'waiting_window']);
 // "all pending" actually targets those existing leads. Mirrors the WhatsApp
 // engine's `status`-based selection but on the independent `smsStatus` field.
 const PENDING_SMS_QUERY = {
+  ...OUTREACH_ALLOWED_FILTER,
   $or: [
     { smsStatus: 'pending' },
     { smsStatus: { $exists: false } },
@@ -157,6 +159,11 @@ async function processLeads(leads) {
 
   for (let i = 0; i < leads.length; i += 1) {
     const lead = leads[i];
+
+    if (isOutreachBlocked(lead)) {
+      state.skipped += 1;
+      continue;
+    }
 
     if (useDrip) {
       await waitForSendSlot();

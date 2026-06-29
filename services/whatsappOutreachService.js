@@ -5,6 +5,7 @@ const {
   normalizeWhatsAppPhone,
   buildProfessionalInviteMessage
 } = require('../utils/professionalInviteMessage');
+const { OUTREACH_ALLOWED_FILTER, isOutreachBlocked } = require('../utils/outreachPhone');
 
 const BUSY_PHASES = new Set(['initializing', 'qr', 'sending', 'waiting_window']);
 
@@ -226,7 +227,12 @@ async function processTargets(targets, options = {}) {
   for (let i = 0; i < targets.length; i += 1) {
     const target = targets[i];
 
-    // Slow-drip gate: pause (without erroring) until inside the night window
+    if (isOutreachBlocked(target.leadDoc) || target.leadDoc?.doNotContact) {
+      state.skipped += 1;
+      continue;
+    }
+
+    // Slow-drip gate:
     // and under the nightly cap. Long-lived; may span multiple nights.
     if (useDrip) {
       await waitForSendSlot();
@@ -352,7 +358,10 @@ async function startBulkOutreach() {
     return getStatus();
   }
 
-  const pendingLeads = await PotentialProfessional.find({ status: 'pending' }).sort({ createdAt: 1 });
+  const pendingLeads = await PotentialProfessional.find({
+    status: 'pending',
+    ...OUTREACH_ALLOWED_FILTER
+  }).sort({ createdAt: 1 });
 
   if (pendingLeads.length === 0) {
     state.phase = 'complete';

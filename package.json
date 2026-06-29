@@ -26,7 +26,8 @@
     "ip:enrich": "node scripts/enrich-ip.js",
     "ip:backfill": "node scripts/enrich-ip.js --backfill",
     "docker:build-timings": "node scripts/parse-docker-build-timings.js",
-    "awareness:ribbons": "node scripts/generate-awareness-ribbons.js"
+    "awareness:ribbons": "node scripts/generate-awareness-ribbons.js",
+    "outreach:block-phone": "node scripts/block-outreach-phone.js"
   },
   "keywords": [],
   "author": "",

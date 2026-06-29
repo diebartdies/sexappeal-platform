@@ -1943,11 +1943,15 @@ export async function loadLeads(page = leadsCurrentPage) {
                 const smsState = lead.smsStatus || 'pending';
                 const smsColor = smsState === 'sent' ? 'green' : (smsState === 'failed' ? 'red' : 'orange');
                 const waLink = lead.whatsappLink || '#';
-                const waDisabled = !lead.whatsappLink;
-                const isPending = (lead.status || 'pending') === 'pending';
+                const blocked = Boolean(lead.doNotContact);
+                const waDisabled = !lead.whatsappLink || blocked;
+                const isPending = (lead.status || 'pending') === 'pending' && !blocked;
 
                 const statusLabel = t(lead.status || 'pending');
                 const smsLabel = `${t('SMS')}: ${t(smsState)}`;
+                const blockBadge = blocked
+                    ? `<span class="admin-status-badge admin-status-badge--blocked" style="background:#6b1d1d;" title="${(lead.doNotContactReason || '').replace(/"/g, '&quot;')}">${t('Do not contact')}</span>`
+                    : '';
 
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid #333';
@@ -1963,10 +1967,12 @@ export async function loadLeads(page = leadsCurrentPage) {
                         <div class="lead-status-stack">
                             <span class="admin-status-badge admin-status-badge--${lead.status || 'pending'}" style="background: ${statusColor};">${statusLabel}</span>
                             <span class="admin-status-badge admin-status-badge--sms" style="background: ${smsColor};">${smsLabel}</span>
+                            ${blockBadge}
                         </div>
                     </td>
                     <td style="padding: 10px;">
-                        <a href="${waLink}" target="_blank" rel="noopener noreferrer" data-lead-id="${lead._id}" class="lead-whatsapp-btn"${waDisabled ? ' aria-disabled="true" style="opacity:0.4;pointer-events:none;"' : ''}>${t('Send invite')}</a>
+                        <a href="${waLink}" target="_blank" rel="noopener noreferrer" data-lead-id="${lead._id}" data-lead-phone="${lead.phone || ''}" class="lead-whatsapp-btn"${waDisabled ? ' aria-disabled="true" style="opacity:0.4;pointer-events:none;"' : ''}>${t('Send invite')}</a>
+                        ${blocked ? '' : `<button type="button" class="lead-block-btn" data-lead-phone="${lead.phone || ''}" style="margin-left:6px;font-size:0.85em;">${t('Block')}</button>`}
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -1974,6 +1980,9 @@ export async function loadLeads(page = leadsCurrentPage) {
 
             document.querySelectorAll('.lead-whatsapp-btn').forEach((btn) => {
                 btn.addEventListener('click', () => markLeadContacted(btn.getAttribute('data-lead-id')));
+            });
+            document.querySelectorAll('.lead-block-btn').forEach((btn) => {
+                btn.addEventListener('click', () => blockLeadPhone(btn.getAttribute('data-lead-phone')));
             });
         }
     } catch (err) {
@@ -2038,6 +2047,35 @@ async function markLeadContacted(id) {
         });
     } catch (err) {
         console.error('Failed to mark lead as contacted', err);
+    }
+}
+
+async function blockLeadPhone(phone) {
+    if (!phone) return;
+    const reason = prompt(t('Reason for blocking outreach (optional):'), t('Requested stop'));
+    if (reason === null) return;
+
+    try {
+        const res = await fetch(`${API_URL}/admin/potential-professionals/block-phone`, {
+            method: 'POST',
+            headers: {
+                ...authHeaders(),
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ phone, reason: reason || 'Blocked in admin' })
+        });
+        const data = await parseAdminApiResponse(res);
+        if (!data.success) {
+            announceMessage(data.error || t('Could not block phone'));
+            return;
+        }
+        const n = data.data?.modified ?? data.data?.matched ?? 0;
+        announceMessage(t('Blocked outreach for {count} lead(s).').replace('{count}', String(n)));
+        loadLeads(leadsCurrentPage);
+    } catch (err) {
+        console.error('Failed to block lead phone', err);
+        announceMessage(t('Could not block phone'));
     }
 }
 

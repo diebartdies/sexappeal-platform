@@ -58,6 +58,17 @@ const PotentialProfessionalSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  doNotContact: {
+    type: Boolean,
+    default: false
+  },
+  doNotContactReason: {
+    type: String,
+    trim: true
+  },
+  doNotContactAt: {
+    type: Date
+  },
   createdAt: {
     type: Date,
     default: Date.now
