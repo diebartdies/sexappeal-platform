@@ -48,12 +48,9 @@ exports.robotsTxt = (req, res) => {
 
 exports.sitemapXml = async (req, res, next) => {
   try {
-    if (isSelfAppealHost(req)) {
-      res.status(404);
-      res.type('text/plain');
-      return res.send('Not found');
-    }
-    const baseUrl = resolveRequestBaseUrl(req);
+    const baseUrl = isSelfAppealHost(req)
+      ? baseUrlForNamedSite('selfappeal')
+      : resolveRequestBaseUrl(req);
     const { xml } = await buildSitemapForBase(baseUrl);
     sendSitemapXml(res, xml);
   } catch (error) {

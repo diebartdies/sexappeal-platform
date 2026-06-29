@@ -13,12 +13,27 @@ const RESERVED_PROFILE_ALIASES = new Set([
 ]);
 
 const STATIC_SITEMAP_PAGES = [
-  { path: '/', priority: '1.0', changefreq: 'weekly' },
-  { path: '/categories.html', priority: '0.9', changefreq: 'daily' },
-  { path: '/home.html', priority: '0.8', changefreq: 'daily' },
-  { path: '/services.html', priority: '0.7', changefreq: 'monthly' },
-  { path: '/plataforma.html', priority: '0.6', changefreq: 'monthly' }
+  { path: '/', priority: '1.0', changefreq: 'weekly', sites: ['sexappeal'] },
+  { path: '/categories.html', priority: '0.9', changefreq: 'daily', sites: ['sexappeal'] },
+  { path: '/home.html', priority: '0.8', changefreq: 'daily', sites: ['sexappeal'] },
+  { path: '/services.html', priority: '0.7', changefreq: 'monthly', sites: ['sexappeal'] },
+  { path: '/plataforma.html', priority: '0.6', changefreq: 'monthly', sites: ['sexappeal'] },
+  { path: '/detalles.html', priority: '0.65', changefreq: 'monthly', sites: ['sexappeal'] },
+  { path: '/conciencia-vih.html', priority: '0.5', changefreq: 'yearly', sites: ['sexappeal'] },
+  { path: '/conciencia-cancer-mama.html', priority: '0.5', changefreq: 'yearly', sites: ['sexappeal'] },
+  { path: '/para-modelos.html', priority: '0.85', changefreq: 'weekly', sites: ['selfappeal'] }
 ];
+
+function staticSitemapPagesForSite(siteKey) {
+  return STATIC_SITEMAP_PAGES.filter((page) => {
+    const sites = page.sites || ['sexappeal'];
+    return sites.includes(siteKey);
+  });
+}
+
+function siteKeyFromBaseUrl(baseUrl) {
+  return String(baseUrl || '').toLowerCase().includes('selfappeal') ? 'selfappeal' : 'sexappeal';
+}
 
 function escapeHtml(value) {
   return String(value || '')
@@ -200,6 +215,8 @@ module.exports = {
   DEFAULT_OG_IMAGE,
   RESERVED_PROFILE_ALIASES,
   STATIC_SITEMAP_PAGES,
+  staticSitemapPagesForSite,
+  siteKeyFromBaseUrl,
   escapeHtml,
   truncate,
   formatProfileLocation,

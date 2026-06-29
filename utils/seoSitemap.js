@@ -4,7 +4,8 @@ const config = require('../config/appConfig');
 const {
   PUBLIC_URL,
   RESERVED_PROFILE_ALIASES,
-  STATIC_SITEMAP_PAGES
+  staticSitemapPagesForSite,
+  siteKeyFromBaseUrl
 } = require('./seoMeta');
 const { getLocationPages } = require('./seoLocations');
 
@@ -106,9 +107,13 @@ function isSelfAppealHost(req) {
 }
 
 function buildSelfAppealRobotsTxt() {
+  const site = SELFAPPEAL_BASE;
   return [
     'User-agent: *',
+    'Allow: /para-modelos.html',
     'Disallow: /',
+    '',
+    `Sitemap: ${site}/sitemap.xml`,
     ''
   ].join('\n');
 }
@@ -119,9 +124,7 @@ function baseUrlForNamedSite(site) {
 }
 
 async function collectSitemapUrls(baseUrl) {
-  const professionals = await User.find(INDEXABLE_FILTER)
-    .select('professionalProfile.alias professionalProfile.lastPhotoUpdate updatedAt createdAt');
-
+  const siteKey = siteKeyFromBaseUrl(baseUrl);
   const urls = [];
   const seenLocs = new Set();
 
@@ -137,13 +140,21 @@ async function collectSitemapUrls(baseUrl) {
     });
   };
 
-  STATIC_SITEMAP_PAGES.forEach((page) => {
+  staticSitemapPagesForSite(siteKey).forEach((page) => {
     addUrl(absoluteUrlFromBase(baseUrl, page.path), {
       lastmod: toIsoDate(),
       changefreq: page.changefreq,
       priority: page.priority
     });
   });
+
+  if (siteKey !== 'sexappeal') {
+    urls.sort((a, b) => a.loc.localeCompare(b.loc));
+    return urls;
+  }
+
+  const professionals = await User.find(INDEXABLE_FILTER)
+    .select('professionalProfile.alias professionalProfile.lastPhotoUpdate updatedAt createdAt');
 
   professionals.forEach((user) => {
     const alias = sanitizeAliasForSitemap(user.professionalProfile?.alias);
@@ -186,6 +197,10 @@ function buildRobotsTxt(baseUrl) {
     'Allow: /categories.html',
     'Allow: /home.html',
     'Allow: /services.html',
+    'Allow: /plataforma.html',
+    'Allow: /detalles.html',
+    'Allow: /conciencia-vih.html',
+    'Allow: /conciencia-cancer-mama.html',
     'Allow: /acompanantes/',
     'Allow: /perfil/',
     'Disallow: /api/',

@@ -40,12 +40,11 @@ async function writeSiteBundle(label, baseUrl) {
   console.log(`  Sitemap:        ${selfappeal.sitemapPath}`);
   console.log(`  Robots:         ${selfappeal.robotsPath}`);
   console.log('--------------------------------------------------');
-  console.log('Google Search Console — submit ONLY SexAppeal:');
-  console.log(`  Property: ${SEXAPPEAL_BASE}`);
-  console.log(`  Sitemap:  ${SEXAPPEAL_BASE}/sitemap.xml`);
-  console.log('');
-  console.log('SelfAppeal is outreach-only (WhatsApp links). Do NOT add to GSC.');
-  console.log(`  ${SELFAPPEAL_BASE} — noindex, robots Disallow: /`);
+  console.log('Google Search Console — submit:');
+  console.log(`  SexAppeal property: ${SEXAPPEAL_BASE}`);
+  console.log(`  SexAppeal sitemap:  ${SEXAPPEAL_BASE}/sitemap.xml`);
+  console.log(`  SelfAppeal property (model landing only): ${SELFAPPEAL_BASE}`);
+  console.log(`  SelfAppeal sitemap: ${SELFAPPEAL_BASE}/sitemap.xml`);
   console.log('--------------------------------------------------');
 
   process.exit(0);
