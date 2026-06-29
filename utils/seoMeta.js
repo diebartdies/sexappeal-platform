@@ -1,4 +1,5 @@
 const config = require('../config/appConfig');
+const { isAccountDeleted } = require('./professionalVisibility');
 const { resolveFirstPhotoForClient } = require('./photoUtils');
 
 const PUBLIC_URL = (config.platform?.publicUrl || 'https://sexappeal.drsrv.net.ar').replace(/\/$/, '');
@@ -7,7 +8,8 @@ const DEFAULT_OG_IMAGE = `${PUBLIC_URL}/SexAppeal_logo_black.png`;
 const RESERVED_PROFILE_ALIASES = new Set([
   'login.html', 'register.html', 'recover.html', 'verify.html', 'index.html',
   'categories.html', 'dashboard.html', 'profDashboard.html', 'treasure.html',
-  'discover.html', 'home.html', 'services.html', 'admin.html', 'admin-potentials.html', 'plataforma.html'
+  'discover.html', 'home.html', 'services.html', 'admin.html', 'admin-potentials.html', 'plataforma.html',
+  'para-modelos.html', 'detalles.html', 'conciencia-vih.html', 'conciencia-cancer-mama.html'
 ]);
 
 const STATIC_SITEMAP_PAGES = [
@@ -48,6 +50,7 @@ function isProfileIndexable(user) {
   return Boolean(
     user
     && user.role === 'professional'
+    && !isAccountDeleted(user)
     && user.isVerified
     && user.verificationStatus === 'approved'
     && prof.subscriptionStatus !== 'suspended'

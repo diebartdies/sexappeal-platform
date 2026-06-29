@@ -42,6 +42,11 @@ const UserSchema = new mongoose.Schema({
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
   },
+  /** Set when the user deletes their account — hidden from public; data retained. */
+  accountDeletedAt: {
+    type: Date,
+    default: null
+  },
   rejectionReason: {
     type: String,
     enum: ['photos_unclear', 'photo_info_mismatch', 'general_failure']

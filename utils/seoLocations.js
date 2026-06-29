@@ -6,14 +6,7 @@ const { PUBLIC_URL, escapeHtml, absoluteUrl, buildSeoHeadTags } = require('./seo
 const REGISTRY_PATH = path.join(__dirname, 'seo-locations.generated.json');
 const MIN_PROFESSIONALS = Math.max(1, parseInt(process.env.SEO_LOCATION_MIN_COUNT || '1', 10));
 
-const INDEXABLE_QUERY = {
-  role: 'professional',
-  isVerified: true,
-  verificationStatus: 'approved',
-  'professionalProfile.subscriptionStatus': { $ne: 'suspended' },
-  'professionalProfile.isExposed': { $ne: false },
-  'professionalProfile.alias': { $exists: true, $nin: ['', null] }
-};
+const INDEXABLE_QUERY = require('./professionalVisibility').INDEXABLE_FILTER;
 
 function slugify(value) {
   return String(value || '')

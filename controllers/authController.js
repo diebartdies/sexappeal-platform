@@ -686,6 +686,13 @@ exports.login = async (req, res, next) => {
       });
     }
 
+    if (user.accountDeletedAt) {
+      return res.status(401).json({
+        success: false,
+        error: 'This account has been deleted.'
+      });
+    }
+
     // Log professional login activity
     const clientIp = getClientIp(req);
     if (user.role === 'professional') {
@@ -903,6 +910,9 @@ exports.googleAuth = async (req, res) => {
     let user = await User.findOne({ email });
 
     if (user) {
+      if (user.accountDeletedAt) {
+        return res.status(401).json({ success: false, error: 'This account has been deleted.' });
+      }
       if (!user.isEmailVerified) {
         user.isEmailVerified = true;
         user.emailVerificationCode = undefined;

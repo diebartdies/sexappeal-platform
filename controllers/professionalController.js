@@ -13,6 +13,10 @@ const { isUploadPath, resolvePhotoForClient, resolvePhotosForClient, normalizePh
 const { resolveWhatsappNumber, hasContactNumber } = require('../utils/contactNumber');
 const { recordCategoryChange, normalizeQuality } = require('../utils/categoryBilling');
 const smsNotifications = require('../services/smsNotifications');
+const { getClientIp } = require('../utils/clientIp');
+const { mergePublicListingFilter, isAccountDeleted } = require('../utils/professionalVisibility');
+
+const ALIAS_LOOKUP_FILTER = { role: 'professional', accountDeletedAt: null };
 
 // Simple in-memory cache setup
 const cache = new Map();
@@ -71,12 +75,7 @@ function checkIsActive(profile) {
 // @access  Public
 exports.getProfessionals = async (req, res, next) => {
   try {
-    let query = { 
-      role: 'professional', 
-      isVerified: true,
-      'professionalProfile.subscriptionStatus': { $ne: 'suspended' },
-      'professionalProfile.isExposed': { $ne: false }
-    };
+    let query = mergePublicListingFilter();
 
     // Filter by Quality (formerly Tier)
     if (req.query.quality && req.query.quality.trim()) {
@@ -194,17 +193,15 @@ exports.getProfessionalByAlias = async (req, res, next) => {
     const aliasRegex = new RegExp(`^${req.params.alias}$`, 'i');
     const professional = await User.findOne({ 
       'professionalProfile.alias': aliasRegex,
-      role: 'professional'
-    }).select('professionalProfile.alias professionalProfile.quality professionalProfile.bio professionalProfile.services professionalProfile.location professionalProfile.pricing professionalProfile.measurements professionalProfile.height professionalProfile.eyeColor professionalProfile.hasTattoos professionalProfile.whatsappNumber professionalProfile.mobilePhone professionalProfile.photos professionalProfile.workingHours professionalProfile.workingDays');
+      ...ALIAS_LOOKUP_FILTER
+    }).select('accountDeletedAt professionalProfile.alias professionalProfile.quality professionalProfile.bio professionalProfile.services professionalProfile.location professionalProfile.pricing professionalProfile.measurements professionalProfile.height professionalProfile.eyeColor professionalProfile.hasTattoos professionalProfile.whatsappNumber professionalProfile.mobilePhone professionalProfile.photos professionalProfile.workingHours professionalProfile.workingDays');
 
-    if (!professional) {
+    if (!professional || isAccountDeleted(professional)) {
       return res.status(404).json({
         success: false,
         error: 'Professional not found'
       });
     }
-
-    // Convert to object, check for WhatsApp, and delete the actual number so it's never sent to the browser
     const profObj = professional.toObject();
     const hasWhatsapp = hasContactNumber(profObj.professionalProfile);
     delete profObj.professionalProfile.whatsappNumber;
@@ -254,7 +251,7 @@ exports.trackDashboardPhotoClick = async (req, res, next) => {
     const aliasRegex = new RegExp(`^${req.params.alias}$`, 'i');
     const professional = await User.findOne({
       'professionalProfile.alias': aliasRegex,
-      role: 'professional'
+      ...ALIAS_LOOKUP_FILTER
     }).select('_id');
 
     if (!professional) {
@@ -282,7 +279,7 @@ exports.contactWhatsApp = async (req, res, next) => {
     const aliasRegex = new RegExp(`^${req.params.alias}$`, 'i');
     const professional = await User.findOne({ 
       'professionalProfile.alias': aliasRegex,
-      role: 'professional'
+      ...ALIAS_LOOKUP_FILTER
     }).select('professionalProfile.whatsappNumber professionalProfile.mobilePhone professionalProfile.alias');
 
     const contactNumber = professional ? resolveWhatsappNumber(professional.professionalProfile) : '';
@@ -324,12 +321,7 @@ exports.contactWhatsApp = async (req, res, next) => {
 // @access  Public
 exports.getSpecialties = async (req, res, next) => {
   try {
-    const query = {
-      role: 'professional',
-      isVerified: true,
-      'professionalProfile.subscriptionStatus': { $ne: 'suspended' },
-      'professionalProfile.isExposed': { $ne: false }
-    };
+    const query = mergePublicListingFilter();
 
     // If a quality filter is applied, only show specialties from that quality tier
     if (req.query.quality && req.query.quality.trim()) {
@@ -843,7 +835,7 @@ exports.contactPhone = async (req, res, next) => {
     const aliasRegex = new RegExp(`^${req.params.alias}$`, 'i');
     const professional = await User.findOne({ 
       'professionalProfile.alias': aliasRegex,
-      role: 'professional'
+      ...ALIAS_LOOKUP_FILTER
     }).select('professionalProfile.whatsappNumber professionalProfile.mobilePhone professionalProfile.alias');
 
     const contactNumber = professional ? resolveWhatsappNumber(professional.professionalProfile) : '';
@@ -889,7 +881,7 @@ function tryDeleteUploadFile(storedPath) {
   }
 }
 
-// @desc    Permanently delete the logged-in professional account
+// @desc    User-initiated profile deletion — hidden from public; data retained server-side
 // @route   DELETE /api/v1/professionals/me
 // @access  Private (Professional)
 exports.deleteMyProfile = async (req, res, next) => {
@@ -900,9 +892,16 @@ exports.deleteMyProfile = async (req, res, next) => {
     }
 
     const userId = req.user.id || req.user._id;
-    const user = await User.findById(userId).select('+password +verificationDocuments');
+    const user = await User.findById(userId).select('+password');
     if (!user || user.role !== 'professional') {
       return res.status(404).json({ success: false, error: 'Professional account not found' });
+    }
+
+    if (user.accountDeletedAt) {
+      return res.status(200).json({
+        success: true,
+        message: 'Your profile has been permanently deleted.'
+      });
     }
 
     const isMatch = await user.matchPassword(password);
@@ -910,22 +909,25 @@ exports.deleteMyProfile = async (req, res, next) => {
       return res.status(401).json({ success: false, error: 'Incorrect password. Please try again.' });
     }
 
-    const prof = user.professionalProfile || {};
+    user.accountDeletedAt = new Date();
+    if (user.professionalProfile) {
+      user.professionalProfile.isExposed = false;
+      user.professionalProfile.subscriptionStatus = 'suspended';
+    }
+    await user.save();
 
-    (prof.photos || []).forEach(tryDeleteUploadFile);
-    tryDeleteUploadFile(prof.paymentReceiptUrl);
-    (prof.paymentHistory || []).forEach((entry) => tryDeleteUploadFile(entry.receiptUrl));
-
-    await Promise.all([
-      ActivityLog.deleteMany({ professional: user._id }),
-      Statistic.deleteMany({ professionalId: user._id }),
-      Specialty.deleteMany({ user: user._id }),
-      Review.deleteMany({ $or: [{ professional: user._id }, { author: user._id }] }),
-      Connection.deleteMany({ $or: [{ professional: user._id }, { requester: user._id }] }),
-      ConnectionRequest.deleteMany({ $or: [{ professional: user._id }, { guestUser: user._id }] })
-    ]);
-
-    await User.findByIdAndDelete(user._id);
+    try {
+      await ActivityLog.create({
+        professional: user._id,
+        action: 'account_soft_deleted',
+        actorType: 'professional',
+        ipAddress: getClientIp(req),
+        userAgent: req.headers['user-agent'] ? String(req.headers['user-agent']).slice(0, 500) : undefined,
+        details: { alias: user.professionalProfile?.alias || null }
+      });
+    } catch (err) {
+      console.error('Failed to log account soft delete:', err.message);
+    }
 
     res.status(200).json({
       success: true,

@@ -12,7 +12,11 @@ exports.requestConnection = async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'Please provide a professional to connect with.' });
     }
 
-    const professional = await User.findOne({ 'professionalProfile.alias': professionalAlias, role: 'professional' });
+    const professional = await User.findOne({
+      'professionalProfile.alias': professionalAlias,
+      role: 'professional',
+      accountDeletedAt: null
+    });
 
     if (!professional) {
       return res.status(404).json({ success: false, error: 'Professional not found.' });

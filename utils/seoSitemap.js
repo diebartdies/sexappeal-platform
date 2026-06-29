@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const { INDEXABLE_FILTER } = require('./professionalVisibility');
 const config = require('../config/appConfig');
 const {
   PUBLIC_URL,
@@ -118,14 +119,8 @@ function baseUrlForNamedSite(site) {
 }
 
 async function collectSitemapUrls(baseUrl) {
-  const professionals = await User.find({
-    role: 'professional',
-    isVerified: true,
-    verificationStatus: 'approved',
-    'professionalProfile.subscriptionStatus': { $ne: 'suspended' },
-    'professionalProfile.isExposed': { $ne: false },
-    'professionalProfile.alias': { $exists: true, $nin: ['', null] }
-  }).select('professionalProfile.alias professionalProfile.lastPhotoUpdate updatedAt createdAt');
+  const professionals = await User.find(INDEXABLE_FILTER)
+    .select('professionalProfile.alias professionalProfile.lastPhotoUpdate updatedAt createdAt');
 
   const urls = [];
   const seenLocs = new Set();

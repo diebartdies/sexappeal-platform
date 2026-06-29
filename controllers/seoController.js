@@ -1,13 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const User = require('../models/User');
-const {
-  PUBLIC_URL,
-  RESERVED_PROFILE_ALIASES,
-  buildProfileSeo,
-  applySeoToHtml,
-  absoluteUrl
-} = require('../utils/seoMeta');
+const { isProfileIndexable } = require('../utils/seoMeta');
 const {
   resolveRequestBaseUrl,
   isSelfAppealHost,
@@ -128,16 +122,17 @@ exports.renderProfilePage = async (req, res, next) => {
     const aliasRegex = new RegExp(`^${aliasParam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
     const professional = await User.findOne({
       'professionalProfile.alias': aliasRegex,
-      role: 'professional'
+      role: 'professional',
+      accountDeletedAt: null
     }).select(
-      'role isVerified verificationStatus professionalProfile.alias professionalProfile.quality '
+      'role isVerified verificationStatus accountDeletedAt professionalProfile.alias professionalProfile.quality '
       + 'professionalProfile.bio professionalProfile.services professionalProfile.location '
       + 'professionalProfile.photos professionalProfile.subscriptionStatus professionalProfile.isExposed'
     );
 
     const template = loadTreasureTemplate();
 
-    if (!professional) {
+    if (!professional || !isProfileIndexable(professional)) {
       res.status(404);
       const html = applySeoToHtml(template, {
         title: 'Perfil no encontrado | SexAppeal',

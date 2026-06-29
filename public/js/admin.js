@@ -3569,9 +3569,12 @@ export async function renderProfessionalList(aliasSearch = '') {
             data.data.forEach(prof => {
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid #333';
+                const deletedBadge = prof.accountDeletedAt
+                    ? ' <span style="color:#888;font-size:0.75rem;">(user-deleted · data kept)</span>'
+                    : '';
                 tr.innerHTML = `
                     <td style="padding: 10px;">${prof.email}</td>
-                    <td style="padding: 10px;">${prof.professionalProfile?.alias || 'N/A'}</td>
+                    <td style="padding: 10px;">${prof.professionalProfile?.alias || 'N/A'}${deletedBadge}</td>
                     <td style="padding: 10px;">${prof.verificationStatus}</td>
                     <td style="padding: 10px;">
                         <button class="edit-prof-btn" data-id="${prof._id}" style="padding: 5px 10px;">Edit</button>

@@ -37,6 +37,12 @@ exports.protect = async (req, res, next) => {
     try {
       const user = await authenticateToken(token);
       if (user) {
+        if (user.accountDeletedAt && user.role !== 'admin') {
+          return res.status(401).json({
+            success: false,
+            error: 'This account has been deleted.'
+          });
+        }
         req.user = user;
         return next();
       }
