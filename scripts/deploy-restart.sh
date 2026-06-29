@@ -112,10 +112,17 @@ if ! $DC build app 2>&1 | tee "$BUILD_LOG"; then
   exit 1
 fi
 
-if [ -f "$DEPLOY_DIR/scripts/parse-docker-build-timings.js" ]; then
+if [ -f "$DEPLOY_DIR/scripts/parse-docker-build-timings.js" ] && [ -f "$BUILD_LOG" ]; then
   echo ""
   echo "=== Docker build timing summary ==="
-  node "$DEPLOY_DIR/scripts/parse-docker-build-timings.js" "$BUILD_LOG" || true
+  if command -v node >/dev/null 2>&1; then
+    node "$DEPLOY_DIR/scripts/parse-docker-build-timings.js" "$BUILD_LOG" || true
+  elif docker image inspect node:22-alpine >/dev/null 2>&1; then
+    docker run --rm -v "$DEPLOY_DIR:/app" -w /app node:22-alpine \
+      node scripts/parse-docker-build-timings.js .cache/docker-build.log || true
+  else
+    echo "(timing report skipped — no node on host; use: npm run docker:build-timings locally)"
+  fi
 fi
 
 if ! replace_app_container; then
