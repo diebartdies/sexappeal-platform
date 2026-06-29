@@ -4,10 +4,33 @@ import { t } from './i18n.js';
 const AIDS_WINDOW = { month: 12, startDay: 1, endDay: 7 };
 const BREAST_WINDOW = { month: 10, startDay: 19, endDay: 25 };
 
-const RIBBON_SVG = `<svg class="awareness-ribbon-svg" viewBox="0 0 36 52" aria-hidden="true" focusable="false">
-    <path d="M18 2 C10 2 4 9 4 17 C4 28 18 50 18 50 C18 50 32 28 32 17 C32 9 26 2 18 2 Z" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/>
-    <path d="M18 8 C13 8 9 12 9 17 C9 24 18 42 18 42 C18 42 27 24 27 17 C27 12 23 8 18 8 Z" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="0.75"/>
-</svg>`;
+const CAMPAIGNS = {
+    aids: {
+        id: 'aids',
+        page: 'conciencia-vih.html',
+        ribbonClass: 'awareness-ribbon-link--aids',
+        ariaLabelKey: 'AIDS awareness — open prevention information',
+        captionKey: 'World AIDS Day · 1 Dec',
+        titleKey: 'World AIDS Day'
+    },
+    breast: {
+        id: 'breast',
+        page: 'conciencia-cancer-mama.html',
+        ribbonClass: 'awareness-ribbon-link--breast',
+        ariaLabelKey: 'Breast cancer awareness — open prevention information',
+        captionKey: 'Breast cancer awareness · 19 Oct',
+        titleKey: 'Breast cancer awareness'
+    }
+};
+
+const TEST_PARAM_ALIASES = {
+    aids: 'aids',
+    sida: 'aids',
+    vih: 'aids',
+    breast: 'breast',
+    mama: 'breast',
+    cancer: 'breast'
+};
 
 function isInWindow(date, window) {
     const month = date.getMonth() + 1;
@@ -15,36 +38,38 @@ function isInWindow(date, window) {
     return month === window.month && day >= window.startDay && day <= window.endDay;
 }
 
+function getTestCampaignFromUrl() {
+    if (typeof window === 'undefined') return null;
+    const raw = new URLSearchParams(window.location.search).get('awareness');
+    if (!raw) return null;
+    const key = TEST_PARAM_ALIASES[String(raw).trim().toLowerCase()];
+    return key ? { ...CAMPAIGNS[key], testMode: true } : null;
+}
+
 export function getActiveAwarenessCampaign(now = new Date()) {
+    const testCampaign = getTestCampaignFromUrl();
+    if (testCampaign) return testCampaign;
+
     if (isInWindow(now, AIDS_WINDOW)) {
-        return {
-            id: 'aids',
-            page: 'conciencia-vih.html',
-            ribbonClass: 'awareness-ribbon-link--aids',
-            ariaLabelKey: 'AIDS awareness — open prevention information',
-            captionKey: 'World AIDS Day · 1 Dec',
-            titleKey: 'World AIDS Day'
-        };
+        return { ...CAMPAIGNS.aids };
     }
     if (isInWindow(now, BREAST_WINDOW)) {
-        return {
-            id: 'breast',
-            page: 'conciencia-cancer-mama.html',
-            ribbonClass: 'awareness-ribbon-link--breast',
-            ariaLabelKey: 'Breast cancer awareness — open prevention information',
-            captionKey: 'Breast cancer awareness · 19 Oct',
-            titleKey: 'Breast cancer awareness'
-        };
+        return { ...CAMPAIGNS.breast };
     }
     return null;
 }
+
+const RIBBON_SVG = `<svg class="awareness-ribbon-svg" viewBox="0 0 36 52" aria-hidden="true" focusable="false">
+    <path d="M18 2 C10 2 4 9 4 17 C4 28 18 50 18 50 C18 50 32 28 32 17 C32 9 26 2 18 2 Z" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/>
+    <path d="M18 8 C13 8 9 12 9 17 C9 24 18 42 18 42 C18 42 27 24 27 17 C27 12 23 8 18 8 Z" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="0.75"/>
+</svg>`;
 
 function ensureAwarenessStyles() {
     if (document.getElementById('sexappeal-awareness-css')) return;
     const link = document.createElement('link');
     link.id = 'sexappeal-awareness-css';
     link.rel = 'stylesheet';
-    link.href = '/css/awareness-campaigns.css?v=1';
+    link.href = '/css/awareness-campaigns.css?v=2';
     document.head.appendChild(link);
 }
 
