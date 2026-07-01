@@ -94,3 +94,89 @@
 .interest-notes-error {
   color: var(--accent-red, #ff6b6b);
 }
+
+/* Blueprint variant */
+body.blueprint-theme.blueprint-notes-page .interest-notes-page {
+  max-width: 860px;
+  padding-top: 8px;
+}
+
+body.blueprint-theme.blueprint-notes-page .interest-notes-back {
+  font-family: var(--blueprint-font-ui, 'Segoe UI', sans-serif);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border: 1px solid rgba(184, 146, 46, 0.35);
+  border-radius: 4px;
+  padding: 8px 12px;
+  text-decoration: none;
+  color: var(--primary-gold, #d4af37);
+}
+
+body.blueprint-theme.blueprint-notes-page .interest-notes-back:hover {
+  text-decoration: none;
+  background: rgba(184, 146, 46, 0.12);
+  border-color: rgba(184, 146, 46, 0.55);
+}
+
+body.blueprint-theme.blueprint-notes-page .interest-notes-heading,
+body.blueprint-theme.blueprint-notes-page .interest-note-article-title {
+  font-family: var(--blueprint-font-ui, 'Segoe UI', sans-serif);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--primary-gold, #d4af37);
+  margin-bottom: 14px;
+}
+
+body.blueprint-theme.blueprint-notes-page .interest-notes-sub {
+  font-family: var(--blueprint-font-mono, 'Consolas', monospace);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #777;
+  margin-bottom: 18px;
+}
+
+body.blueprint-theme.blueprint-notes-page .interest-notes-list {
+  gap: 12px;
+}
+
+body.blueprint-theme.blueprint-notes-page .interest-note-card {
+  border: 1px solid rgba(184, 146, 46, 0.35);
+  border-radius: 4px;
+  background: rgba(8, 10, 14, 0.9);
+  padding: 14px 16px;
+}
+
+body.blueprint-theme.blueprint-notes-page .interest-note-card:hover {
+  border-color: rgba(184, 146, 46, 0.6);
+  background: rgba(12, 14, 18, 0.95);
+}
+
+body.blueprint-theme.blueprint-notes-page .interest-note-card-title {
+  margin-bottom: 8px;
+  font-family: var(--blueprint-font-ui, 'Segoe UI', sans-serif);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--primary-gold, #d4af37);
+}
+
+body.blueprint-theme.blueprint-notes-page .interest-note-card-preview,
+body.blueprint-theme.blueprint-notes-page .interest-note-article {
+  font-family: var(--blueprint-font-mono, 'Consolas', monospace);
+  font-size: 0.72rem;
+  line-height: 1.75;
+  letter-spacing: 0.02em;
+  color: #c0c0c0;
+}
+
+body.blueprint-theme.blueprint-notes-page #interestNoteArticle {
+  border: 1px solid rgba(184, 146, 46, 0.35);
+  border-radius: 4px;
+  background: rgba(8, 10, 14, 0.9);
+  padding: 16px;
+}

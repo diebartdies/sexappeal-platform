@@ -732,6 +732,13 @@ export async function initializeFilters() {
             transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             overflowY: 'auto', padding: '20px', paddingTop: '70px', boxSizing: 'border-box'
         });
+        if (document.body.classList.contains('blueprint-theme')) {
+            filterDrawer.style.maxWidth = '92vw';
+            filterDrawer.style.paddingTop = 'calc(var(--global-topbar-height, 55px) + var(--blueprint-notes-height, 40px) + env(safe-area-inset-top, 0px) + 12px)';
+            filterDrawer.style.paddingLeft = 'max(12px, env(safe-area-inset-left))';
+            filterDrawer.style.paddingRight = 'max(12px, env(safe-area-inset-right))';
+            filterDrawer.style.paddingBottom = 'max(20px, env(safe-area-inset-bottom))';
+        }
 
         const drawerHeader = document.createElement('div');
         drawerHeader.style.display = 'flex';
