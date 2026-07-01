@@ -536,6 +536,39 @@ body.blueprint-theme.blueprint-dashboard-page #dashboardContent .interest-notes-
   min-height: 44px;
 }
 
+body.blueprint-theme.blueprint-dashboard-page #dashboardContent .admin-pending-table-wrap,
+body.blueprint-theme.blueprint-dashboard-page #dashboardContent .admin-main table {
+  border-color: var(--blueprint-border);
+}
+
+body.blueprint-theme.blueprint-dashboard-page #dashboardContent .admin-pending-table th,
+body.blueprint-theme.blueprint-dashboard-page #dashboardContent table th {
+  font-family: var(--blueprint-font-ui);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-color: var(--blueprint-border) !important;
+  background: rgba(184, 146, 46, 0.08) !important;
+  color: var(--primary-gold) !important;
+}
+
+body.blueprint-theme.blueprint-dashboard-page #dashboardContent .admin-pending-table td,
+body.blueprint-theme.blueprint-dashboard-page #dashboardContent table td {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.75rem;
+  border-color: rgba(184, 146, 46, 0.2) !important;
+}
+
+body.blueprint-theme.blueprint-dashboard-page #dashboardContent input,
+body.blueprint-theme.blueprint-dashboard-page #dashboardContent select,
+body.blueprint-theme.blueprint-dashboard-page #dashboardContent textarea {
+  border: 1px solid var(--blueprint-border) !important;
+  border-radius: 4px !important;
+  background: rgba(0, 0, 0, 0.45) !important;
+  font-family: var(--blueprint-font-mono);
+  color: #e8e8e8;
+}
+
 @media (max-width: 1024px) {
   body.blueprint-theme .categories-container {
     padding-top: 8px;
@@ -577,16 +610,19 @@ body.blueprint-theme.blueprint-dashboard-page #dashboardContent .interest-notes-
 }
 
 /* ---- Login (model auth) ---- */
-body.blueprint-theme.blueprint-login-page.landing-page {
+body.blueprint-theme.blueprint-login-page.landing-page,
+body.blueprint-theme.blueprint-landing-page.landing-page {
   padding-top: env(safe-area-inset-top, 0px);
 }
 
-body.blueprint-theme.blueprint-login-page .landing-frame {
+body.blueprint-theme.blueprint-login-page .landing-frame,
+body.blueprint-theme.blueprint-landing-page .landing-frame {
   border-right: 1px dashed var(--blueprint-border);
   background: var(--blueprint-panel);
 }
 
-body.blueprint-theme.blueprint-login-page .landing-frame:last-child {
+body.blueprint-theme.blueprint-login-page .landing-frame:last-child,
+body.blueprint-theme.blueprint-landing-page .landing-frame:last-child {
   border-right: none;
 }
 
@@ -609,7 +645,8 @@ body.blueprint-theme.blueprint-login-page .landing-login-sub {
   letter-spacing: 0.04em;
 }
 
-body.blueprint-theme.blueprint-login-page .brand-services-tagline {
+body.blueprint-theme.blueprint-login-page .brand-services-tagline,
+body.blueprint-theme.blueprint-landing-page .brand-services-tagline {
   font-family: var(--blueprint-font-mono);
   font-size: 0.62rem;
   text-transform: uppercase;
@@ -618,6 +655,110 @@ body.blueprint-theme.blueprint-login-page .brand-services-tagline {
   border-top: 1px dashed var(--blueprint-border);
   padding-top: 12px;
   margin-top: 12px;
+}
+
+body.blueprint-theme.blueprint-landing-page .landing-brand-name {
+  font-family: var(--blueprint-font-ui);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--primary-gold);
+}
+
+body.blueprint-theme.blueprint-landing-page .landing-brochure-link {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #888;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+body.blueprint-theme.blueprint-landing-page .landing-brochure-link:hover {
+  color: var(--primary-gold);
+  border-bottom-color: var(--primary-gold);
+}
+
+body.blueprint-theme.blueprint-landing-page .landing-title {
+  font-family: var(--blueprint-font-ui) !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--primary-gold) !important;
+  margin: 0 0 12px;
+}
+
+body.blueprint-theme.blueprint-landing-page .landing-tagline,
+body.blueprint-theme.blueprint-landing-page .landing-age-disclaimer {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.72rem;
+  color: #888;
+  line-height: 1.55;
+  margin: 0 0 12px;
+}
+
+body.blueprint-theme.blueprint-landing-page .landing-age-gate {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 280px;
+  margin: 16px auto 0;
+}
+
+body.blueprint-theme.blueprint-landing-page .landing-btn-enter,
+body.blueprint-theme.blueprint-landing-page .landing-btn-exit {
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 0 !important;
+}
+
+body.blueprint-theme.blueprint-landing-page .landing-pro-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+  width: 100%;
+  max-width: 280px;
+}
+
+body.blueprint-theme.blueprint-landing-page .landing-pro-link {
+  font-family: var(--blueprint-font-ui);
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  padding: 10px 14px;
+  border-radius: 4px;
+  border: 1px solid var(--blueprint-border);
+  text-align: center;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+body.blueprint-theme.blueprint-landing-page .landing-pro-link-login {
+  background: rgba(184, 146, 46, 0.12);
+  color: #f0e4c3 !important;
+}
+
+body.blueprint-theme.blueprint-landing-page .landing-pro-link-register {
+  background: transparent;
+  color: var(--primary-gold) !important;
+}
+
+body.blueprint-theme.blueprint-landing-page .landing-pro-link:hover {
+  border-color: rgba(184, 146, 46, 0.55);
+  background: rgba(184, 146, 46, 0.1);
+}
+
+body.blueprint-theme.blueprint-landing-page .landing-logo {
+  border: 1px dashed var(--blueprint-border);
+  border-radius: 4px;
+  padding: 8px;
+  background: #000;
 }
 
 body.blueprint-theme.blueprint-login-page .landing-login-form label {
@@ -680,19 +821,218 @@ body.blueprint-theme.blueprint-login-page .landing-login-form img {
 }
 
 @media (max-width: 768px) {
-  body.blueprint-theme.blueprint-login-page .landing-dual {
+  body.blueprint-theme.blueprint-login-page .landing-dual,
+  body.blueprint-theme.blueprint-landing-page .landing-dual {
     min-height: auto;
   }
 
-  body.blueprint-theme.blueprint-login-page .landing-frame {
+  body.blueprint-theme.blueprint-login-page .landing-frame,
+  body.blueprint-theme.blueprint-landing-page .landing-frame {
     border-right: none;
     border-bottom: 1px dashed var(--blueprint-border);
     min-height: auto;
     padding: 24px 16px;
   }
 
-  body.blueprint-theme.blueprint-login-page .landing-frame:last-child {
+  body.blueprint-theme.blueprint-login-page .landing-frame:last-child,
+  body.blueprint-theme.blueprint-landing-page .landing-frame:last-child {
     border-bottom: none;
+  }
+}
+
+/* ---- Auth pages: register, recover, verify ---- */
+body.blueprint-theme.blueprint-auth-page {
+  padding-top: calc(55px + env(safe-area-inset-top, 0px));
+}
+
+body.blueprint-theme.blueprint-auth-page .card,
+body.blueprint-theme.blueprint-auth-page .password-recovery-page {
+  border-radius: 4px !important;
+  border: 1px solid var(--blueprint-border) !important;
+  background: var(--blueprint-panel) !important;
+  box-shadow: none !important;
+}
+
+body.blueprint-theme.blueprint-auth-page h1.gold-text,
+body.blueprint-theme.blueprint-auth-page h2.gold-text,
+body.blueprint-theme.blueprint-auth-page h3.gold-text {
+  font-family: var(--blueprint-font-ui) !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  background: none !important;
+  -webkit-text-fill-color: var(--primary-gold) !important;
+  color: var(--primary-gold) !important;
+  animation: none !important;
+}
+
+body.blueprint-theme.blueprint-auth-page .form-group label,
+body.blueprint-theme.blueprint-auth-page .reg-page label {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #999 !important;
+}
+
+body.blueprint-theme.blueprint-auth-page input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+body.blueprint-theme.blueprint-auth-page select,
+body.blueprint-theme.blueprint-auth-page textarea,
+body.blueprint-theme.blueprint-auth-page .reg-input,
+body.blueprint-theme.blueprint-auth-page .reg-phone-input,
+body.blueprint-theme.blueprint-auth-page .reg-date-text {
+  border: 1px solid var(--blueprint-border) !important;
+  border-radius: 4px !important;
+  background: rgba(0, 0, 0, 0.45) !important;
+  font-family: var(--blueprint-font-mono);
+  color: #e8e8e8 !important;
+}
+
+body.blueprint-theme.blueprint-auth-page input:focus,
+body.blueprint-theme.blueprint-auth-page select:focus,
+body.blueprint-theme.blueprint-auth-page textarea:focus {
+  border-color: rgba(184, 146, 46, 0.65) !important;
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(184, 146, 46, 0.25);
+}
+
+body.blueprint-theme.blueprint-auth-page .recovery-step-text,
+body.blueprint-theme.blueprint-auth-page .reg-hint,
+body.blueprint-theme.blueprint-auth-page #regFormIntro {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.72rem;
+  color: #888 !important;
+  line-height: 1.5;
+}
+
+body.blueprint-theme.blueprint-auth-page .brand-services-tagline {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #777;
+}
+
+body.blueprint-theme.blueprint-auth-page .reg-logo-block img,
+body.blueprint-theme.blueprint-auth-page .password-recovery-page img,
+body.blueprint-theme.blueprint-auth-page .card img[alt*="Logo"] {
+  border: 1px dashed var(--blueprint-border);
+  border-radius: 4px;
+  padding: 8px;
+  background: #000;
+  box-shadow: none !important;
+}
+
+body.blueprint-theme.blueprint-auth-page .reg-back-btn {
+  font-family: var(--blueprint-font-ui);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border: 1px solid var(--blueprint-border) !important;
+  color: var(--primary-gold) !important;
+  background: transparent !important;
+  border-radius: 4px;
+}
+
+body.blueprint-theme.blueprint-auth-page .reg-back-btn:hover {
+  background: rgba(184, 146, 46, 0.1) !important;
+}
+
+body.blueprint-theme.blueprint-auth-page #regInstructions {
+  border: 1px dashed var(--blueprint-border) !important;
+  border-radius: 4px !important;
+  background: rgba(184, 146, 46, 0.06) !important;
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.78rem;
+}
+
+body.blueprint-theme.blueprint-auth-page .reg-country-btn {
+  border: 1px solid var(--blueprint-border) !important;
+  border-right: none !important;
+  background: rgba(0, 0, 0, 0.45) !important;
+}
+
+body.blueprint-theme.blueprint-auth-page .reg-phone-input {
+  border-left: none !important;
+}
+
+body.blueprint-theme.blueprint-auth-page .reg-country-menu {
+  border: 1px solid var(--blueprint-border);
+  background: var(--blueprint-panel);
+}
+
+body.blueprint-theme.blueprint-auth-page .reg-date-picker-btn {
+  border: 1px solid var(--blueprint-border) !important;
+  background: rgba(0, 0, 0, 0.45) !important;
+  color: var(--primary-gold);
+}
+
+body.blueprint-theme.blueprint-auth-page .reg-inline-link,
+body.blueprint-theme.blueprint-auth-page .recovery-resend-link,
+body.blueprint-theme.blueprint-auth-page a[href*="index"],
+body.blueprint-theme.blueprint-auth-page a[href*="login"] {
+  font-family: var(--blueprint-font-ui);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--primary-gold) !important;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  cursor: pointer;
+}
+
+body.blueprint-theme.blueprint-auth-page .reg-inline-link:hover,
+body.blueprint-theme.blueprint-auth-page .recovery-resend-link:hover,
+body.blueprint-theme.blueprint-auth-page a[href*="index"]:hover,
+body.blueprint-theme.blueprint-auth-page a[href*="login"]:hover {
+  border-bottom-color: var(--primary-gold);
+  text-decoration: none;
+}
+
+body.blueprint-theme.blueprint-auth-page .reg-inline-link.muted {
+  color: #777 !important;
+}
+
+body.blueprint-theme.blueprint-auth-page #regNoPaymentNote {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.7rem !important;
+  border: 1px dashed rgba(37, 211, 102, 0.35) !important;
+  border-radius: 4px !important;
+  background: rgba(37, 211, 102, 0.06) !important;
+}
+
+body.blueprint-theme.blueprint-auth-page .reg-inapp-browser-tip {
+  border: 1px dashed rgba(255, 193, 7, 0.45) !important;
+  border-radius: 4px !important;
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.75rem;
+}
+
+body.blueprint-theme.blueprint-auth-page .page-header {
+  border-bottom: 1px dashed var(--blueprint-border);
+  margin-bottom: 24px;
+}
+
+body.blueprint-theme.blueprint-auth-page button[type="submit"].sa-btn,
+body.blueprint-theme.blueprint-auth-page .landing-btn-login.sa-btn {
+  min-height: 44px;
+}
+
+body.blueprint-theme.blueprint-auth-page .recovery-code-input,
+body.blueprint-theme.blueprint-auth-page #verifyCode {
+  letter-spacing: 0.35em;
+  text-align: center;
+  font-size: 1.25rem !important;
+}
+
+@media (max-width: 768px) {
+  body.blueprint-theme.blueprint-auth-page .reg-page {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
   }
 }
 
@@ -854,5 +1194,456 @@ body.blueprint-theme.blueprint-prof-page #photoGrid .photo-frame {
   body.blueprint-theme.blueprint-prof-page .prof-dashboard-layout {
     flex-direction: column;
     gap: 16px;
+  }
+}
+
+/* ---- Public treasure profile ---- */
+body.blueprint-theme.blueprint-treasure-page {
+  color: #e0e0e0;
+  font-family: var(--blueprint-font-ui);
+}
+
+body.blueprint-theme.blueprint-treasure-page .container {
+  max-width: 850px;
+  margin: 0 auto;
+  padding: 20px;
+  padding-top: calc(55px + env(safe-area-inset-top, 0px) + 24px);
+  padding-bottom: max(100px, calc(80px + env(safe-area-inset-bottom)));
+  box-sizing: border-box;
+}
+
+body.blueprint-theme.blueprint-treasure-page #loader p {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #777;
+  text-align: center;
+  padding: 48px 16px;
+}
+
+body.blueprint-theme.blueprint-treasure-page #treasureContent .card {
+  border-radius: 4px !important;
+  border: 1px solid var(--blueprint-border) !important;
+  background: var(--blueprint-panel) !important;
+  box-shadow: none !important;
+  padding: 28px 24px !important;
+}
+
+body.blueprint-theme.blueprint-treasure-page #treasureContent h2.gold-text,
+body.blueprint-theme.blueprint-treasure-page #treasureContent h3.gold-text {
+  font-family: var(--blueprint-font-ui) !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  background: none !important;
+  -webkit-text-fill-color: var(--primary-gold) !important;
+  color: var(--primary-gold) !important;
+  animation: none !important;
+}
+
+body.blueprint-theme.blueprint-treasure-page #treasureContent p,
+body.blueprint-theme.blueprint-treasure-page #treasureContent strong {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: #bbb;
+}
+
+body.blueprint-theme.blueprint-treasure-page #treasureContent strong {
+  color: #d8d8d8;
+  font-family: var(--blueprint-font-ui);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+body.blueprint-theme.blueprint-treasure-page .tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+body.blueprint-theme.blueprint-treasure-page .tag {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(184, 146, 46, 0.1) !important;
+  border: 1px solid var(--blueprint-border) !important;
+  color: var(--primary-gold) !important;
+  padding: 4px 10px;
+  border-radius: 4px !important;
+}
+
+body.blueprint-theme.blueprint-treasure-page #treasureBackBtn {
+  font-family: var(--blueprint-font-ui) !important;
+  font-size: 0.65rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border: 1px solid var(--blueprint-border) !important;
+  border-radius: 4px !important;
+  background: transparent !important;
+  color: var(--primary-gold) !important;
+  min-height: 36px;
+  padding: 6px 12px !important;
+}
+
+body.blueprint-theme.blueprint-treasure-page #treasureBackBtn:hover {
+  background: rgba(184, 146, 46, 0.1) !important;
+}
+
+body.blueprint-theme.blueprint-treasure-page #treasureContent button {
+  border-radius: 4px !important;
+  font-family: var(--blueprint-font-ui);
+  font-size: 0.68rem !important;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  min-height: 44px;
+  padding: 10px 18px !important;
+}
+
+body.blueprint-theme.blueprint-treasure-page #treasureContent button[onclick*="contactOnPhone"] {
+  background: transparent !important;
+  border: 1px solid var(--blueprint-border) !important;
+  color: var(--primary-gold) !important;
+}
+
+body.blueprint-theme.blueprint-treasure-page #treasurePhotoGrid.photo-carousel {
+  border: 1px dashed var(--blueprint-border);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 8px;
+}
+
+body.blueprint-theme.blueprint-treasure-page .photo-item-public {
+  border: 1px solid var(--blueprint-border) !important;
+  border-radius: 4px !important;
+  overflow: hidden;
+}
+
+body.blueprint-theme.blueprint-treasure-page #treasureBioSection {
+  border-bottom: 1px dashed var(--blueprint-border) !important;
+}
+
+@media (max-width: 768px) {
+  body.blueprint-theme.blueprint-treasure-page .container {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+  }
+
+  body.blueprint-theme.blueprint-treasure-page #treasureContent .card {
+    padding: 20px 16px !important;
+  }
+
+  body.blueprint-theme.blueprint-treasure-page #treasureContent h2.gold-text {
+    font-size: 0.85rem !important;
+    padding: 0 56px !important;
+  }
+}
+
+/* ---- Static / content pages (detalles, awareness, para-modelos) ---- */
+body.blueprint-theme.blueprint-static-page.landing-page {
+  padding-top: calc(55px + env(safe-area-inset-top, 0px));
+}
+
+body.blueprint-theme.blueprint-static-page .landing-details-header {
+  border-bottom: 1px dashed var(--blueprint-border);
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+}
+
+body.blueprint-theme.blueprint-static-page .landing-details-back,
+body.blueprint-theme.blueprint-static-page .reg-back-btn {
+  font-family: var(--blueprint-font-ui);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border: 1px solid var(--blueprint-border) !important;
+  border-radius: 4px;
+  background: transparent !important;
+  color: var(--primary-gold) !important;
+}
+
+body.blueprint-theme.blueprint-static-page .landing-details-logo {
+  border: 1px dashed var(--blueprint-border);
+  border-radius: 4px;
+  padding: 6px;
+  background: #000;
+}
+
+body.blueprint-theme.blueprint-static-page .landing-advantages-heading {
+  font-family: var(--blueprint-font-ui) !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--primary-gold) !important;
+}
+
+body.blueprint-theme.blueprint-static-page .landing-advantages-sub,
+body.blueprint-theme.blueprint-static-page .awareness-info-lead {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.78rem;
+  color: #888 !important;
+  line-height: 1.6;
+}
+
+body.blueprint-theme.blueprint-static-page .landing-advantages-card {
+  border-radius: 4px !important;
+  border: 1px solid var(--blueprint-border) !important;
+  background: var(--blueprint-panel) !important;
+  box-shadow: none !important;
+}
+
+body.blueprint-theme.blueprint-static-page .landing-advantages-title {
+  font-family: var(--blueprint-font-ui);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--primary-gold) !important;
+}
+
+body.blueprint-theme.blueprint-static-page .landing-advantages-lead,
+body.blueprint-theme.blueprint-static-page .landing-advantages-list li,
+body.blueprint-theme.blueprint-static-page .awareness-info-section p,
+body.blueprint-theme.blueprint-static-page .awareness-info-section li {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.8rem;
+  color: #bbb !important;
+  line-height: 1.6;
+}
+
+body.blueprint-theme.blueprint-static-page .awareness-info-section h2 {
+  font-family: var(--blueprint-font-ui);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--primary-gold) !important;
+}
+
+body.blueprint-theme.blueprint-static-page .awareness-info-ribbon {
+  border: 1px dashed var(--blueprint-border);
+  border-radius: 4px;
+  box-shadow: none !important;
+}
+
+body.blueprint-theme.blueprint-static-page .awareness-info-note {
+  border: 1px dashed var(--blueprint-border) !important;
+  border-radius: 4px !important;
+  background: rgba(184, 146, 46, 0.06) !important;
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.75rem;
+  color: #999 !important;
+}
+
+body.blueprint-theme.blueprint-static-page .landing-advantages-cta {
+  font-family: var(--blueprint-font-ui);
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-radius: 4px !important;
+  padding: 12px 16px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.blueprint-theme.blueprint-static-page .landing-advantages-cta:not(.landing-advantages-cta-muted) {
+  background: rgba(184, 146, 46, 0.14) !important;
+  border: 1px solid rgba(184, 146, 46, 0.55) !important;
+  color: #f0e4c3 !important;
+}
+
+body.blueprint-theme.blueprint-static-page .landing-advantages-cta-muted {
+  background: transparent !important;
+  border: 1px solid rgba(143, 223, 176, 0.45) !important;
+  color: #8fdfb0 !important;
+}
+
+/* SelfAppeal outreach landing */
+body.blueprint-theme.blueprint-model-landing-page .model-landing-brand h1 {
+  font-family: var(--blueprint-font-ui);
+  font-size: 0.95rem !important;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--primary-gold) !important;
+}
+
+body.blueprint-theme.blueprint-model-landing-page .model-landing-lead {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.78rem;
+  color: #999 !important;
+}
+
+body.blueprint-theme.blueprint-model-landing-page .model-landing-brand img {
+  border: 1px dashed var(--blueprint-border);
+  border-radius: 4px;
+  padding: 8px;
+  background: #000;
+}
+
+body.blueprint-theme.blueprint-model-landing-page .model-landing-perks {
+  border: 1px dashed var(--blueprint-border) !important;
+  border-radius: 4px !important;
+  background: rgba(184, 146, 46, 0.06) !important;
+}
+
+body.blueprint-theme.blueprint-model-landing-page .model-landing-perks ul {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.78rem;
+  color: #ccc !important;
+}
+
+body.blueprint-theme.blueprint-model-landing-page .model-landing-register {
+  font-family: var(--blueprint-font-ui);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-radius: 4px !important;
+  border: 1px solid var(--blueprint-border) !important;
+  color: var(--primary-gold) !important;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.blueprint-theme.blueprint-model-landing-page .model-landing-wa {
+  border-radius: 4px !important;
+  font-family: var(--blueprint-font-ui);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  box-shadow: none !important;
+}
+
+body.blueprint-theme.blueprint-model-landing-page .model-landing-note,
+body.blueprint-theme.blueprint-model-landing-page .model-landing-founder {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.72rem;
+  color: #777 !important;
+}
+
+body.blueprint-theme.blueprint-model-landing-page .model-landing-founder {
+  border: 1px dashed var(--blueprint-border) !important;
+  border-radius: 4px !important;
+  background: rgba(8, 10, 14, 0.6) !important;
+}
+
+/* ---- Admin overlays & modals ---- */
+body.blueprint-theme .admin-overlay-modal {
+  background: rgba(4, 5, 8, 0.92) !important;
+}
+
+body.blueprint-theme .admin-overlay-modal .card,
+body.blueprint-theme .admin-overlay-modal .fileteado-section,
+body.blueprint-theme .admin-overlay-modal [data-modal-panel] {
+  border-radius: 4px !important;
+  border: 1px solid var(--blueprint-border) !important;
+  background: var(--blueprint-panel) !important;
+  box-shadow: none !important;
+}
+
+body.blueprint-theme .admin-overlay-modal h2,
+body.blueprint-theme .admin-overlay-modal h3.gold-text,
+body.blueprint-theme .admin-overlay-modal h2.gold-text {
+  font-family: var(--blueprint-font-ui) !important;
+  font-size: 0.88rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  background: none !important;
+  -webkit-text-fill-color: var(--primary-gold) !important;
+  color: var(--primary-gold) !important;
+  animation: none !important;
+}
+
+body.blueprint-theme .admin-overlay-modal label {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #999;
+}
+
+body.blueprint-theme .admin-overlay-modal input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+body.blueprint-theme .admin-overlay-modal select,
+body.blueprint-theme .admin-overlay-modal textarea {
+  border: 1px solid var(--blueprint-border) !important;
+  border-radius: 4px !important;
+  background: rgba(0, 0, 0, 0.45) !important;
+  font-family: var(--blueprint-font-mono);
+  color: #e8e8e8;
+}
+
+body.blueprint-theme .admin-overlay-modal button,
+body.blueprint-theme .admin-overlay-modal .admin-nav-btn,
+body.blueprint-theme .admin-overlay-modal a.admin-nav-btn {
+  border-radius: 4px !important;
+  font-family: var(--blueprint-font-ui);
+  font-size: 0.68rem !important;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  min-height: 40px;
+}
+
+body.blueprint-theme .admin-overlay-modal .admin-modal-close-btn,
+body.blueprint-theme .admin-overlay-modal .modal-close-external {
+  border: 1px solid var(--blueprint-border) !important;
+  background: rgba(8, 10, 14, 0.95) !important;
+  color: var(--primary-gold) !important;
+  border-radius: 4px !important;
+  font-size: 0.65rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+body.blueprint-theme .admin-overlay-modal table th {
+  font-family: var(--blueprint-font-ui);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-color: var(--blueprint-border) !important;
+  background: rgba(184, 146, 46, 0.08) !important;
+  color: var(--primary-gold) !important;
+}
+
+body.blueprint-theme .admin-overlay-modal table td {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.75rem;
+  border-color: rgba(184, 146, 46, 0.2) !important;
+  color: #ccc;
+}
+
+body.blueprint-theme .admin-overlay-modal .admin-pending-table-wrap {
+  border: 1px dashed var(--blueprint-border);
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+body.blueprint-theme .admin-overlay-modal p,
+body.blueprint-theme .admin-overlay-modal .recovery-step-text {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.78rem;
+  color: #aaa;
+  line-height: 1.55;
+}
+
+@media (max-width: 768px) {
+  body.blueprint-theme.blueprint-static-page .landing-advantages-grid {
+    gap: 16px;
+  }
+
+  body.blueprint-theme .admin-overlay-modal {
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)) !important;
   }
 }
