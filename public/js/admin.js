@@ -1,6 +1,6 @@
 import { BASE_ORIGIN, API_URL, CATEGORY_META, getVerificationGesture, appPath } from './globals.js';
 import { showAlert, getPendingApprovalBannerHtml, getResubmissionBannerHtml, getGeneralRejectionBannerHtml } from './uiHelpers.js';
-import { t, applyStaticTranslations, formatOpeningDateTime } from './i18n.js';
+import { t, applyStaticTranslations, formatOpeningDateTime, currentLang } from './i18n.js';
 import { activateAccessibleModal, deactivateAccessibleModal, announceMessage, confirmDialog } from './a11y.js';
 import { beginDashboardLoad, finishDashboardLoad, failDashboardLoad } from './dashboardShell.js';
 import { renderSpecialtyDropdown, setupLocationDropdowns } from './helpers.js';
@@ -442,6 +442,7 @@ export async function loadDashboard() {
                                 <button id="btnPendingApprovals" class="admin-nav-btn active-nav">✅ Pending Approvals</button>
                                 <button id="btnPaymentVerifications" class="admin-nav-btn">💳 Payment Verifications</button>
                                 <button id="btnSupportMessages" class="admin-nav-btn">📩 ${t('Support messages')}</button>
+                                <button id="btnInterestNotes" class="admin-nav-btn">📰 ${t('Notes of Interest')}</button>
                                 <button id="btnDashboardConfig" class="admin-nav-btn">⚙️ ${t('Dashboard Config')}</button>
                             </div>
                         </div>
@@ -501,6 +502,7 @@ export async function loadDashboard() {
                 document.getElementById('btnPendingApprovals').addEventListener('click', openPendingVerificationsModal);
                 document.getElementById('btnPaymentVerifications').addEventListener('click', openPaymentVerificationsModal);
                 document.getElementById('btnSupportMessages').addEventListener('click', openSupportMessagesModal);
+                document.getElementById('btnInterestNotes').addEventListener('click', openInterestNotesAdminModal);
                 
                 document.getElementById('btnProfProfileAdmin').addEventListener('click', () => {
                     document.getElementById('adminGridContainer').scrollIntoView({ behavior: 'smooth' });
@@ -2453,6 +2455,234 @@ export async function acknowledgePayment(id) {
         }
     } catch (err) {
         announceMessage(adminConnectionErrorMessage(err));
+    }
+}
+
+// --- Admin Interest Notes (Notas de Interés) ---
+export async function openInterestNotesAdminModal() {
+    let modal = document.getElementById('interestNotesAdminModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'interestNotesAdminModal';
+        Object.assign(modal.style, {
+            position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.9)', zIndex: '3000', display: 'flex',
+            flexDirection: 'column', padding: '20px', overflowY: 'auto'
+        });
+
+        const closeBar = createAdminModalCloseBar({
+            maxWidth: '900px',
+            onClick: () => closeAdminOverlay(modal)
+        });
+
+        const container = document.createElement('div');
+        Object.assign(container.style, {
+            backgroundColor: 'var(--dark-bg, #1a1a1a)', padding: '20px',
+            borderRadius: '8px', color: 'white', maxWidth: '900px', margin: '0 auto', width: '100%'
+        });
+
+        container.innerHTML = `
+            <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px;">
+                <h2 class="gold-text" style="margin:0;">${t('Notes of Interest')}</h2>
+                <button type="button" id="interestNotesAddBtn" class="admin-nav-btn" style="width:auto;">+ ${t('Add article')}</button>
+            </div>
+            <div id="interestNotesAdminList" style="display:flex;flex-direction:column;gap:14px;">
+                <div style="text-align:center;padding:10px;">${t('Loading...')}</div>
+            </div>
+            <div id="interestNotesEditor" class="hidden" style="margin-top:24px;border-top:1px solid rgba(212,175,55,0.25);padding-top:20px;">
+                <h3 class="gold-text" id="interestNotesEditorTitle" style="margin-top:0;">${t('Edit article')}</h3>
+                <input type="hidden" id="interestNotesEditId" value="">
+                <label style="display:block;margin-bottom:6px;">${t('Title')}</label>
+                <input type="text" id="interestNotesEditTitle" maxlength="200" style="width:100%;margin-bottom:16px;padding:10px;">
+                <label style="display:block;margin-bottom:6px;">${t('Body')}</label>
+                <textarea id="interestNotesEditBody" rows="14" style="width:100%;margin-bottom:10px;padding:10px;"></textarea>
+                <p style="margin:0 0 16px;font-size:0.85rem;color:#aaa;line-height:1.45;">${t('Write in Spanish or English. The other language is generated automatically when you save.')}</p>
+                <div style="display:flex;flex-wrap:wrap;gap:10px;">
+                    <button type="button" id="interestNotesSaveBtn" class="admin-nav-btn" style="width:auto;">${t('Save')}</button>
+                    <button type="button" id="interestNotesCancelEditBtn" class="admin-nav-btn" style="width:auto;">${t('Cancel')}</button>
+                    <button type="button" id="interestNotesDeleteBtn" class="admin-nav-btn hidden" style="width:auto;color:var(--accent-red);">${t('Delete')}</button>
+                </div>
+            </div>
+        `;
+
+        modal.appendChild(closeBar);
+        modal.appendChild(container);
+        document.body.appendChild(modal);
+        applyStaticTranslations(modal);
+
+        document.getElementById('interestNotesAddBtn').addEventListener('click', () => openInterestNoteEditor());
+        document.getElementById('interestNotesSaveBtn').addEventListener('click', saveInterestNoteFromEditor);
+        document.getElementById('interestNotesCancelEditBtn').addEventListener('click', closeInterestNoteEditor);
+        document.getElementById('interestNotesDeleteBtn').addEventListener('click', deleteInterestNoteFromEditor);
+    }
+
+    openAdminOverlay(modal);
+    loadInterestNotesAdminList();
+}
+
+function openInterestNoteEditor(note = null) {
+    const editor = document.getElementById('interestNotesEditor');
+    const titleEl = document.getElementById('interestNotesEditorTitle');
+    const idEl = document.getElementById('interestNotesEditId');
+    const titleInput = document.getElementById('interestNotesEditTitle');
+    const bodyInput = document.getElementById('interestNotesEditBody');
+    const deleteBtn = document.getElementById('interestNotesDeleteBtn');
+    if (!editor || !titleInput || !bodyInput) return;
+
+    idEl.value = note?._id || '';
+    titleInput.value = note?.title || '';
+    bodyInput.value = note?.body || '';
+    titleEl.textContent = note ? t('Edit article') : t('Add article');
+    deleteBtn.classList.toggle('hidden', !note?._id);
+    editor.classList.remove('hidden');
+    titleInput.focus();
+}
+
+function closeInterestNoteEditor() {
+    const editor = document.getElementById('interestNotesEditor');
+    if (editor) editor.classList.add('hidden');
+}
+
+async function loadInterestNotesAdminList() {
+    const list = document.getElementById('interestNotesAdminList');
+    if (!list) return;
+    list.innerHTML = `<div style="text-align:center;padding:10px;">${t('Loading...')}</div>`;
+
+    try {
+        const res = await fetch(`${API_URL}/interest-notes?lang=${encodeURIComponent(currentLang || 'es')}`, {
+            headers: {
+                ...authHeaders(),
+                'X-Platform-Lang': currentLang || 'es'
+            },
+            credentials: 'include'
+        });
+        const data = await parseAdminApiResponse(res);
+        if (!data.success) {
+            list.innerHTML = `<div style="padding:10px;color:var(--accent-red);">Error: ${data.error}</div>`;
+            return;
+        }
+
+        const notes = data.data || [];
+        if (!notes.length) {
+            list.innerHTML = `<div style="padding:10px;text-align:center;">${t('No articles yet.')}</div>`;
+            return;
+        }
+
+        list.innerHTML = '';
+        for (const note of notes) {
+            const full = await fetchInterestNoteForAdmin(note._id);
+            const card = document.createElement('div');
+            Object.assign(card.style, {
+                border: '1px solid rgba(212,175,55,0.35)',
+                borderRadius: '8px',
+                padding: '14px',
+                background: 'rgba(212,175,55,0.05)'
+            });
+            card.innerHTML = `
+                <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;margin-bottom:8px;">
+                    <strong style="color:var(--primary-gold);">${escapeAdminHtml(note.title)}</strong>
+                    <span style="font-size:0.8rem;color:#aaa;">${note.sourceLocale ? note.sourceLocale.toUpperCase() + ' · ' : ''}${note.updatedAt ? new Date(note.updatedAt).toLocaleString() : ''}</span>
+                </div>
+                <p style="margin:0 0 12px;color:#ccc;font-size:0.9rem;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;">${escapeAdminHtml(note.preview || '')}</p>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                    <button type="button" class="admin-nav-btn interest-note-edit-btn" data-id="${note._id}" style="width:auto;">${t('Edit')}</button>
+                    <a class="admin-nav-btn" href="${appPath(`nota-interes.html?id=${encodeURIComponent(note._id)}`)}" target="_blank" rel="noopener" style="display:inline-block;width:auto;text-decoration:none;text-align:center;">${t('View')}</a>
+                </div>
+            `;
+            card.querySelector('.interest-note-edit-btn').addEventListener('click', () => {
+                openInterestNoteEditor(full || note);
+            });
+            list.appendChild(card);
+        }
+    } catch (err) {
+        list.innerHTML = `<div style="padding:10px;color:var(--accent-red);">${err.message || t('Network Error')}</div>`;
+    }
+}
+
+async function fetchInterestNoteForAdmin(id) {
+    const res = await fetch(`${API_URL}/interest-notes/${encodeURIComponent(id)}?edit=1`, {
+        headers: authHeaders(),
+        credentials: 'include'
+    });
+    const data = await parseAdminApiResponse(res);
+    return data.success ? data.data : null;
+}
+
+function escapeAdminHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+async function saveInterestNoteFromEditor() {
+    const id = document.getElementById('interestNotesEditId')?.value;
+    const title = document.getElementById('interestNotesEditTitle')?.value?.trim();
+    const body = document.getElementById('interestNotesEditBody')?.value?.trim();
+    if (!title || !body) {
+        announceMessage(t('Title and body are required.'));
+        return;
+    }
+
+    const saveBtn = document.getElementById('interestNotesSaveBtn');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = t('Translating and saving...');
+    }
+
+    try {
+        const url = id
+            ? `${API_URL}/admin/interest-notes/${encodeURIComponent(id)}`
+            : `${API_URL}/admin/interest-notes`;
+        const res = await fetch(url, {
+            method: id ? 'PUT' : 'POST',
+            headers: {
+                ...authHeaders(),
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ title, body })
+        });
+        const data = await parseAdminApiResponse(res);
+        if (!data.success) {
+            announceMessage(data.error || t('Could not save article.'));
+            return;
+        }
+        closeInterestNoteEditor();
+        await loadInterestNotesAdminList();
+        announceMessage(data.message || t('Article saved.'));
+    } catch {
+        announceMessage(t('Could not save article.'));
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = t('Save');
+        }
+    }
+}
+
+async function deleteInterestNoteFromEditor() {
+    const id = document.getElementById('interestNotesEditId')?.value;
+    if (!id) return;
+    if (!(await confirmDialog(t('Delete this article?')))) return;
+
+    try {
+        const res = await fetch(`${API_URL}/admin/interest-notes/${encodeURIComponent(id)}`, {
+            method: 'DELETE',
+            headers: authHeaders(),
+            credentials: 'include'
+        });
+        const data = await parseAdminApiResponse(res);
+        if (!data.success) {
+            announceMessage(data.error || t('Could not delete article.'));
+            return;
+        }
+        closeInterestNoteEditor();
+        await loadInterestNotesAdminList();
+        announceMessage(t('Article deleted.'));
+    } catch {
+        announceMessage(t('Could not delete article.'));
     }
 }
 

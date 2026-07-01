@@ -1,0 +1,96 @@
+.interest-notes-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 12px 16px 48px;
+}
+
+.interest-notes-back {
+  display: inline-block;
+  margin-bottom: 24px;
+  color: var(--primary-gold, #d4af37);
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.interest-notes-back:hover {
+  text-decoration: underline;
+}
+
+.interest-notes-heading {
+  margin: 0 0 8px;
+  font-size: 2rem;
+  font-weight: 300;
+  letter-spacing: 1px;
+}
+
+.interest-notes-sub {
+  color: #aaa;
+  margin: 0 0 28px;
+  line-height: 1.5;
+}
+
+.interest-notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.interest-note-card {
+  display: block;
+  padding: 18px 20px;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: 10px;
+  background: rgba(212, 175, 55, 0.05);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.interest-note-card:hover {
+  border-color: var(--primary-gold, #d4af37);
+  background: rgba(212, 175, 55, 0.1);
+}
+
+.interest-note-card-title {
+  margin: 0 0 10px;
+  color: var(--primary-gold, #d4af37);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.interest-note-card-preview {
+  margin: 0;
+  color: #ccc;
+  line-height: 1.55;
+  font-size: 0.95rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-wrap;
+}
+
+.interest-note-article {
+  line-height: 1.7;
+  color: #ddd;
+  font-size: 1rem;
+  white-space: pre-wrap;
+}
+
+.interest-note-article-title {
+  margin: 0 0 20px;
+  color: var(--primary-gold, #d4af37);
+  font-size: 1.75rem;
+  font-weight: 400;
+}
+
+.interest-notes-empty,
+.interest-notes-error {
+  text-align: center;
+  padding: 32px 16px;
+  color: #aaa;
+}
+
+.interest-notes-error {
+  color: var(--accent-red, #ff6b6b);
+}

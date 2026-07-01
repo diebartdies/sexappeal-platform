@@ -16,6 +16,7 @@ import {
 import { loadDashboard } from './admin.js';
 import { loadProfDashboard } from './professional.js';
 import { initProfessionalRegistration } from './registerProfessional.js';
+import { loadInterestNotesList, loadInterestNoteArticle } from './interestNotes.js';
 
 function initRelativeLinkFixer() {
     document.addEventListener('click', (e) => {
@@ -121,8 +122,10 @@ export function initBootstrap() {
         const allowedAncestors = {
             'categories.html': ['index.html', 'categories.html', 'treasure.html', 'dashboard.html', 'login.html'],
             'treasure.html': ['categories.html', 'treasure.html'],
-            'dashboard.html': ['index.html', 'login.html', 'verify.html', 'categories.html', 'treasure.html', 'dashboard.html', 'profDashboard.html'],
-            'profDashboard.html': ['index.html', 'login.html', 'verify.html', 'dashboard.html', 'profDashboard.html', 'categories.html', 'treasure.html'],
+            'dashboard.html': ['index.html', 'login.html', 'verify.html', 'categories.html', 'treasure.html', 'dashboard.html', 'profDashboard.html', 'notas-interes.html', 'nota-interes.html'],
+            'profDashboard.html': ['index.html', 'login.html', 'verify.html', 'dashboard.html', 'profDashboard.html', 'categories.html', 'treasure.html', 'notas-interes.html', 'nota-interes.html'],
+            'notas-interes.html': ['dashboard.html', 'profDashboard.html', 'notas-interes.html', 'nota-interes.html'],
+            'nota-interes.html': ['dashboard.html', 'profDashboard.html', 'notas-interes.html', 'nota-interes.html'],
             'verify.html': ['register.html', 'login.html', 'verify.html'],
             'register.html': ['index.html', 'login.html', 'register.html', 'dashboard.html', 'categories.html', 'treasure.html'],
             'login.html': ['index.html', 'register.html', 'recover.html', 'login.html', 'dashboard.html', 'categories.html', 'treasure.html'],
@@ -231,6 +234,8 @@ export function initBootstrap() {
         if (document.getElementById('treasureGrid')) loadTreasures();
         if (document.getElementById('dashboardContent')) loadDashboard();
         if (document.getElementById('profDashboardContent')) loadProfDashboard();
+        if (document.getElementById('interestNotesList')) loadInterestNotesList();
+        if (document.getElementById('interestNoteArticle')) loadInterestNoteArticle();
         if (document.getElementById('treasureDetail')) loadTreasureDetails();
     });
 
@@ -240,6 +245,8 @@ export function initBootstrap() {
         document.documentElement.classList.add('page-pending');
         if (document.getElementById('dashboardContent')) loadDashboard();
         if (document.getElementById('profDashboardContent')) loadProfDashboard();
+        if (document.getElementById('interestNotesList')) loadInterestNotesList();
+        if (document.getElementById('interestNoteArticle')) loadInterestNoteArticle();
         if (document.getElementById('treasureGrid')) loadTreasures();
         if (document.getElementById('treasureDetail')) loadTreasureDetails();
     });

@@ -398,6 +398,7 @@ const whatsappController = require('./controllers/whatsappController');
 const twilioWebhookController = require('./controllers/twilioWebhookController');
 const launchCurtainController = require('./controllers/launchCurtainController');
 const supportController = require('./controllers/supportController');
+const interestNoteController = require('./controllers/interestNoteController');
 
 app.get('/api/v1/public/launch-curtain', launchCurtainController.getPublicLaunchCurtainStatus);
 
@@ -420,6 +421,12 @@ app.post('/api/v1/public/registration-track', registrationTrackController.trackR
 app.post('/api/v1/support', protect, authorize('professional'), supportController.createSupportMessage);
 app.get('/api/v1/admin/support', protect, authorize('admin'), supportController.getSupportMessages);
 app.put('/api/v1/admin/support/:id', protect, authorize('admin'), supportController.updateSupportMessage);
+
+app.get('/api/v1/interest-notes', protect, authorize('professional', 'admin'), interestNoteController.listInterestNotes);
+app.get('/api/v1/interest-notes/:id', protect, authorize('professional', 'admin'), interestNoteController.getInterestNote);
+app.post('/api/v1/admin/interest-notes', protect, authorize('admin'), interestNoteController.createInterestNote);
+app.put('/api/v1/admin/interest-notes/:id', protect, authorize('admin'), interestNoteController.updateInterestNote);
+app.delete('/api/v1/admin/interest-notes/:id', protect, authorize('admin'), interestNoteController.deleteInterestNote);
 app.get('/api/v1/admin/whatsapp/config', protect, authorize('admin'), whatsappController.getWhatsAppConfig);
 app.put('/api/v1/admin/whatsapp/config', protect, authorize('admin'), whatsappController.updateWhatsAppPhone);
 app.post('/api/v1/admin/whatsapp/register', protect, authorize('admin'), whatsappController.startWhatsAppRegistration);

@@ -9,7 +9,8 @@ const RESERVED_PROFILE_ALIASES = new Set([
   'login.html', 'register.html', 'recover.html', 'verify.html', 'index.html',
   'categories.html', 'dashboard.html', 'profDashboard.html', 'treasure.html',
   'discover.html', 'home.html', 'services.html', 'admin.html', 'admin-potentials.html', 'plataforma.html',
-  'para-modelos.html', 'detalles.html', 'conciencia-vih.html', 'conciencia-cancer-mama.html'
+  'para-modelos.html', 'detalles.html', 'conciencia-vih.html', 'conciencia-cancer-mama.html',
+  'notas-interes.html', 'nota-interes.html'
 ]);
 
 const STATIC_SITEMAP_PAGES = [

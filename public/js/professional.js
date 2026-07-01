@@ -52,7 +52,10 @@ export function mountProfessionalPaymentOverlays() {
 
 export function renderProfessionalMainDashboardShell(content) {
     content.innerHTML = `
-        <h2 class="gold-text" style="margin-bottom: 40px;">Your Sanctuary Dashboard</h2>
+        <h2 class="gold-text" style="margin-bottom: 16px;">Your Sanctuary Dashboard</h2>
+        <div style="text-align: center; margin-bottom: 28px;">
+            <a href="${appPath('notas-interes.html')}" class="interest-notes-dashboard-link" style="display:inline-block;padding:12px 22px;border:1px solid rgba(212,175,55,0.45);border-radius:8px;color:var(--primary-gold);text-decoration:none;font-weight:600;letter-spacing:0.5px;">${t('Notes of Interest')}</a>
+        </div>
         <div class="grid">
             <div class="card">
                 <h3 class="gold-text">Identity Status</h3>
