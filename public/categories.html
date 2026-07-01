@@ -7,8 +7,9 @@
     <link rel="alternate icon" href="/favicon.ico">
     <title>Descubrí Living Treasures por categoría | SexAppeal</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/style.css?v=8.9">
-    <link rel="stylesheet" href="/css/responsive.css?v=8.10">
+    <link rel="stylesheet" href="/css/style.css?v=8.24">
+    <link rel="stylesheet" href="/css/blueprint.css?v=1">
+    <link rel="stylesheet" href="/css/responsive.css?v=8.21">
     <meta name="description" content="Explorá el directorio SexAppeal: acompañantes VIP y Living Treasures por categoría, ciudad y especialidad en Argentina.">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://sexappeal.drsrv.net.ar/categories.html">
@@ -20,8 +21,9 @@
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="SexAppeal">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="theme-color" content="#B8922E">
+    <meta name="theme-color" content="#08090c">
     <meta name="color-scheme" content="dark">
+
     <!-- SEO & Open Graph Tags -->
     <meta name="description" content="SexAppeal - The Architecture of Intimacy. Directorio exclusivo de acompañantes VIP y Living Treasures.">
     <meta property="og:title" content="SexAppeal Platform">
@@ -31,7 +33,9 @@
     <meta property="og:type" content="website">
     <meta name="theme-color" content="#D4AF37">
 </head>
-<body class="categories-page">
+<body class="categories-page blueprint-theme">
+    <div id="categoriesNotesBanner" class="blueprint-notes-banner" role="navigation" aria-label="Notas de Interés" hidden></div>
+
     <div class="container categories-container">
         <div class="categories-shell" role="main" id="main-content">
             <aside class="categories-frame categories-frame-side categories-frame-left" aria-label="SexAppeal">
@@ -41,7 +45,7 @@
                 </a>
             </aside>
 
-            <section class="categories-frame categories-frame-center">
+            <section class="categories-frame categories-frame-center" data-module="DIR-01">
                 <div class="card categories-filter-source" style="display: none;">
                     <h2 class="gold-text">Discover Our Treasures</h2>
                     <p style="margin-bottom: 30px; opacity: 0.8;">Filter by quality and service, or browse the full collection below.</p>
@@ -75,12 +79,12 @@
                                     <span id="specialtyBtnText">All</span>
                                     <span style="font-size: 0.8rem;">&#9660;</span>
                                 </div>
-                                <div id="specialtyCheckboxes" style="display: none; position: absolute; top: 100%; left: 0; width: 100%; background: #222; border: 1px solid var(--primary-gold); border-radius: 4px; border-top-left-radius: 0; border-top-right-radius: 0; z-index: 100; max-height: 200px; overflow-y: auto; padding: 10px; box-sizing: border-box; box-shadow: 0 4px 10px rgba(0,0,0,0.8);">
+                                <div id="specialtyCheckboxes" style="display: none; position: absolute; top: 100%; left: 0; width: 100%; background: #0a0c10; border: 1px solid rgba(184, 146, 46, 0.35); border-radius: 4px; border-top-left-radius: 0; border-top-right-radius: 0; z-index: 100; max-height: 200px; overflow-y: auto; padding: 10px; box-sizing: border-box;">
                                     <div>Loading...</div>
                                 </div>
                             </div>
                         </div>
-                        <button type="submit">Find Treasures</button>
+                        <button type="submit" class="sa-btn sa-btn--active">Find Treasures</button>
                     </form>
                 </div>
                 <div class="treasure-grid-slot" id="treasureGridSlot">
@@ -94,7 +98,7 @@
             </aside>
         </div>
     </div>
-    <script src="/js/app.js?v=8.10" type="module"></script>
+    <script src="/js/app.js?v=8.24" type="module"></script>
     <script src="/js/adminHome.js?v=1" defer></script>
 </body>
 </html>

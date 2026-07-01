@@ -985,6 +985,8 @@ const translations = {
         'Write in Spanish or English. The other language is generated automatically when you save.': 'Escriba en español o en inglés. El otro idioma se genera automáticamente al guardar.',
         'Translating and saving...': 'Traduciendo y guardando...',
         'Article saved with automatic translation': 'Artículo guardado con traducción automática',
+        'NOTES': 'NOTAS',
+        'VIEW ALL →': 'VER MÁS →',
         'No support messages.': 'No hay mensajes de soporte.',
         'Resolve': 'Resolver',
         'Resolved': 'Resuelto',

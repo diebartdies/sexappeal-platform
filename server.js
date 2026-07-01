@@ -401,6 +401,7 @@ const supportController = require('./controllers/supportController');
 const interestNoteController = require('./controllers/interestNoteController');
 
 app.get('/api/v1/public/launch-curtain', launchCurtainController.getPublicLaunchCurtainStatus);
+app.get('/api/v1/public/interest-note-headlines', interestNoteController.listPublicHeadlines);
 
 app.get('/api/v1/public/client-config', (req, res) => {
   res.status(200).json({

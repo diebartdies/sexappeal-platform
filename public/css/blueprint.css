@@ -1,0 +1,440 @@
+/**
+ * Blueprint Grid design system — SexAppeal
+ * Option 3: technical grid, gold frames, uppercase UI, status-line banner
+ */
+
+:root {
+  --blueprint-grid-size: 24px;
+  --blueprint-grid-color: rgba(184, 146, 46, 0.06);
+  --blueprint-border: rgba(184, 146, 46, 0.35);
+  --blueprint-bg: #08090c;
+  --blueprint-panel: rgba(8, 10, 14, 0.92);
+  --blueprint-notes-height: 40px;
+  --blueprint-font-ui: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --blueprint-font-mono: 'Consolas', 'Courier New', monospace;
+}
+
+/* ---- Design system: buttons & links ---- */
+.sa-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 4px;
+  font-family: var(--blueprint-font-ui);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  cursor: pointer;
+  text-decoration: none;
+  border: 1px solid var(--blueprint-border);
+  background: transparent;
+  color: var(--primary-gold, #d4af37);
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.sa-btn:hover,
+.sa-btn:focus-visible {
+  background: rgba(184, 146, 46, 0.12);
+  border-color: rgba(184, 146, 46, 0.55);
+  color: #f0e4c3;
+  outline: none;
+}
+
+.sa-btn--active,
+.sa-btn--solid,
+button.sa-btn[type="submit"] {
+  background: rgba(184, 146, 46, 0.14);
+  border-color: rgba(184, 146, 46, 0.55);
+  color: #f0e4c3;
+}
+
+.sa-btn--ghost {
+  border-color: transparent;
+  color: #888;
+}
+
+.sa-btn--ghost:hover {
+  color: var(--primary-gold);
+  background: rgba(184, 146, 46, 0.08);
+}
+
+.sa-link {
+  font-family: var(--blueprint-font-ui);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--primary-gold);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.sa-link:hover {
+  border-bottom-color: var(--primary-gold);
+}
+
+/* ---- Blueprint theme: page shell ---- */
+body.blueprint-theme {
+  font-family: var(--blueprint-font-ui);
+  background-color: var(--blueprint-bg);
+  background-image:
+    linear-gradient(var(--blueprint-grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--blueprint-grid-color) 1px, transparent 1px);
+  background-size: var(--blueprint-grid-size) var(--blueprint-grid-size);
+  padding-top: calc(
+    var(--global-topbar-height, 55px)
+    + var(--blueprint-notes-height, 40px)
+    + env(safe-area-inset-top, 0px)
+  );
+}
+
+body.blueprint-theme.categories-page {
+  padding-top: calc(
+    var(--global-topbar-height, 55px)
+    + var(--blueprint-notes-height, 40px)
+    + env(safe-area-inset-top, 0px)
+  );
+}
+
+/* Top bar — blueprint */
+body.blueprint-theme #globalTopBar {
+  background: rgba(8, 10, 14, 0.92) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--blueprint-border) !important;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+body.blueprint-theme #globalTopBar button,
+body.blueprint-theme #globalTopBar a:not(.sa-btn) {
+  font-size: 0.7rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-radius: 4px !important;
+  border: 1px solid var(--blueprint-border) !important;
+  background: transparent !important;
+  color: var(--primary-gold) !important;
+  font-weight: 600 !important;
+  padding: 5px 10px !important;
+}
+
+body.blueprint-theme #globalTopBar a[style*="background-color: var(--primary-gold)"],
+body.blueprint-theme #globalTopBar button[style*="background"] {
+  background: rgba(184, 146, 46, 0.14) !important;
+}
+
+body.blueprint-theme #globalTopBar .user-info-text,
+body.blueprint-theme #globalTopBar strong {
+  font-family: var(--blueprint-font-mono);
+  letter-spacing: 0.04em;
+}
+
+/* Notes status banner */
+.blueprint-notes-banner {
+  position: fixed;
+  top: calc(var(--global-topbar-height, 55px) + env(safe-area-inset-top, 0px));
+  left: 0;
+  right: 0;
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+  min-height: var(--blueprint-notes-height);
+  padding: 6px 16px;
+  margin: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #666;
+  background: rgba(8, 10, 14, 0.95);
+  border-bottom: 1px dashed var(--blueprint-border);
+  box-sizing: border-box;
+}
+
+.blueprint-notes-banner::-webkit-scrollbar {
+  display: none;
+}
+
+.blueprint-notes-banner[hidden] {
+  display: none !important;
+}
+
+.blueprint-notes-banner__label {
+  flex-shrink: 0;
+  color: var(--primary-gold);
+  font-weight: 700;
+}
+
+.blueprint-notes-banner__sep {
+  flex-shrink: 0;
+  color: rgba(184, 146, 46, 0.45);
+  font-style: normal;
+}
+
+.blueprint-notes-banner__link {
+  flex-shrink: 0;
+  color: #888;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+
+.blueprint-notes-banner__link:hover {
+  color: #f0e4c3;
+}
+
+.blueprint-notes-banner__more {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--primary-gold);
+  text-decoration: none;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.blueprint-notes-banner__more:hover {
+  text-decoration: underline;
+}
+
+/* Categories container */
+body.blueprint-theme .categories-container {
+  max-width: min(1720px, 100%);
+  padding: 10px max(12px, env(safe-area-inset-right)) 40px max(12px, env(safe-area-inset-left));
+}
+
+body.blueprint-theme .categories-shell {
+  gap: 12px;
+}
+
+body.blueprint-theme .categories-frame {
+  border: 1px solid var(--blueprint-border);
+  border-radius: 4px;
+  background: var(--blueprint-panel);
+  box-shadow: none;
+}
+
+body.blueprint-theme .categories-frame-side {
+  padding: 14px 8px;
+}
+
+body.blueprint-theme .categories-frame-center {
+  padding: 16px 14px 24px;
+  border-color: rgba(184, 146, 46, 0.45);
+  position: relative;
+}
+
+body.blueprint-theme .categories-frame-center::before {
+  content: attr(data-module);
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.6rem;
+  color: rgba(184, 146, 46, 0.5);
+  letter-spacing: 0.12em;
+  pointer-events: none;
+}
+
+body.blueprint-theme .categories-frame-accent {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(184, 146, 46, 0.2) 20%,
+    rgba(184, 146, 46, 0.5) 50%,
+    rgba(184, 146, 46, 0.2) 80%,
+    transparent 100%
+  );
+}
+
+body.blueprint-theme .brand-services-tagline {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-align: center;
+  color: rgba(184, 146, 46, 0.55);
+  margin-top: 10px;
+  line-height: 1.4;
+}
+
+/* Discovery category sections */
+body.blueprint-theme .discovery-cat-section {
+  border: 1px solid var(--blueprint-border);
+  border-radius: 4px;
+  background: rgba(8, 10, 14, 0.6);
+  padding: 12px 12px 16px;
+  margin-bottom: 16px;
+}
+
+body.blueprint-theme .discovery-cat-section .category-section-header h3 {
+  font-family: var(--blueprint-font-ui) !important;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  background: none !important;
+  -webkit-text-fill-color: var(--primary-gold) !important;
+  color: var(--primary-gold) !important;
+  animation: none !important;
+}
+
+body.blueprint-theme .discovery-cat-section .category-section-header span {
+  font-family: var(--blueprint-font-mono) !important;
+  font-size: 0.65rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Treasure cards */
+body.blueprint-theme .treasure-card {
+  border: 1px solid var(--blueprint-border) !important;
+  border-radius: 4px !important;
+  background: rgba(12, 14, 18, 0.9) !important;
+  box-shadow: none !important;
+  overflow: hidden;
+}
+
+body.blueprint-theme .treasure-card:hover {
+  border-color: rgba(184, 146, 46, 0.6) !important;
+  box-shadow: 0 0 0 1px rgba(184, 146, 46, 0.15) !important;
+  transform: translateY(-2px);
+}
+
+body.blueprint-theme .treasure-caption {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.03em;
+}
+
+/* Loader */
+body.blueprint-theme #pageLoader {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #666;
+}
+
+/* Filter drawer */
+body.blueprint-theme #filterDrawer {
+  border-right: 1px solid var(--blueprint-border) !important;
+  background: rgba(8, 10, 14, 0.98) !important;
+  background-image:
+    linear-gradient(var(--blueprint-grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--blueprint-grid-color) 1px, transparent 1px) !important;
+  background-size: var(--blueprint-grid-size) var(--blueprint-grid-size) !important;
+}
+
+body.blueprint-theme #filterDrawer h3.gold-text {
+  font-family: var(--blueprint-font-ui) !important;
+  font-size: 0.85rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  background: none !important;
+  -webkit-text-fill-color: var(--primary-gold) !important;
+  color: var(--primary-gold) !important;
+  animation: none !important;
+}
+
+body.blueprint-theme #filterDrawer label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #888;
+}
+
+body.blueprint-theme #filterDrawer .form-select,
+body.blueprint-theme #filterDrawer select {
+  border-radius: 4px !important;
+  border: 1px solid var(--blueprint-border) !important;
+  background: rgba(8, 10, 14, 0.9) !important;
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.75rem;
+}
+
+body.blueprint-theme #filterDrawer button[type="button"]:not(.sa-btn),
+body.blueprint-theme #filterDrawer button[type="submit"]:not(.sa-btn) {
+  border-radius: 4px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.7rem !important;
+  font-weight: 600;
+}
+
+body.blueprint-theme #filterDrawer button[type="submit"] {
+  background: rgba(184, 146, 46, 0.14) !important;
+  border: 1px solid var(--blueprint-border) !important;
+  color: #f0e4c3 !important;
+}
+
+body.blueprint-theme #filterDrawer button[type="button"] {
+  background: transparent !important;
+  border: 1px solid rgba(184, 146, 46, 0.25) !important;
+  color: #888 !important;
+}
+
+/* Floating grid / filter controls */
+body.blueprint-theme .floating-controls-bar {
+  border: 1px solid var(--blueprint-border) !important;
+  border-radius: 4px !important;
+  background: rgba(8, 10, 14, 0.94) !important;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5) !important;
+}
+
+body.blueprint-theme .floating-menu-btn {
+  border-radius: 4px !important;
+  border: 1px solid transparent !important;
+}
+
+body.blueprint-theme .floating-menu-btn.is-active {
+  background: rgba(184, 146, 46, 0.14) !important;
+  border-color: var(--blueprint-border) !important;
+}
+
+/* Launch curtain — blueprint frames */
+body.blueprint-theme .launch-curtain-stage {
+  border: 1px dashed var(--blueprint-border);
+  border-radius: 4px;
+  background-color: var(--blueprint-bg);
+}
+
+body.blueprint-theme .launch-curtain-title {
+  font-family: var(--blueprint-font-ui);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+body.blueprint-theme .launch-curtain-kicker,
+body.blueprint-theme .launch-curtain-subtitle {
+  font-family: var(--blueprint-font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --blueprint-notes-height: 44px;
+  }
+
+  .blueprint-notes-banner {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+  }
+
+  body.blueprint-theme .categories-frame-center::before {
+    display: none;
+  }
+}

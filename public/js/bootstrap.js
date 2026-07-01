@@ -17,6 +17,7 @@ import { loadDashboard } from './admin.js';
 import { loadProfDashboard } from './professional.js';
 import { initProfessionalRegistration } from './registerProfessional.js';
 import { loadInterestNotesList, loadInterestNoteArticle } from './interestNotes.js';
+import { initCategoriesNotesBanner } from './categoriesNotesBanner.js';
 
 function initRelativeLinkFixer() {
     document.addEventListener('click', (e) => {
@@ -221,6 +222,7 @@ export function initBootstrap() {
             const prov = p.get('province');
 
             setupLocationDropdowns('provinceSelect', 'citySelect', 'neighborhoodSelect', true, { province: prov, city: p.get('city'), neighborhood: p.get('neighborhood') });
+            initCategoriesNotesBanner();
             try {
                 await initializeFilters();
             } catch (e) {

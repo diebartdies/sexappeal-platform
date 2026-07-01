@@ -835,27 +835,37 @@ export async function initializeFilters() {
             
             const clearBtn = document.createElement('button');
             clearBtn.type = 'button';
+            clearBtn.className = document.body.classList.contains('blueprint-theme') ? 'sa-btn sa-btn--ghost' : '';
             clearBtn.textContent = t('Clear');
-            clearBtn.style.flex = '1';
-            clearBtn.style.background = 'transparent';
-            clearBtn.style.color = '#ccc';
-            clearBtn.style.border = '1px solid #444';
-            clearBtn.style.padding = '10px';
-            clearBtn.style.borderRadius = '4px';
-            clearBtn.style.cursor = 'pointer';
+            if (!clearBtn.className) {
+                clearBtn.style.flex = '1';
+                clearBtn.style.background = 'transparent';
+                clearBtn.style.color = '#ccc';
+                clearBtn.style.border = '1px solid #444';
+                clearBtn.style.padding = '10px';
+                clearBtn.style.borderRadius = '4px';
+                clearBtn.style.cursor = 'pointer';
+            } else {
+                clearBtn.style.flex = '1';
+            }
             clearBtn.onclick = () => { window.location.href = appPath('categories.html'); };
-            
+
             const applyBtn = document.createElement('button');
             applyBtn.type = 'submit';
+            applyBtn.className = document.body.classList.contains('blueprint-theme') ? 'sa-btn sa-btn--active' : '';
             applyBtn.textContent = t('Apply Filters');
-            applyBtn.style.flex = '2';
-            applyBtn.style.background = 'var(--primary-gold)';
-            applyBtn.style.color = '#111';
-            applyBtn.style.border = 'none';
-            applyBtn.style.fontWeight = 'bold';
-            applyBtn.style.padding = '10px';
-            applyBtn.style.borderRadius = '4px';
-            applyBtn.style.cursor = 'pointer';
+            if (!applyBtn.className) {
+                applyBtn.style.flex = '2';
+                applyBtn.style.background = 'var(--primary-gold)';
+                applyBtn.style.color = '#111';
+                applyBtn.style.border = 'none';
+                applyBtn.style.fontWeight = 'bold';
+                applyBtn.style.padding = '10px';
+                applyBtn.style.borderRadius = '4px';
+                applyBtn.style.cursor = 'pointer';
+            } else {
+                applyBtn.style.flex = '2';
+            }
             
             btnContainer.appendChild(clearBtn);
             btnContainer.appendChild(applyBtn);

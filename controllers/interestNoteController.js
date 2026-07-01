@@ -25,6 +25,32 @@ async function applyBilingualFields(noteDoc, { title, body, sortOrder, published
   return noteDoc;
 }
 
+// @desc    Public headlines for categories banner (titles only)
+// @route   GET /api/v1/public/interest-note-headlines
+// @access  Public
+exports.listPublicHeadlines = async (req, res) => {
+  try {
+    await ensureDefaultInterestNotes();
+    const lang = resolveRequestLang(req);
+    const notes = await InterestNote.find({ published: true })
+      .sort({ sortOrder: 1, createdAt: -1 })
+      .limit(8);
+
+    const hydrated = [];
+    for (const note of notes) {
+      hydrated.push(await hydrateLegacyNote(note));
+    }
+
+    res.status(200).json({
+      success: true,
+      lang,
+      data: hydrated.map((note) => mapNoteForList(note, lang))
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 // @desc    List interest notes (professionals read-only; admin sees all)
 // @route   GET /api/v1/interest-notes
 // @access  Private (professional, admin)

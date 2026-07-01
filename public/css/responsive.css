@@ -692,6 +692,10 @@ body.register-page #registerMain {
         grid-template-columns: minmax(48px, 8%) minmax(0, 1fr) minmax(48px, 8%);
         gap: 10px;
     }
+
+    body.blueprint-theme .categories-shell {
+        gap: 10px;
+    }
 }
 
 @media (max-width: 768px) {
