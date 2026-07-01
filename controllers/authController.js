@@ -9,6 +9,7 @@ const { recordAdminLoginIp, HOME_LABEL } = require('../utils/adminKnownIps');
 const Specialty = require('../models/Specialty');
 const { normalizeRegistrationMobilePhone } = require('../utils/professionalInviteMessage');
 const { rollbackPendingUser, purgeExpiredUnverifiedUsers, isEmailFullyRegistered, hasVerifiedGuestAccount } = require('../utils/pendingRegistration');
+const { getCertificateExpiryWarnings } = require('../utils/certExpiry');
 const { OAuth2Client } = require('google-auth-library');
 
 function ageFromBirthDate(dateStr) {
@@ -720,8 +721,21 @@ exports.login = async (req, res, next) => {
         }
       });
     }
+    let certExpiryWarnings = [];
+    if (user.role === 'admin') {
+      try {
+        certExpiryWarnings = getCertificateExpiryWarnings(10).warnings;
+      } catch (err) {
+        certExpiryWarnings = [{
+          id: 'cert-check',
+          domain: 'certificate-check',
+          status: 'error',
+          error: err.message
+        }];
+      }
+    }
 
-    sendTokenResponse(user, 200, res);
+    sendTokenResponse(user, 200, res, { certExpiryWarnings });
   } catch (error) {
     res.status(400).json({
       success: false,
@@ -1085,6 +1099,9 @@ const sendTokenResponse = (user, statusCode, res, options = {}) => {
     payload.needsProfileCompletion = true;
   } else if (options.needsProfileCompletion === false) {
     payload.needsProfileCompletion = false;
+  }
+  if (Array.isArray(options.certExpiryWarnings) && options.certExpiryWarnings.length) {
+    payload.certExpiryWarnings = options.certExpiryWarnings;
   }
 
   res

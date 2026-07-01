@@ -25,9 +25,26 @@ function resolveMoreHref() {
   return appPath('login.html');
 }
 
+function getSessionUser() {
+  try {
+    return JSON.parse(localStorage.getItem('user') || 'null');
+  } catch {
+    return null;
+  }
+}
+
+function isProfessionalOrAdmin(user) {
+  return Boolean(user && (user.role === 'professional' || user.role === 'admin'));
+}
+
 export async function initCategoriesNotesBanner() {
   const banner = document.getElementById('categoriesNotesBanner');
   if (!banner) return;
+  const user = getSessionUser();
+  if (!isProfessionalOrAdmin(user)) {
+    banner.hidden = true;
+    return;
+  }
 
   const label = t('NOTES');
   const moreLabel = t('VIEW ALL →');

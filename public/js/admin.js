@@ -366,6 +366,47 @@ export async function loadAdminGridData() {
 
 let dashboardLoadInFlight = null;
 
+function formatCertWarningLine(item) {
+    const domain = item?.domain || item?.id || 'unknown-cert';
+    if (item?.status === 'missing') {
+        return t('SSL cert {domain}: file missing on server').replace('{domain}', domain);
+    }
+    if (item?.status === 'error') {
+        return t('SSL cert {domain}: read failed ({error})')
+            .replace('{domain}', domain)
+            .replace('{error}', item.error || 'unknown');
+    }
+    if (Number.isFinite(item?.daysRemaining)) {
+        return t('SSL cert {domain}: expires in {days} day(s)')
+            .replace('{domain}', domain)
+            .replace('{days}', String(item.daysRemaining));
+    }
+    return t('SSL cert {domain}: expiration unknown').replace('{domain}', domain);
+}
+
+function maybeShowAdminCertExpiryPopup() {
+    let warnings = null;
+    try {
+        const raw = sessionStorage.getItem('admin_cert_expiry_warnings');
+        if (!raw) return;
+        sessionStorage.removeItem('admin_cert_expiry_warnings');
+        warnings = JSON.parse(raw);
+    } catch {
+        return;
+    }
+    if (!Array.isArray(warnings) || warnings.length === 0) return;
+
+    const details = warnings.map(formatCertWarningLine).join('\n');
+    const hints = [...new Set(warnings.map((w) => w.renewalHint).filter(Boolean))].join('\n');
+
+    window.alert(
+        `${t('SSL certificate warning')}\n\n`
+        + `${t('One or more TLS certificates expire within 10 days or are missing on the server. Certbot is not used on the VPS — renew at source and upload.')}\n\n`
+        + `${details}\n\n`
+        + `${t('What to do')}:\n${hints || t('Run scripts/upload-ssl-certs-to-prod.bat then reload nginx (full deploy or docker compose exec nginx nginx -s reload).')}`
+    );
+}
+
 export async function loadDashboard() {
     if (dashboardLoadInFlight) return dashboardLoadInFlight;
 
@@ -409,6 +450,7 @@ export async function loadDashboard() {
 
             // --- Admin Specific Injection ---
             if (user.role === 'admin' && content) {
+                maybeShowAdminCertExpiryPopup();
                 hideProfessionalPaymentOverlays();
                 content.innerHTML = ''; // Clear out the professional profile form
                 

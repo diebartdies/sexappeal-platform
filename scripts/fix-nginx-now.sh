@@ -68,6 +68,7 @@ docker run --rm "${net_args[@]}" \
   -v "$DEPLOY_DIR/nginx.conf:/etc/nginx/nginx.conf:ro" \
   -v "$DEPLOY_DIR/nginx/conf.d:/etc/nginx/conf.d:ro" \
   -v "$DEPLOY_DIR/certbot/conf/live:/etc/nginx/certs-live:ro" \
+  -v "$DEPLOY_DIR/certbot/conf/archive:/etc/nginx/archive:ro" \
   nginx:alpine nginx -t
 
 if [ -f "$DEPLOY_DIR/docker-compose.override.yml" ]; then

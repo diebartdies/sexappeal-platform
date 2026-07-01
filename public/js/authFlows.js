@@ -21,6 +21,15 @@ function revealLoginAlert(alert) {
     alert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+function cacheAdminCertWarnings(warnings) {
+    if (!Array.isArray(warnings) || warnings.length === 0) return;
+    try {
+        sessionStorage.setItem('admin_cert_expiry_warnings', JSON.stringify(warnings));
+    } catch (err) {
+        console.warn('[Login] Could not cache admin cert warnings:', err);
+    }
+}
+
 export function redirectAfterLogin(user = {}) {
     let intended = sessionStorage.getItem('intended_destination');
     sessionStorage.removeItem('intended_destination');
@@ -156,6 +165,7 @@ async function submitLoginForm(e) {
                 localStorage.setItem('is18Plus', 'true');
                 sessionStorage.setItem('valid_entry', 'true');
                 if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
+                if (data.user?.role === 'admin') cacheAdminCertWarnings(data.certExpiryWarnings);
             } catch (storageErr) {
                 console.warn('[Login] Storage unavailable:', storageErr);
             }

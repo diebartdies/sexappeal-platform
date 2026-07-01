@@ -575,3 +575,284 @@ body.blueprint-theme.blueprint-dashboard-page #dashboardContent .interest-notes-
     padding-right: max(8px, env(safe-area-inset-right));
   }
 }
+
+/* ---- Login (model auth) ---- */
+body.blueprint-theme.blueprint-login-page.landing-page {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+body.blueprint-theme.blueprint-login-page .landing-frame {
+  border-right: 1px dashed var(--blueprint-border);
+  background: var(--blueprint-panel);
+}
+
+body.blueprint-theme.blueprint-login-page .landing-frame:last-child {
+  border-right: none;
+}
+
+body.blueprint-theme.blueprint-login-page .landing-login-heading {
+  font-family: var(--blueprint-font-ui) !important;
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  background: none !important;
+  -webkit-text-fill-color: var(--primary-gold) !important;
+  color: var(--primary-gold) !important;
+  animation: none !important;
+}
+
+body.blueprint-theme.blueprint-login-page .landing-login-sub {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.72rem;
+  color: #888;
+  letter-spacing: 0.04em;
+}
+
+body.blueprint-theme.blueprint-login-page .brand-services-tagline {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #777;
+  border-top: 1px dashed var(--blueprint-border);
+  padding-top: 12px;
+  margin-top: 12px;
+}
+
+body.blueprint-theme.blueprint-login-page .landing-login-form label {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #999;
+}
+
+body.blueprint-theme.blueprint-login-page .landing-login-form input {
+  border: 1px solid var(--blueprint-border) !important;
+  border-radius: 4px !important;
+  background: rgba(0, 0, 0, 0.45) !important;
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.85rem;
+  color: #e8e8e8;
+}
+
+body.blueprint-theme.blueprint-login-page .landing-login-form input:focus {
+  border-color: rgba(184, 146, 46, 0.65) !important;
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(184, 146, 46, 0.25);
+}
+
+body.blueprint-theme.blueprint-login-page .landing-btn-login {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 8px;
+}
+
+body.blueprint-theme.blueprint-login-page .landing-forgot a,
+body.blueprint-theme.blueprint-login-page .landing-register-link a {
+  font-family: var(--blueprint-font-ui);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--primary-gold);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+body.blueprint-theme.blueprint-login-page .landing-forgot a:hover,
+body.blueprint-theme.blueprint-login-page .landing-register-link a:hover {
+  border-bottom-color: var(--primary-gold);
+}
+
+body.blueprint-theme.blueprint-login-page .landing-register-link {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.7rem;
+  color: #777;
+}
+
+body.blueprint-theme.blueprint-login-page .landing-login-form img {
+  border: 1px dashed var(--blueprint-border);
+  border-radius: 4px;
+  padding: 8px;
+  background: #000;
+  box-shadow: none !important;
+}
+
+@media (max-width: 768px) {
+  body.blueprint-theme.blueprint-login-page .landing-dual {
+    min-height: auto;
+  }
+
+  body.blueprint-theme.blueprint-login-page .landing-frame {
+    border-right: none;
+    border-bottom: 1px dashed var(--blueprint-border);
+    min-height: auto;
+    padding: 24px 16px;
+  }
+
+  body.blueprint-theme.blueprint-login-page .landing-frame:last-child {
+    border-bottom: none;
+  }
+}
+
+/* ---- Professional profile editor (profDashboard) ---- */
+body.blueprint-theme.blueprint-prof-page .prof-dashboard-page {
+  max-width: min(1280px, 100%) !important;
+}
+
+body.blueprint-theme.blueprint-prof-page #loader p {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #777;
+}
+
+body.blueprint-theme.blueprint-prof-page .card,
+body.blueprint-theme.blueprint-prof-page .fileteado-section,
+body.blueprint-theme.blueprint-prof-page .payment-modal-panel {
+  border-radius: 4px !important;
+  border-color: rgba(184, 146, 46, 0.35) !important;
+  background: rgba(8, 10, 14, 0.92) !important;
+  box-shadow: none !important;
+}
+
+body.blueprint-theme.blueprint-prof-page h2.gold-text,
+body.blueprint-theme.blueprint-prof-page h3.gold-text {
+  font-family: var(--blueprint-font-ui) !important;
+  font-size: 0.88rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  background: none !important;
+  -webkit-text-fill-color: var(--primary-gold) !important;
+  color: var(--primary-gold) !important;
+  animation: none !important;
+}
+
+body.blueprint-theme.blueprint-prof-page #profDashboardContent label,
+body.blueprint-theme.blueprint-prof-page #profDashboardContent .form-group label {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #999;
+}
+
+body.blueprint-theme.blueprint-prof-page #profDashboardContent input,
+body.blueprint-theme.blueprint-prof-page #profDashboardContent select,
+body.blueprint-theme.blueprint-prof-page #profDashboardContent textarea,
+body.blueprint-theme.blueprint-prof-page #receiptForm input[type="file"],
+body.blueprint-theme.blueprint-prof-page #deleteProfilePassword {
+  border: 1px solid var(--blueprint-border) !important;
+  border-radius: 4px !important;
+  background: rgba(0, 0, 0, 0.45) !important;
+  font-family: var(--blueprint-font-mono);
+  color: #e8e8e8;
+}
+
+body.blueprint-theme.blueprint-prof-page #profDashboardContent button,
+body.blueprint-theme.blueprint-prof-page .prof-payment-actions button,
+body.blueprint-theme.blueprint-prof-page #receiptForm button,
+body.blueprint-theme.blueprint-prof-page #rateAlert button,
+body.blueprint-theme.blueprint-prof-page .payment-modal-panel button {
+  border-radius: 4px !important;
+  font-family: var(--blueprint-font-ui);
+  font-size: 0.68rem !important;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+body.blueprint-theme.blueprint-prof-page .prof-payment-actions button:first-child,
+body.blueprint-theme.blueprint-prof-page #receiptForm button[type="submit"],
+body.blueprint-theme.blueprint-prof-page #rateAlert button {
+  background: rgba(184, 146, 46, 0.14) !important;
+  border: 1px solid rgba(184, 146, 46, 0.55) !important;
+  color: #f0e4c3 !important;
+}
+
+body.blueprint-theme.blueprint-prof-page .prof-payment-secondary,
+body.blueprint-theme.blueprint-prof-page #btnCloseHowToPayFooter,
+body.blueprint-theme.blueprint-prof-page #cancelDeleteProfileBtn {
+  background: transparent !important;
+  border: 1px solid var(--blueprint-border) !important;
+  color: var(--primary-gold) !important;
+}
+
+body.blueprint-theme.blueprint-prof-page #confirmDeleteProfileBtn {
+  background: rgba(139, 0, 0, 0.35) !important;
+  border: 1px solid var(--accent-red) !important;
+  color: #fff !important;
+}
+
+body.blueprint-theme.blueprint-prof-page .payment-modal-close {
+  border: 1px solid var(--blueprint-border);
+  border-radius: 4px;
+  background: rgba(8, 10, 14, 0.9);
+  color: var(--primary-gold);
+  min-width: 44px;
+  min-height: 44px;
+}
+
+body.blueprint-theme.blueprint-prof-page #howToPayContent {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.82rem;
+  line-height: 1.65;
+  color: #bbb;
+}
+
+body.blueprint-theme.blueprint-prof-page #profDashboardContent table th {
+  font-family: var(--blueprint-font-ui);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-color: var(--blueprint-border) !important;
+  background: rgba(184, 146, 46, 0.08) !important;
+  color: var(--primary-gold) !important;
+}
+
+body.blueprint-theme.blueprint-prof-page #profDashboardContent table td {
+  font-family: var(--blueprint-font-mono);
+  font-size: 0.78rem;
+  border-color: rgba(184, 146, 46, 0.2) !important;
+}
+
+body.blueprint-theme.blueprint-prof-page #btnUploadPhoto,
+body.blueprint-theme.blueprint-prof-page #bottomBackBtn {
+  background: rgba(184, 146, 46, 0.14) !important;
+  border: 1px solid rgba(184, 146, 46, 0.55) !important;
+  color: #f0e4c3 !important;
+}
+
+body.blueprint-theme.blueprint-prof-page #btnOpenDeleteProfile {
+  background: transparent !important;
+  border: 1px solid var(--accent-red) !important;
+  color: var(--accent-red) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.68rem !important;
+}
+
+body.blueprint-theme.blueprint-prof-page #photoGrid .add-photo-frame,
+body.blueprint-theme.blueprint-prof-page #photoGrid .photo-frame {
+  border: 1px dashed var(--blueprint-border) !important;
+  border-radius: 4px !important;
+  background: rgba(8, 10, 14, 0.6) !important;
+}
+
+@media (max-width: 768px) {
+  body.blueprint-theme.blueprint-prof-page .prof-payment-sidebar {
+    position: static;
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  body.blueprint-theme.blueprint-prof-page .prof-dashboard-layout {
+    flex-direction: column;
+    gap: 16px;
+  }
+}

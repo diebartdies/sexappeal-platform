@@ -9,21 +9,19 @@ alwaysApply: true
 - **App path:** `/root/SexAppeal-platform`
 - **Deploy:** `upload_to_server.bat` (full) or `scripts/fix-nginx-now.bat` (nginx + certs)
 
-## TLS on prod (required every deploy / cert renewal)
+## TLS on prod
 
-Nginx mounts `./certbot/conf/live` from the **server filesystem**. Local Windows cert files are **not** used at runtime unless uploaded.
+Nginx mounts `certbot/conf/live` + `certbot/conf/archive` (Certbot symlinks) from the **server filesystem**.
 
-| Domain | Local source | Server path (fullchain + privkey) |
-|--------|--------------|-----------------------------------|
-| sexappeal.drsrv.net.ar | `certbot/conf/live/sexappeal.drsrv.net.ar/` (`sexappeal.chain`, `sexappeal.key`) | `certbot/conf/live/sexappeal.drsrv.net.ar/fullchain.pem`, `privkey.pem` |
-| selfappeal.drsrv.net.ar | `D:\Certs-Selfapeal` (`selfa.chain`, `selfa.key`) | `certbot/conf/live/selfappeal.drsrv.net.ar/fullchain.pem`, `privkey.pem` |
+| Domain | Renewal on VPS |
+|--------|----------------|
+| sexappeal.drsrv.net.ar | Certbot (`scripts/certbot/issue-domain.sh`) |
+| selfappeal.drsrv.net.ar | Certbot (`scripts/certbot/issue-selfappeal.sh`) |
+
+**Timer:** `scripts/certbot/install-systemd.sh` — renew check **once per day** (~04:15 UTC), not twice.
 
 **Rebrand:** outreach alias is **selfappeal.drsrv.net.ar** (replaced **fcwa.drsrv.net.ar**). Same app as sexappeal; used for WhatsApp step-2 links only.
 
 **Google SEO:** only **sexappeal.drsrv.net.ar** goes in Search Console (`/sitemap.xml`). SelfAppeal is noindex — do not submit to Google.
 
-**Always keep both certificate sets** on the Moldova server.
-
-**Always run** `scripts/upload-ssl-certs-to-prod.bat` (or full deploy) after renewing either certificate.
-
-`certbot/` is excluded from the deploy tarball — certs are uploaded separately via `scp`.
+`certbot/` is excluded from the deploy tarball — certs live only on the VPS after initial `certbot certonly`.
