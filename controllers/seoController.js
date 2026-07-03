@@ -1,7 +1,13 @@
 const fs = require('fs');
 const path = require('path');
 const User = require('../models/User');
-const { isProfileIndexable } = require('../utils/seoMeta');
+const {
+  RESERVED_PROFILE_ALIASES,
+  isProfileIndexable,
+  buildProfileSeo,
+  applySeoToHtml,
+  absoluteUrl
+} = require('../utils/seoMeta');
 const {
   resolveRequestBaseUrl,
   isSelfAppealHost,
