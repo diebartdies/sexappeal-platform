@@ -4,7 +4,7 @@ import { t, applyStaticTranslations, formatOpeningDateTime, currentLang } from '
 import { activateAccessibleModal, deactivateAccessibleModal, announceMessage, confirmDialog } from './a11y.js';
 import { beginDashboardLoad, finishDashboardLoad, failDashboardLoad } from './dashboardShell.js';
 import { renderSpecialtyDropdown, setupLocationDropdowns } from './helpers.js';
-import { addPhotoToGrid, openPendingConnectionsModal, bindProfessionalProfileForm, hideProfessionalPaymentOverlays, renderProfessionalMainDashboardShell, injectProfessionalDashboardGuides } from './professional.js';
+import { addPhotoToGrid, openPendingConnectionsModal, bindProfessionalProfileForm, hideProfessionalPaymentOverlays, renderProfessionalMainDashboardShell, injectProfessionalDashboardGuides, renderAvailabilityDayControls } from './professional.js';
 import { buildCategoryQueue, resetLazyCategoryLoader, startLazyCategoryLoader } from './lazyCategoryLoader.js';
 import { beginModalSession, endModalSession, navigateWithReturn } from './navReturn.js';
 import { saveLaunchCurtainEnabled, saveLaunchCurtainOpeningAt, loadLaunchCurtainAdminState } from './launchCurtain.js';
@@ -878,31 +878,13 @@ export async function loadDashboard() {
                     availBlock.appendChild(title);
                     
                     // Days checkboxes
-                    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
                     const daysContainer = document.createElement('div');
                     daysContainer.style.display = 'flex';
                     daysContainer.style.gap = '10px';
                     daysContainer.style.flexWrap = 'wrap';
                     daysContainer.style.marginBottom = '15px';
                     
-                    const userDays = prof.workingDays || days;
-                    days.forEach(day => {
-                        const lbl = document.createElement('label');
-                        lbl.style.display = 'flex';
-                        lbl.style.alignItems = 'center';
-                        lbl.style.gap = '5px';
-                        lbl.style.cursor = 'pointer';
-                        
-                        const cb = document.createElement('input');
-                        cb.type = 'checkbox';
-                        cb.value = day;
-                        cb.className = 'avail-day-cb';
-                        cb.checked = userDays.includes(day);
-                        
-                        lbl.appendChild(cb);
-                        lbl.appendChild(document.createTextNode(t(day)));
-                        daysContainer.appendChild(lbl);
-                    });
+                    renderAvailabilityDayControls(daysContainer, prof.workingDays);
                     availBlock.appendChild(daysContainer);
                     
                     // Times
@@ -935,7 +917,7 @@ export async function loadDashboard() {
                     availBlock.appendChild(timeContainer);
                     
                     // Disable inputs by default
-                    const inputs = [startInput, endInput, ...availBlock.querySelectorAll('.avail-day-cb')];
+                    const inputs = [startInput, endInput, ...availBlock.querySelectorAll('.avail-day-cb, [data-availability-preset]')];
                     inputs.forEach(el => {
                         el.disabled = true;
                         if(el.type !== 'checkbox') el.style.background = '#333';
@@ -3913,7 +3895,6 @@ export function renderEditForm(prof) {
     const container = document.getElementById('editProfContainer');
     const profile = prof.professionalProfile || {};
     const servicesStr = (profile.services || []).join(', ');
-    const daysStr = (profile.workingDays || []).join(', ');
 
         container.style.position = 'relative';
 
@@ -3970,8 +3951,8 @@ export function renderEditForm(prof) {
                 <div style="flex:1;"><label>End Time (HH:mm)</label><input type="time" id="adminEditWEnd" value="${profile.workingHours?.end || '23:59'}" style="width:100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
             </div>
             
-            <label>Working Days (comma separated)</label>
-            <input type="text" id="adminEditWDays" value="${daysStr}" style="padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;" placeholder="Monday, Tuesday...">
+            <label>${t('Working Days')}</label>
+            <div id="adminEditWDays" style="display: flex; gap: 15px; flex-wrap: wrap; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
 
             <label>Visibility / Exposure</label>
             <div style="display: flex; align-items: center; gap: 10px;">
@@ -4074,6 +4055,8 @@ export function renderEditForm(prof) {
         })();
     }
 
+    renderAvailabilityDayControls(document.getElementById('adminEditWDays'), profile.workingDays);
+
     document.getElementById('backToListBtn').onclick = () => {
         if (editModalReturnMode === 'dashboard') {
             closeAdminEditModalToDashboard();
@@ -4146,7 +4129,7 @@ export function renderEditForm(prof) {
                     start: document.getElementById('adminEditWStart').value,
                     end: document.getElementById('adminEditWEnd').value
                 },
-                workingDays: document.getElementById('adminEditWDays').value.split(',').map(s => s.trim()).filter(s => s),
+                workingDays: Array.from(document.querySelectorAll('#adminEditWDays .avail-day-cb:checked')).map(cb => cb.value),
                 isExposed: document.getElementById('adminEditIsExposed').checked,
                 paysMonthlyCharges: document.getElementById('adminEditPaysMonthly').checked,
                 location: {

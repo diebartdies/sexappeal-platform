@@ -17,6 +17,7 @@ const { getClientIp } = require('../utils/clientIp');
 const { mergePublicListingFilter, isAccountDeleted } = require('../utils/professionalVisibility');
 
 const ALIAS_LOOKUP_FILTER = { role: 'professional', accountDeletedAt: null };
+const DEFAULT_WORKING_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 // Simple in-memory cache setup
 const cache = new Map();
@@ -34,10 +35,13 @@ function isOnVacation(profile) {
 
 // Helper function to check if professional is active RIGHT NOW in Argentina timezone
 function checkIsActive(profile) {
-  if (!profile || !profile.workingDays || profile.workingDays.length === 0) return false;
+  if (!profile) return false;
   if (!profile.workingHours || !profile.workingHours.start || !profile.workingHours.end) return false;
   if (typeof profile.workingHours.start !== 'string' || typeof profile.workingHours.end !== 'string') return false;
   if (isOnVacation(profile)) return false;
+  const workingDays = Array.isArray(profile.workingDays) && profile.workingDays.length > 0
+    ? profile.workingDays
+    : DEFAULT_WORKING_DAYS;
 
   const now = new Date();
   const formatter = new Intl.DateTimeFormat('en-US', {
@@ -60,12 +64,12 @@ function checkIsActive(profile) {
 
   if (startTotal <= endTotal) {
     // Standard shift (e.g., 09:00 to 18:00)
-    if (!profile.workingDays.includes(currentDay)) return false;
+    if (!workingDays.includes(currentDay)) return false;
     return currentTotal >= startTotal && currentTotal <= endTotal;
   } else {
     // Overnight shift (e.g., 22:00 to 06:00) crosses midnight
-    if (currentTotal <= endTotal) return profile.workingDays.includes(new Date(now.getTime() - 86400000).toLocaleDateString('en-US', { timeZone: 'America/Argentina/Buenos_Aires', weekday: 'long' }));
-    if (currentTotal >= startTotal) return profile.workingDays.includes(currentDay);
+    if (currentTotal <= endTotal) return workingDays.includes(new Date(now.getTime() - 86400000).toLocaleDateString('en-US', { timeZone: 'America/Argentina/Buenos_Aires', weekday: 'long' }));
+    if (currentTotal >= startTotal) return workingDays.includes(currentDay);
     return false;
   }
 }
@@ -127,6 +131,7 @@ exports.getProfessionals = async (req, res, next) => {
       'professionalProfile.hasTattoos': 1,
       'professionalProfile.workingHours': 1,
       'professionalProfile.workingDays': 1,
+      'professionalProfile.vacation': 1,
       'professionalProfile.photos': 1
     };
 
@@ -194,7 +199,7 @@ exports.getProfessionalByAlias = async (req, res, next) => {
     const professional = await User.findOne({ 
       'professionalProfile.alias': aliasRegex,
       ...ALIAS_LOOKUP_FILTER
-    }).select('accountDeletedAt professionalProfile.alias professionalProfile.quality professionalProfile.bio professionalProfile.services professionalProfile.location professionalProfile.pricing professionalProfile.measurements professionalProfile.height professionalProfile.eyeColor professionalProfile.hasTattoos professionalProfile.whatsappNumber professionalProfile.mobilePhone professionalProfile.photos professionalProfile.workingHours professionalProfile.workingDays');
+    }).select('accountDeletedAt professionalProfile.alias professionalProfile.quality professionalProfile.bio professionalProfile.services professionalProfile.location professionalProfile.pricing professionalProfile.measurements professionalProfile.height professionalProfile.eyeColor professionalProfile.hasTattoos professionalProfile.whatsappNumber professionalProfile.mobilePhone professionalProfile.photos professionalProfile.workingHours professionalProfile.workingDays professionalProfile.vacation');
 
     if (!professional || isAccountDeleted(professional)) {
       return res.status(404).json({

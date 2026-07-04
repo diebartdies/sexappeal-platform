@@ -1,0 +1,23 @@
+User-agent: *
+Allow: /
+Allow: /index.html
+Allow: /categories.html
+Allow: /home.html
+Allow: /services.html
+Allow: /plataforma.html
+Allow: /detalles.html
+Allow: /conciencia-vih.html
+Allow: /conciencia-cancer-mama.html
+Allow: /acompanantes/
+Allow: /perfil/
+Disallow: /api/
+Disallow: /dashboard.html
+Disallow: /profDashboard.html
+Disallow: /login.html
+Disallow: /register.html
+Disallow: /recover.html
+Disallow: /verify.html
+Disallow: /discover.html
+Disallow: /admin-potentials.html
+
+Sitemap: https://selfappeal.drsrv.net.ar/sitemap.xml

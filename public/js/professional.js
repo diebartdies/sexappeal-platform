@@ -21,6 +21,72 @@ import {
 
 let currentPaymentInstructions = DEFAULT_PAYMENT_INSTRUCTIONS;
 
+const AVAILABILITY_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const WEEKDAY_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+export function renderAvailabilityDayControls(container, selectedDays = []) {
+    if (!container) return;
+    const effectiveDays = Array.isArray(selectedDays) && selectedDays.length > 0 ? selectedDays : AVAILABILITY_DAYS;
+    container.innerHTML = '';
+
+    const presetWrap = document.createElement('div');
+    presetWrap.style.cssText = 'display:flex; gap:15px; flex-wrap:wrap; flex-basis:100%; margin-bottom:4px;';
+    const daysWrap = document.createElement('div');
+    daysWrap.style.cssText = 'display:flex; gap:15px; flex-wrap:wrap; flex-basis:100%;';
+
+    const syncPresets = () => {
+        const checkedDays = Array.from(daysWrap.querySelectorAll('.avail-day-cb:checked')).map(cb => cb.value);
+        const hasSameDays = (expected) => checkedDays.length === expected.length && expected.every(day => checkedDays.includes(day));
+        const allPreset = presetWrap.querySelector('[data-availability-preset="all"]');
+        const weekdaysPreset = presetWrap.querySelector('[data-availability-preset="weekdays"]');
+        if (allPreset) allPreset.checked = hasSameDays(AVAILABILITY_DAYS);
+        if (weekdaysPreset) weekdaysPreset.checked = hasSameDays(WEEKDAY_DAYS);
+    };
+
+    const setCheckedDays = (days) => {
+        daysWrap.querySelectorAll('.avail-day-cb').forEach(cb => {
+            cb.checked = days.includes(cb.value);
+        });
+        syncPresets();
+    };
+
+    [
+        { label: 'All days', value: 'all', days: AVAILABILITY_DAYS },
+        { label: 'Weekdays', value: 'weekdays', days: WEEKDAY_DAYS }
+    ].forEach((preset) => {
+        const lbl = document.createElement('label');
+        lbl.style.cssText = 'display:flex; align-items:center; gap:5px; cursor:pointer; color: var(--primary-gold);';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.dataset.availabilityPreset = preset.value;
+        cb.addEventListener('change', () => {
+            if (cb.checked) setCheckedDays(preset.days);
+            else syncPresets();
+        });
+        lbl.appendChild(cb);
+        lbl.appendChild(document.createTextNode(t(preset.label)));
+        presetWrap.appendChild(lbl);
+    });
+
+    AVAILABILITY_DAYS.forEach((day) => {
+        const lbl = document.createElement('label');
+        lbl.style.cssText = 'display:flex; align-items:center; gap:5px; cursor:pointer;';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = day;
+        cb.className = 'avail-day-cb';
+        cb.checked = effectiveDays.includes(day);
+        cb.addEventListener('change', syncPresets);
+        lbl.appendChild(cb);
+        lbl.appendChild(document.createTextNode(t(day)));
+        daysWrap.appendChild(lbl);
+    });
+
+    container.appendChild(presetWrap);
+    container.appendChild(daysWrap);
+    syncPresets();
+}
+
 function attachOverlayToBody(id) {
     const el = document.getElementById(id);
     if (!el || el.parentElement === document.body) return;
@@ -1441,16 +1507,7 @@ export async function loadProfDashboard() {
             }
 
             const daysContainer = document.getElementById('daysContainer');
-            const fullDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-            const userDays = prof.workingDays || fullDays;
-            fullDays.forEach((day) => {
-                const lbl = document.createElement('label');
-                lbl.style.cssText = 'display:flex; align-items:center; gap:5px; cursor:pointer;';
-                const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = day; cb.className = 'avail-day-cb';
-                cb.checked = userDays.includes(day);
-                lbl.appendChild(cb); lbl.appendChild(document.createTextNode(t(day)));
-                daysContainer.appendChild(lbl);
-            });
+            renderAvailabilityDayControls(daysContainer, prof.workingDays);
 
             setupLocationDropdowns('upProvince', 'upCity', 'upNeighborhood', false, prof.location || {});
 
