@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const InterestNote = require('../models/InterestNote');
 const { INDEXABLE_FILTER } = require('./professionalVisibility');
 const config = require('../config/appConfig');
 const {
@@ -8,6 +9,7 @@ const {
   siteKeyFromBaseUrl
 } = require('./seoMeta');
 const { getLocationPages } = require('./seoLocations');
+const { isExternalUrl, replaceDeadExternalUrl } = require('./photoUtils');
 
 const SEXAPPEAL_BASE = PUBLIC_URL.replace(/\/$/, '');
 
@@ -68,19 +70,43 @@ function toIsoDate(value) {
   return date.toISOString().slice(0, 10);
 }
 
+function resolveSitemapPhotoUrl(photos) {
+  if (!Array.isArray(photos) || photos.length === 0) return null;
+  for (const photo of photos) {
+    if (!photo || typeof photo !== 'string') continue;
+    const resolved = isExternalUrl(photo) ? replaceDeadExternalUrl(photo) : null;
+    if (resolved) return resolved;
+  }
+  return null;
+}
+
 function buildSitemapXml(urls) {
-  const body = urls.map((entry) => [
-    '  <url>',
-    `    <loc>${entry.loc}</loc>`,
-    `    <lastmod>${entry.lastmod}</lastmod>`,
-    `    <changefreq>${entry.changefreq}</changefreq>`,
-    `    <priority>${entry.priority}</priority>`,
-    '  </url>'
-  ].join('\n')).join('\n');
+  const hasImages = urls.some((entry) => entry.images && entry.images.length > 0);
+  const xmlns = ['xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"'];
+  if (hasImages) xmlns.push('xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"');
+
+  const body = urls.map((entry) => {
+    const lines = ['  <url>'];
+    lines.push(`    <loc>${entry.loc}</loc>`);
+    lines.push(`    <lastmod>${entry.lastmod}</lastmod>`);
+    lines.push(`    <changefreq>${entry.changefreq}</changefreq>`);
+    lines.push(`    <priority>${entry.priority}</priority>`);
+    if (entry.images && entry.images.length > 0) {
+      entry.images.forEach((img) => {
+        lines.push('    <image:image>');
+        lines.push(`      <image:loc>${img.loc}</image:loc>`);
+        if (img.title) lines.push(`      <image:title><![CDATA[${img.title}]]></image:title>`);
+        if (img.caption) lines.push(`      <image:caption><![CDATA[${img.caption}]]></image:caption>`);
+        lines.push('    </image:image>');
+      });
+    }
+    lines.push('  </url>');
+    return lines.join('\n');
+  }).join('\n');
 
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    `<urlset ${xmlns.join(' ')}>`,
     body,
     '</urlset>',
     ''
@@ -123,7 +149,7 @@ function baseUrlForNamedSite(site) {
   return SEXAPPEAL_BASE;
 }
 
-async function collectSitemapUrls(baseUrl) {
+async function collectAllUrls(baseUrl) {
   const siteKey = siteKeyFromBaseUrl(baseUrl);
   const urls = [];
   const seenLocs = new Set();
@@ -136,7 +162,8 @@ async function collectSitemapUrls(baseUrl) {
       loc,
       lastmod: meta.lastmod,
       changefreq: meta.changefreq,
-      priority: meta.priority
+      priority: meta.priority,
+      images: meta.images || []
     });
   };
 
@@ -148,39 +175,60 @@ async function collectSitemapUrls(baseUrl) {
     });
   });
 
-  if (siteKey !== 'sexappeal') {
-    urls.sort((a, b) => a.loc.localeCompare(b.loc));
-    return urls;
+  if (siteKey === 'sexappeal') {
+    const professionals = await User.find(INDEXABLE_FILTER)
+      .select('professionalProfile.alias professionalProfile.lastPhotoUpdate professionalProfile.photos professionalProfile.bio updatedAt createdAt');
+
+    professionals.forEach((user) => {
+      const alias = sanitizeAliasForSitemap(user.professionalProfile?.alias);
+      if (!alias || RESERVED_PROFILE_ALIASES.has(alias.toLowerCase())) return;
+      const photoUrl = resolveSitemapPhotoUrl(user.professionalProfile?.photos);
+      const images = photoUrl ? [{ loc: photoUrl, title: alias, caption: user.professionalProfile?.bio || alias }] : [];
+      addUrl(absoluteUrlFromBase(baseUrl, `/perfil/${encodePathSegment(alias)}`), {
+        lastmod: toIsoDate(user.professionalProfile?.lastPhotoUpdate || user.updatedAt || user.createdAt),
+        changefreq: 'weekly',
+        priority: '0.8',
+        images
+      });
+    });
+
+    const locationPages = await getLocationPages();
+    locationPages.forEach((page) => {
+      addUrl(absoluteUrlFromBase(baseUrl, page.path), {
+        lastmod: toIsoDate(page.lastUpdated),
+        changefreq: 'daily',
+        priority: page.areaSlug ? '0.75' : '0.7'
+      });
+    });
+
+    const publishedNotes = await InterestNote.find({ published: true })
+      .select('updatedAt createdAt titleEs titleEn')
+      .sort({ sortOrder: 1, createdAt: -1 });
+
+    if (publishedNotes.length > 0) {
+      addUrl(absoluteUrlFromBase(baseUrl, '/notas-interes.html'), {
+        lastmod: toIsoDate(publishedNotes[0].updatedAt || publishedNotes[0].createdAt),
+        changefreq: 'weekly',
+        priority: '0.6'
+      });
+    }
+
+    publishedNotes.forEach((note) => {
+      const noteTitle = note.titleEs || note.titleEn || note.title || 'Interés';
+      addUrl(absoluteUrlFromBase(baseUrl, `/nota-interes.html?id=${note._id}`), {
+        lastmod: toIsoDate(note.updatedAt || note.createdAt),
+        changefreq: 'monthly',
+        priority: '0.55'
+      });
+    });
   }
-
-  const professionals = await User.find(INDEXABLE_FILTER)
-    .select('professionalProfile.alias professionalProfile.lastPhotoUpdate updatedAt createdAt');
-
-  professionals.forEach((user) => {
-    const alias = sanitizeAliasForSitemap(user.professionalProfile?.alias);
-    if (!alias || RESERVED_PROFILE_ALIASES.has(alias.toLowerCase())) return;
-    addUrl(absoluteUrlFromBase(baseUrl, `/perfil/${encodePathSegment(alias)}`), {
-      lastmod: toIsoDate(user.professionalProfile?.lastPhotoUpdate || user.updatedAt || user.createdAt),
-      changefreq: 'weekly',
-      priority: '0.8'
-    });
-  });
-
-  const locationPages = await getLocationPages();
-  locationPages.forEach((page) => {
-    addUrl(absoluteUrlFromBase(baseUrl, page.path), {
-      lastmod: toIsoDate(page.lastUpdated),
-      changefreq: 'daily',
-      priority: page.areaSlug ? '0.75' : '0.7'
-    });
-  });
 
   urls.sort((a, b) => a.loc.localeCompare(b.loc));
   return urls;
 }
 
 async function buildSitemapForBase(baseUrl) {
-  const urls = await collectSitemapUrls(baseUrl);
+  const urls = await collectAllUrls(baseUrl);
   const xml = buildSitemapXml(urls);
   if (!xml.includes('</urlset>') || !/<loc>https:\/\//.test(xml)) {
     throw new Error('Invalid sitemap XML generated');
@@ -193,25 +241,48 @@ function buildRobotsTxt(baseUrl) {
   return [
     'User-agent: *',
     'Allow: /',
-    'Allow: /index.html',
-    'Allow: /categories.html',
-    'Allow: /home.html',
-    'Allow: /services.html',
-    'Allow: /plataforma.html',
-    'Allow: /detalles.html',
-    'Allow: /conciencia-vih.html',
-    'Allow: /conciencia-cancer-mama.html',
+    '',
+    '# Core pages',
+    'Allow: /index.html$',
+    'Allow: /home.html$',
+    'Allow: /categories.html$',
+    'Allow: /services.html$',
+    'Allow: /plataforma.html$',
+    'Allow: /detalles.html$',
+    'Allow: /conciencia-vih.html$',
+    'Allow: /conciencia-cancer-mama.html$',
+    '',
+    '# SEO landing pages',
     'Allow: /acompanantes/',
     'Allow: /perfil/',
+    '',
+    '# Content pages',
+    'Allow: /notas-interes.html$',
+    'Allow: /nota-interes.html',
+    '',
+    '# Utility pages (noindex, but crawlable to find links)',
+    'Allow: /login.html$',
+    'Allow: /register.html$',
+    'Allow: /recover.html$',
+    'Allow: /verify.html$',
+    'Allow: /forgot.html$',
+    '',
+    '# Resources',
+    'Allow: /favicon.svg$',
+    'Allow: /SexAppeal_logo_black.png$',
+    'Allow: /css/',
+    'Allow: /js/',
+    '',
+    '# Blocked paths',
     'Disallow: /api/',
     'Disallow: /dashboard.html',
     'Disallow: /profDashboard.html',
-    'Disallow: /login.html',
-    'Disallow: /register.html',
-    'Disallow: /recover.html',
-    'Disallow: /verify.html',
-    'Disallow: /discover.html',
+    'Disallow: /admin.html',
     'Disallow: /admin-potentials.html',
+    'Disallow: /discover.html',
+    'Disallow: /whatsapp-inbox.html',
+    'Disallow: /treasure.html',
+    'Disallow: /design-previews.html',
     '',
     `Sitemap: ${site}/sitemap.xml`,
     ''
@@ -225,7 +296,7 @@ module.exports = {
   isSelfAppealHost,
   buildSelfAppealRobotsTxt,
   baseUrlForNamedSite,
-  collectSitemapUrls,
+  collectAllUrls,
   buildSitemapForBase,
   buildSitemapXml,
   buildRobotsTxt
