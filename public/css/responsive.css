@@ -87,7 +87,6 @@ input[type="submit"],
 
 .payment-modal-close,
 .reg-country-btn,
-.phone-picker-btn,
 .reg-date-picker-btn {
     min-height: unset;
 }

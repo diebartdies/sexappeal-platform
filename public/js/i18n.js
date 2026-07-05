@@ -115,6 +115,7 @@ const translations = {
         'CP/PC': 'CP/PC',
         'Connection Info': 'Datos de contacto',
         'Password (min 6)': 'Contraseña (mín. 6)',
+        'Contact': 'Contacto',
         'Mobile phone': 'Teléfono móvil',
         'App Configuration': 'Configuración',
         'Category': 'Categoría',

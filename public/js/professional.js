@@ -1440,13 +1440,13 @@ export async function loadProfDashboard() {
 
                 <!-- Contact -->
                 <div class="card fileteado-section" style="margin-bottom: 20px; border: 1px solid var(--primary-gold);">
-                    <h3 class="gold-text" style="margin-bottom: 15px;">Contact</h3>
+                    <h3 class="gold-text" style="margin-bottom: 15px;">${t('Contact')}</h3>
                     <div style="margin-bottom: 12px;">
-                        <label>Mobile Phone</label>
+                        <label>${t('Mobile phone')}</label>
                         ${phonePickerHtml('upMobile', prof.mobilePhone, 'upMobilePhone')}
                     </div>
                     <div>
-                        <label>WhatsApp Number</label>
+                        <label>${t('WhatsApp Number')}</label>
                         ${phonePickerHtml('upWa', prof.whatsappNumber, 'upWaInput')}
                     </div>
                 </div>

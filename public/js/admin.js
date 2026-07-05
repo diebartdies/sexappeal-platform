@@ -3928,7 +3928,7 @@ export function renderEditForm(prof) {
                 <div style="flex:1;"><label>Birth Date</label><input type="date" id="adminEditBirthDate" value="${profile.birthDate ? profile.birthDate.substring(0,10) : ''}" style="width:100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
             </div>
             <div style="display:flex; gap:10px; flex-wrap: wrap; margin-bottom: 15px;">
-                <div style="flex:1; min-width:220px;"><label>Mobile Phone</label>${phonePickerHtml('adminEditMobile', profile.mobilePhone, 'adminEditMobilePhone')}</div>
+                <div style="flex:1; min-width:220px;"><label>${t('Mobile phone')}</label>${phonePickerHtml('adminEditMobile', profile.mobilePhone, 'adminEditMobilePhone')}</div>
                 <div style="flex:1;"><label>Street</label><input type="text" id="adminEditStreet" value="${profile.location?.street || ''}" style="width:100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
                 <div style="flex:1;"><label>Number</label><input type="text" id="adminEditStreetNumber" value="${profile.location?.number || ''}" style="width:100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
                 <div style="flex:1;"><label>Floor</label><input type="text" id="adminEditFloor" value="${profile.location?.floor || ''}" style="width:100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
@@ -3984,7 +3984,7 @@ export function renderEditForm(prof) {
             <label>Services</label>
             <div id="adminEditServices"></div>
 
-            <label>WhatsApp Number</label>
+            <label>${t('WhatsApp Number')}</label>
             ${phonePickerHtml('adminEditWa', profile.whatsappNumber, 'adminEditWhatsapp')}
 
             <label>Measurements</label>

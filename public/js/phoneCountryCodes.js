@@ -1,3 +1,5 @@
+import { t } from './i18n.js';
+
 /** Dial codes for registration — Americas + Europe. Default: Argentina (+54). */
 export const PHONE_COUNTRIES = [
     { iso: 'AR', name: 'Argentina', nameEs: 'Argentina', dial: '+54', default: true },
@@ -168,7 +170,7 @@ export function initPhonePicker(prefix) {
             flagImg.src = getPhoneCountryFlagUrl(selected.iso);
             flagImg.alt = getPhoneCountryName(selected, lang());
         }
-        btn.setAttribute('aria-label', `Country code ${getPhoneCountryName(selected, lang())} ${selected.dial}`);
+        btn.setAttribute('aria-label', `${t('Country code')} ${getPhoneCountryName(selected, lang())} ${selected.dial}`);
     };
 
     const closeMenu = () => {
