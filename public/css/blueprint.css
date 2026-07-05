@@ -967,6 +967,21 @@ body.blueprint-theme.blueprint-auth-page .reg-date-picker-btn {
   color: var(--primary-gold);
 }
 
+body.blueprint-theme .phone-picker-btn {
+  border: 1px solid var(--blueprint-border) !important;
+  border-right: none !important;
+  background: rgba(0, 0, 0, 0.45) !important;
+}
+
+body.blueprint-theme .phone-picker-input {
+  border-left: none !important;
+}
+
+body.blueprint-theme .phone-picker-menu {
+  border: 1px solid var(--blueprint-border);
+  background: var(--blueprint-panel);
+}
+
 body.blueprint-theme.blueprint-auth-page .reg-inline-link,
 body.blueprint-theme.blueprint-auth-page .recovery-resend-link,
 body.blueprint-theme.blueprint-auth-page a[href*="index"],

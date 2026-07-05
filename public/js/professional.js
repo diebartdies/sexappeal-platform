@@ -19,6 +19,13 @@ import {
     DEFAULT_PAYMENT_INSTRUCTIONS
 } from './paymentInstructions.js';
 
+import {
+    buildFullPhoneNumber,
+    splitE164Phone,
+    phonePickerHtml,
+    initPhonePicker
+} from './phoneCountryCodes.js';
+
 let currentPaymentInstructions = DEFAULT_PAYMENT_INSTRUCTIONS;
 
 const AVAILABILITY_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -161,7 +168,7 @@ export function renderProfessionalMainDashboardShell(content) {
                             <div><label>Age</label><input type="text" id="upAge" readonly></div>
                         </div>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
-                            <div><label>Mobile</label><input type="text" id="upMobilePhone"></div>
+                            <div><label>Mobile</label>${phonePickerHtml('upMobile', '', 'upMobilePhone')}</div>
                             <div><label>Street</label><input type="text" id="upStreet"></div>
                             <div><label>Number</label><input type="text" id="upStreetNumber"></div>
                             <div><label>Floor</label><input type="text" id="upFloor"></div>
@@ -550,7 +557,11 @@ export function bindProfessionalProfileForm() {
         formData.append('middleName', document.getElementById('upMiddleName')?.value || '');
         formData.append('idNumber', document.getElementById('upIdNumber')?.value || '');
         formData.append('birthDate', document.getElementById('upBirthDate')?.value || '');
-        formData.append('mobilePhone', document.getElementById('upMobilePhone')?.value || '');
+        {
+            const upDial = document.getElementById('upMobileDial')?.value || '+54';
+            const upLocal = document.getElementById('upMobilePhone')?.value || '';
+            formData.append('mobilePhone', buildFullPhoneNumber(upDial, upLocal));
+        }
         formData.append('street', document.getElementById('upStreet')?.value || '');
         formData.append('number', document.getElementById('upStreetNumber')?.value || '');
         formData.append('floor', document.getElementById('upFloor')?.value || '');
@@ -602,9 +613,14 @@ export function bindProfessionalProfileForm() {
 
         formData.append('measurements', document.getElementById('upMeasurements').value);
         formData.append('height', document.getElementById('upHeight').value);
-        const mobilePhone = document.getElementById('upMobilePhone')?.value || '';
-        const whatsappNumber = (document.getElementById('upWhatsapp')?.value || '').trim() || mobilePhone.trim();
-        formData.append('whatsappNumber', whatsappNumber);
+        {
+            const waDial = document.getElementById('upWaDial')?.value || '+54';
+            const waLocal = document.getElementById('upWaInput')?.value || '';
+            const waFull = buildFullPhoneNumber(waDial, waLocal);
+            const mobDial = document.getElementById('upMobileDial')?.value || '+54';
+            const mobLocal = document.getElementById('upMobilePhone')?.value || '';
+            formData.append('whatsappNumber', waFull || buildFullPhoneNumber(mobDial, mobLocal));
+        }
 
         formData.append('postalCode', document.getElementById('upPostCode')?.value || '');
         formData.append('instagram', document.getElementById('upInstagram')?.value || '');
@@ -1358,10 +1374,8 @@ export async function loadProfDashboard() {
                 
                 <input type="hidden" id="upIdNumber" value="${prof.idNumber || ''}">
                 <input type="hidden" id="upBirthDate" value="${prof.birthDate ? new Date(prof.birthDate).toISOString().split('T')[0] : ''}">
-                <input type="hidden" id="upMobilePhone" value="${prof.mobilePhone || ''}">
                 <input type="checkbox" id="upIsExposed" style="display:none;" ${prof.isExposed !== false ? 'checked' : ''}>
                 <input type="checkbox" id="upPaysMonthly" style="display:none;" ${prof.paysMonthlyCharges !== false ? 'checked' : ''}>
-                <input type="hidden" id="upWhatsapp" value="${prof.whatsappNumber || ''}">
                 <input type="hidden" id="upInstagram" value="${prof.instagram || ''}">
                 <input type="hidden" id="upFacebook" value="${prof.facebook || ''}">
 
@@ -1422,6 +1436,19 @@ export async function loadProfDashboard() {
                     <h3 class="gold-text" style="margin-bottom: 10px;">${t('Service Description')}</h3>
                     <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 12px;">${t('Describe your services for visitors on your public profile.')}</p>
                     <textarea id="upBio" rows="6" maxlength="500" style="width: 100%; padding: 10px; background: #222; color: white; border: 1px solid #444; border-radius: 4px; resize: vertical; box-sizing: border-box; min-height: 120px;">${safeBio}</textarea>
+                </div>
+
+                <!-- Contact -->
+                <div class="card fileteado-section" style="margin-bottom: 20px; border: 1px solid var(--primary-gold);">
+                    <h3 class="gold-text" style="margin-bottom: 15px;">Contact</h3>
+                    <div style="margin-bottom: 12px;">
+                        <label>Mobile Phone</label>
+                        ${phonePickerHtml('upMobile', prof.mobilePhone, 'upMobilePhone')}
+                    </div>
+                    <div>
+                        <label>WhatsApp Number</label>
+                        ${phonePickerHtml('upWa', prof.whatsappNumber, 'upWaInput')}
+                    </div>
                 </div>
 
                 <!-- 3. Address -->
@@ -1510,6 +1537,9 @@ export async function loadProfDashboard() {
             renderAvailabilityDayControls(daysContainer, prof.workingDays);
 
             setupLocationDropdowns('upProvince', 'upCity', 'upNeighborhood', false, prof.location || {});
+
+            initPhonePicker('upMobile');
+            initPhonePicker('upWa');
 
             injectProfessionalDashboardGuides(content, data, formObj);
 
