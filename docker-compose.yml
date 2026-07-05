@@ -41,6 +41,8 @@ services:
       - ./utils:/app/utils
       - ./config:/app/config
       - ./server.js:/app/server.js
+      # Mount certs so certExpiry.js can read them (used only in admin login warning)
+      - ./certbot/conf:/app/certbot/conf:ro
       # Persist the WhatsApp Web auth/session across container rebuilds &
       # recreates so the QR login is not lost. Code writes to
       # <cwd>/.wwebjs_auth/session-platform, and cwd is /app (WORKDIR).
