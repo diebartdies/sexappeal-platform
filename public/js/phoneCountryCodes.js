@@ -114,8 +114,7 @@ export function phonePickerHtml(prefix, currentPhone, inputId, placeholder) {
     return `
         <div class="phone-picker-row">
             <div class="phone-picker-select" id="${prefix}Select">
-                <button type="button" class="phone-picker-btn" id="${prefix}Btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Country code">
-                    <img class="phone-picker-flag-img preserve-brand-colors" id="${prefix}Flag" src="${flagUrl}" width="28" height="21" alt="">
+                <button type="button" class="phone-picker-btn" id="${prefix}Btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Country code" style="background-image: url('${flagUrl}');">
                     <span class="phone-picker-code" id="${prefix}Code">${dial}</span>
                 </button>
                 <ul class="phone-picker-menu hidden" id="${prefix}Menu" role="listbox" aria-label="Country code"></ul>
@@ -136,7 +135,6 @@ export function initPhonePicker(prefix) {
     const btn = document.getElementById(`${prefix}Btn`);
     const hiddenDial = document.getElementById(`${prefix}Dial`);
     const codeEl = document.getElementById(`${prefix}Code`);
-    const flagImg = document.getElementById(`${prefix}Flag`);
     const select = document.getElementById(`${prefix}Select`);
     if (!menu || !btn || !hiddenDial) return;
 
@@ -166,9 +164,8 @@ export function initPhonePicker(prefix) {
     const renderSelected = () => {
         hiddenDial.value = selected.dial;
         if (codeEl) codeEl.textContent = selected.dial;
-        if (flagImg) {
-            flagImg.src = getPhoneCountryFlagUrl(selected.iso);
-            flagImg.alt = getPhoneCountryName(selected, lang());
+        if (btn) {
+            btn.style.backgroundImage = `url('${getPhoneCountryFlagUrl(selected.iso)}')`;
         }
         btn.setAttribute('aria-label', `${t('Country code')} ${getPhoneCountryName(selected, lang())} ${selected.dial}`);
     };
