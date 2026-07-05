@@ -3330,7 +3330,7 @@ body.launch-curtain-opening .launch-curtain-gauze {
     display: flex;
     align-items: center;
     justify-content: center;
-    background-size: cover;
+    background-size: contain;
     background-position: center;
     background-repeat: no-repeat;
     border: none;
@@ -3347,7 +3347,7 @@ body.launch-curtain-opening .launch-curtain-gauze {
     filter: brightness(1.15);
 }
 .phone-picker-code {
-    font-size: 0.8rem;
+    font-size: 0.95rem;
     font-weight: 800;
     color: #000;
     text-shadow: 0 0 2px #fff, 0 0 4px rgba(255,255,255,0.6);
