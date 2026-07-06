@@ -133,13 +133,12 @@ function isSelfAppealHost(req) {
 }
 
 function buildSelfAppealRobotsTxt() {
-  const site = SELFAPPEAL_BASE;
   return [
+    '# SelfAppeal is an outreach alias domain — not indexed in Google.',
+    '# Main site: https://sexappeal.drsrv.net.ar',
     'User-agent: *',
     'Allow: /para-modelos.html',
     'Disallow: /',
-    '',
-    `Sitemap: ${site}/sitemap.xml`,
     ''
   ].join('\n');
 }
