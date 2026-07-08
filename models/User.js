@@ -58,6 +58,10 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  firstApprovedLogin: {
+    type: Boolean,
+    default: false
+  },
   verificationGesture: {
     type: String,
     enum: ['1 finger', '2 fingers', '3 fingers', 'thumbs up', '1FU', '2FU', '3FU', 'TU', 'OS']
@@ -66,6 +70,14 @@ const UserSchema = new mongoose.Schema({
     type: [String],
     select: false
   },
+  phoneVerified: {
+    type: Boolean,
+    default: false
+  },
+  phoneVerificationCode: String,
+  phoneVerificationCodeExpire: Date,
+  /** Twilio Message SID of the most recent phone verification SMS — used for delivery tracking. */
+  phoneVerificationSid: String,
   isAnonymous: {
     type: Boolean,
     default: false

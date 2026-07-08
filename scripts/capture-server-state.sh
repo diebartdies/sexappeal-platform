@@ -67,27 +67,16 @@ echo "[6/14] Logrotate..."
 mkdir -p "$STAGING/logrotate"
 cp -a /etc/logrotate.d/ "$STAGING/logrotate/" 2>/dev/null || echo "no /etc/logrotate.d" > "$STAGING/logrotate/MISSING"
 
-# ── 7. Docker images / containers / volumes / networks ──
-echo "[7/14] Docker state..."
+# ── 7. Docker inventory (SKIP volume export — images built fresh from repo) ──
+echo "[7/14] Docker inventory..."
 docker images --digests --no-trunc > "$STAGING/docker-images.txt" 2>/dev/null || true
 docker ps -a --no-trunc > "$STAGING/docker-ps.txt" 2>/dev/null || true
 docker volume ls > "$STAGING/docker-volumes.txt" 2>/dev/null || true
 docker network ls > "$STAGING/docker-networks.txt" 2>/dev/null || true
 docker system df > "$STAGING/docker-system-df.txt" 2>/dev/null || true
-# Save Docker Compose resolved config
 if command -v docker >/dev/null 2>&1 && [ -f "$DEPLOY_DIR/docker-compose.yml" ]; then
   (cd "$DEPLOY_DIR" && docker compose config 2>/dev/null) > "$STAGING/docker-compose-resolved.yml" || true
 fi
-# Export named volumes (mongo data) as a tarball
-echo "  Exporting Docker volumes (mongo data, wwebjs_auth)..."
-mkdir -p "$STAGING/volumes"
-for vol in sexappeal_mongo_data sexappeal_wwebjs_auth; do
-  if docker volume inspect "$vol" >/dev/null 2>&1; then
-    echo "  -> $vol"
-    docker run --rm -v "$vol:/source" -v "$STAGING/volumes:/target" alpine \
-      tar czf "/target/${vol}.tar.gz" -C /source . 2>/dev/null || true
-  fi
-done
 
 # ── 8. Swap & fstab ──
 echo "[8/14] Swap & fstab..."
@@ -133,32 +122,9 @@ if [ -f "$DEPLOY_DIR/.env" ]; then
   sed 's/=.*/=REDACTED/' "$DEPLOY_DIR/.env" > "$STAGING/env-file-redacted.txt" 2>/dev/null || true
 fi
 
-# ── 13. Latest MongoDB dump ──
-echo "[13/14] MongoDB backup..."
+# ── 13. Latest MongoDB dump (SKIPPED — daily backup exists; use that for restore) ──
+echo "[13/14] MongoDB backup... SKIPPED (daily backup covers this)"
 BACKUP_DIR="/root/sexappeal_backups"
-if [ -d "$BACKUP_DIR" ]; then
-  LATEST=$(ls -t "$BACKUP_DIR"/*.archive 2>/dev/null | head -1)
-  if [ -n "$LATEST" ]; then
-    cp "$LATEST" "$STAGING/latest-mongodb-dump.archive"
-    echo "  Copied: $(basename "$LATEST")"
-  else
-    echo "  No .archive files found in $BACKUP_DIR"
-    # Fallback: live mongodump directly from container
-    echo "  Attempting live mongodump..."
-    MONGO_CONTAINER="sexappeal_mongo"
-    if docker inspect "$MONGO_CONTAINER" >/dev/null 2>&1; then
-      TMPDUMP="/tmp/sexappeal_live_dump_${DATE}.archive"
-      docker exec "$MONGO_CONTAINER" sh -c "mongodump --archive=/tmp/live_dump.archive --gzip --db sexappeal" 2>/dev/null && \
-      docker cp "${MONGO_CONTAINER}:/tmp/live_dump.archive" "$TMPDUMP" 2>/dev/null && \
-      cp "$TMPDUMP" "$STAGING/latest-mongodb-dump.archive" && \
-      docker exec "$MONGO_CONTAINER" rm /tmp/live_dump.archive 2>/dev/null || true
-      rm -f "$TMPDUMP" 2>/dev/null || true
-    fi
-  fi
-  ls -lh "$BACKUP_DIR"/ > "$STAGING/backup-dir-listing.txt" 2>/dev/null || true
-else
-  echo "  No $BACKUP_DIR found"
-fi
 
 # ── 14. Certbot config & certs (live PEMs + renewal hooks) ──
 echo "[14/14] Certbot state..."
@@ -227,8 +193,8 @@ echo "   4. Restore .env from env-file.txt"
 echo "   5. Restore certs from certs/"
 echo "   6. Restore systemd overrides from systemd/"
 echo "   7. Restore cron files from cron/"
-echo "   8. Restore Docker named volumes from volumes/"
-echo "   9. Restore MongoDB from latest-mongodb-dump.archive"
+echo "   8. git clone && docker compose up --build (app built fresh)"
+echo "   9. Restore MongoDB from daily backup (see scripts/restore-disaster-recovery.ps1)"
 echo "==================================================="
 
 # ── Cleanup ──

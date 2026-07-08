@@ -353,7 +353,11 @@ app.put('/api/v1/professionals/updateprofile', protect, authorize('professional'
 app.delete('/api/v1/professionals/me', protect, authorize('professional'), professionalController.deleteMyProfile);
 app.post('/api/v1/professionals/resubmit-verification', protect, authorize('professional'), upload.array('verificationDocuments', 3), professionalController.resubmitVerification);
 app.put('/api/v1/professionals/acknowledge-rate', protect, authorize('professional'), professionalController.acknowledgeRateChange);
+app.post('/api/v1/professionals/acknowledge-first-login', protect, authorize('professional'), professionalController.acknowledgeFirstLogin);
 app.post('/api/v1/professionals/upload-receipt', protect, authorize('professional'), upload.single('receipt'), paymentController.uploadReceipt);
+app.post('/api/v1/professionals/send-phone-code', protect, authorize('professional'), professionalController.sendPhoneCode);
+app.post('/api/v1/professionals/verify-phone-code', protect, authorize('professional'), professionalController.verifyPhoneCode);
+app.get('/api/v1/professionals/phone-code-status', protect, authorize('professional'), professionalController.getPhoneCodeStatus);
 
 // Professional Public Routes
 app.get('/api/v1/professionals', professionalController.getProfessionals);

@@ -181,18 +181,13 @@ Primer mes gratis, sin comisiones por contacto y sin pedir tarjeta ni débito au
 ¿Querés saber más? Respondé a este mensaje.`;
 }
 
-/** Full body for drip preview / WebJS (may differ from approved Twilio template). */
+/** Full body for drip preview / WebJS. */
 function getColdOutreachTemplateBodySample() {
-  return buildColdOutreachStep1Message('María').replace('María', '{{1}}');
-}
-
-/** Paste this into Twilio Content when resubmitting after Meta rejection ({{1}} only). */
-function getColdOutreachTemplateBodyMetaSample() {
   return buildColdOutreachStep1MessageMetaSafe('María').replace('María', '{{1}}');
 }
 
 function buildSanitizedWhatsAppCaption(alias) {
-  return buildColdOutreachStep1Message(alias);
+  return buildColdOutreachStep1MessageMetaSafe(alias);
 }
 
 function buildWhatsAppUrl(phone, alias) {
@@ -213,7 +208,6 @@ module.exports = {
   buildColdOutreachStep1Message,
   buildColdOutreachStep1MessageMetaSafe,
   getColdOutreachTemplateBodySample,
-  getColdOutreachTemplateBodyMetaSample,
   buildStep2LaunchFeedbackReply,
   buildStep2OutreachReply,
   normalizeE164Digits,

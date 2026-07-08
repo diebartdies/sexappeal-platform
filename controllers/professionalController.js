@@ -513,6 +513,166 @@ exports.notifyRateChange = async (req, res, next) => {
   }
 };
 
+// @desc    Acknowledge first login after admin approval (clears the redirect flag)
+// @route   POST /api/v1/professionals/acknowledge-first-login
+// @access  Private/Professional
+exports.acknowledgeFirstLogin = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user || user.role !== 'professional') {
+      return res.status(404).json({ success: false, error: 'Professional not found' });
+    }
+    user.firstApprovedLogin = false;
+    await user.save();
+    res.status(200).json({ success: true });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Send phone verification code via SMS
+// @route   POST /api/v1/professionals/send-phone-code
+// @access  Private/Professional
+exports.sendPhoneCode = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user || user.role !== 'professional') {
+      return res.status(404).json({ success: false, error: 'Professional not found' });
+    }
+    const phone = user.professionalProfile?.mobilePhone;
+    if (!phone) {
+      return res.status(400).json({ success: false, error: 'No mobile phone number on profile' });
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + config.verificationCodeExpireMinutes * 60 * 1000);
+
+    const { sendSms } = require('../services/smsService');
+    const result = await sendSms({
+      to: phone,
+      body: `SexAppeal: tu código de verificación es ${code}. Válido por ${config.verificationCodeExpireMinutes} minutos.`
+    });
+
+    if (!result.ok) {
+      return res.status(500).json({ success: false, error: result.reason || result.error || 'Failed to send SMS' });
+    }
+
+    user.phoneVerificationCode = code;
+    user.phoneVerificationCodeExpire = expiresAt;
+    user.phoneVerificationSid = result.sid || '';
+    await user.save();
+
+    // Log the activity (without the code for security)
+    const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket ? req.socket.remoteAddress : req.ip);
+    await ActivityLog.create({
+      professional: user._id,
+      action: 'send_phone_code',
+      ipAddress: clientIp,
+      userAgent: req.headers['user-agent'],
+      isGuest: false
+    }).catch(() => {});
+
+    res.status(200).json({
+      success: true,
+      message: 'Verification code sent.',
+      sid: result.sid,
+      expiresAt
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Verify phone code and mark phone as verified
+// @route   POST /api/v1/professionals/verify-phone-code
+// @access  Private/Professional
+exports.verifyPhoneCode = async (req, res, next) => {
+  try {
+    const { code } = req.body;
+    if (!code || !/^\d{6}$/.test(code)) {
+      return res.status(400).json({ success: false, error: 'Enter a valid 6-digit code' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user || user.role !== 'professional') {
+      return res.status(404).json({ success: false, error: 'Professional not found' });
+    }
+
+    if (!user.phoneVerificationCode || !user.phoneVerificationCodeExpire) {
+      return res.status(400).json({ success: false, error: 'No verification code was sent. Request a new code.' });
+    }
+
+    if (user.phoneVerified) {
+      return res.status(400).json({ success: false, error: 'Phone number is already verified.' });
+    }
+
+    if (Date.now() > new Date(user.phoneVerificationCodeExpire).getTime()) {
+      user.phoneVerificationCode = undefined;
+      user.phoneVerificationCodeExpire = undefined;
+      user.phoneVerificationSid = undefined;
+      await user.save();
+      return res.status(400).json({ success: false, error: 'Code expired. Request a new code.' });
+    }
+
+    if (user.phoneVerificationCode !== code) {
+      return res.status(400).json({ success: false, error: 'Invalid code. Try again.' });
+    }
+
+    user.phoneVerified = true;
+    user.phoneVerificationCode = undefined;
+    user.phoneVerificationCodeExpire = undefined;
+    user.phoneVerificationSid = undefined;
+    await user.save();
+
+    const clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket ? req.socket.remoteAddress : req.ip);
+    await ActivityLog.create({
+      professional: user._id,
+      action: 'verify_phone',
+      ipAddress: clientIp,
+      userAgent: req.headers['user-agent'],
+      isGuest: false
+    }).catch(() => {});
+
+    res.status(200).json({ success: true, message: 'Phone number verified.' });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Check Twilio delivery status of the last phone verification SMS
+// @route   GET /api/v1/professionals/phone-code-status
+// @access  Private/Professional
+exports.getPhoneCodeStatus = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user || user.role !== 'professional') {
+      return res.status(404).json({ success: false, error: 'Professional not found' });
+    }
+
+    if (!user.phoneVerificationSid) {
+      return res.status(200).json({ success: true, status: 'none', message: 'No phone code has been sent yet.' });
+    }
+
+    const { getClient } = require('../services/smsService');
+    const client = getClient();
+    if (!client) {
+      return res.status(200).json({ success: true, status: 'unknown', message: 'SMS client not available.' });
+    }
+
+    const message = await client.messages(user.phoneVerificationSid).fetch();
+    res.status(200).json({
+      success: true,
+      status: message.status,
+      errorCode: message.errorCode,
+      errorMessage: message.errorMessage,
+      dateSent: message.dateSent,
+      to: message.to
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
 // @desc    Update professional profile (Private)
 // @route   PUT /api/v1/professionals/updateprofile
 // @access  Private/Professional

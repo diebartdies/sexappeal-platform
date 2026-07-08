@@ -1336,6 +1336,43 @@ export async function loadProfDashboard() {
                     <button type="button" id="btnResubmitVerification" style="width: 100%; padding: 12px; background: var(--primary-gold); color: #111; font-weight: bold; border: none; border-radius: 4px; cursor: pointer;">${t('Submit verification for review')}</button>
                 </div>
             ` : '';
+            if (!isApproved && !allowResubmission) {
+                formObj.style.maxWidth = '600px';
+                formObj.style.width = '100%';
+                formObj.style.margin = '0 auto';
+                formObj.innerHTML = `
+                    ${statusBannerHtml}
+                    <button type="button" id="bottomBackBtn" style="background: var(--primary-gold); color: var(--dark-bg); font-weight: bold; width: 100%; padding: 12px; border-radius: 4px; border: none; cursor: pointer;">&#8592; ${t('Back to Main Dashboard')}</button>
+                `;
+                document.getElementById('bottomBackBtn').onclick = () => navigateBack();
+                loader.classList.add('hidden');
+                layout.classList.remove('hidden');
+                finishDashboardLoad('profDashboardLayout', 'loader');
+                applyStaticTranslations(layout);
+                return;
+            }
+
+            if (user.firstApprovedLogin) {
+                fetch(`${API_URL}/professionals/acknowledge-first-login`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' }
+                }).catch(() => {});
+                if (localStorage.getItem('user')) {
+                    try {
+                        const cached = JSON.parse(localStorage.getItem('user'));
+                        cached.firstApprovedLogin = false;
+                        localStorage.setItem('user', JSON.stringify(cached));
+                    } catch (e) {}
+                }
+            }
+
+            const firstApprovedBannerHtml = user.firstApprovedLogin ? `
+                <div class="card fileteado-section" style="margin-bottom: 20px; border: 2px solid var(--primary-gold); background: rgba(212,175,55,0.12);">
+                    <h3 class="gold-text" style="margin-top: 0;">${t('Welcome to SexAppeal!')}</h3>
+                    <p style="color: #eee; line-height: 1.55; margin-bottom: 0;">${t('Your account has been approved. Complete your profile below — choose a category, add specialties, write your bio, and upload photos. Once you save, your public profile will be visible on the directory.')}</p>
+                </div>
+            ` : '';
+
             formObj.style.maxWidth = '1200px';
             formObj.style.width = '100%';
             formObj.style.margin = '0 auto';
@@ -1358,6 +1395,7 @@ export async function loadProfDashboard() {
                 </div>
 
                 ${statusBannerHtml}
+                ${firstApprovedBannerHtml}
                 ${setupBannerHtml}
                 ${resubmitSectionHtml}
                 
@@ -1444,6 +1482,22 @@ export async function loadProfDashboard() {
                     <div style="margin-bottom: 12px;">
                         <label>${t('Mobile phone')}</label>
                         ${phonePickerHtml('upMobile', prof.mobilePhone, 'upMobilePhone')}
+                        <div id="phoneVerifyContainer" style="margin-top: 8px;">
+                            <div id="phoneVerifyStatus" style="font-size: 0.85rem; margin-bottom: 6px;">
+                                ${user.phoneVerified ? `<span style="color: #25D366;">✓ ${t('Phone verified')}</span>` : `<span style="color: #aaa;">${t('Not verified')}</span>`}
+                            </div>
+                            ${!user.phoneVerified ? `
+                            <div id="phoneVerifyAction">
+                                <button type="button" id="btnSendPhoneCode" style="padding: 6px 14px; background: var(--primary-gold); color: #111; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">${t('Send verification code')}</button>
+                                <div id="phoneCodeInputRow" class="hidden" style="gap: 8px; margin-top: 8px; align-items: center;">
+                                    <input type="text" id="phoneVerificationCode" maxlength="6" placeholder="${t('6-digit code')}" style="width: 120px; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px; text-align: center; letter-spacing: 4px; font-size: 1.1rem;">
+                                    <button type="button" id="btnVerifyPhoneCode" style="padding: 6px 14px; background: #25D366; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">${t('Verify')}</button>
+                                    <span id="phoneCodeDeliveryStatus" style="font-size: 0.8rem; color: #aaa;"></span>
+                                </div>
+                                <div id="phoneCodeAlert" class="hidden" style="margin-top: 6px; font-size: 0.8rem; color: var(--accent-red);"></div>
+                            </div>
+                            ` : ''}
+                        </div>
                     </div>
                     <div>
                         <label>${t('WhatsApp Number')}</label>
@@ -1540,6 +1594,8 @@ export async function loadProfDashboard() {
 
             initPhonePicker('upMobile');
             initPhonePicker('upWa');
+
+            initPhoneVerification();
 
             injectProfessionalDashboardGuides(content, data, formObj);
 
@@ -1714,4 +1770,81 @@ export async function loadProfDashboard() {
     })();
 
     return profDashboardLoadInFlight;
+}
+
+function initPhoneVerification() {
+    const btnSend = document.getElementById('btnSendPhoneCode');
+    const codeInputRow = document.getElementById('phoneCodeInputRow');
+    const codeInput = document.getElementById('phoneVerificationCode');
+    const btnVerify = document.getElementById('btnVerifyPhoneCode');
+    const alertEl = document.getElementById('phoneCodeAlert');
+    const statusEl = document.getElementById('phoneCodeDeliveryStatus');
+    const verifyStatus = document.getElementById('phoneVerifyStatus');
+
+    if (!btnSend) return;
+
+    btnSend.addEventListener('click', async () => {
+        btnSend.disabled = true;
+        btnSend.textContent = t('Sending...');
+        if (alertEl) { alertEl.classList.add('hidden'); alertEl.textContent = ''; }
+        if (statusEl) statusEl.textContent = '';
+
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`${API_URL}/professionals/send-phone-code`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+            if (data.success) {
+                if (codeInputRow) { codeInputRow.classList.remove('hidden'); codeInputRow.style.display = 'flex'; }
+                if (codeInput) codeInput.value = '';
+                if (statusEl) statusEl.textContent = t('Code sent!');
+                setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 4000);
+            } else {
+                if (alertEl) { alertEl.textContent = data.error || t('Failed to send code'); alertEl.classList.remove('hidden'); }
+            }
+        } catch {
+            if (alertEl) { alertEl.textContent = t('Server connection error'); alertEl.classList.remove('hidden'); }
+        } finally {
+            btnSend.disabled = false;
+            btnSend.textContent = t('Send verification code');
+        }
+    });
+
+    if (btnVerify && codeInput) {
+        btnVerify.addEventListener('click', async () => {
+            const code = codeInput.value.trim();
+            if (!code || code.length !== 6) {
+                if (alertEl) { alertEl.textContent = t('Enter a valid 6-digit code'); alertEl.classList.remove('hidden'); }
+                return;
+            }
+            btnVerify.disabled = true;
+            btnVerify.textContent = t('Verifying...');
+            if (alertEl) { alertEl.classList.add('hidden'); alertEl.textContent = ''; }
+
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`${API_URL}/professionals/verify-phone-code`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    if (btnSend) btnSend.remove();
+                    if (codeInputRow) codeInputRow.remove();
+                    if (alertEl) alertEl.remove();
+                    if (verifyStatus) verifyStatus.innerHTML = '<span style="color: #25D366;">✓ ' + t('Phone verified') + '</span>';
+                } else {
+                    if (alertEl) { alertEl.textContent = data.error || t('Invalid code'); alertEl.classList.remove('hidden'); }
+                }
+            } catch {
+                if (alertEl) { alertEl.textContent = t('Server connection error'); alertEl.classList.remove('hidden'); }
+            } finally {
+                btnVerify.disabled = false;
+                btnVerify.textContent = t('Verify');
+            }
+        });
+    }
 }

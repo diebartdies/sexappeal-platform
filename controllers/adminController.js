@@ -578,6 +578,9 @@ exports.updateProfessionalProfile = async (req, res, next) => {
     if (req.body.verificationStatus) {
       user.verificationStatus = req.body.verificationStatus;
       user.isVerified = req.body.verificationStatus === 'approved';
+      if (req.body.verificationStatus === 'approved') {
+        user.firstApprovedLogin = true;
+      }
     }
 
     if (req.body.professionalProfile) {
