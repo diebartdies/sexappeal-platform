@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solicitar servicio - KuraTe</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; }
+    .container { max-width: 640px; margin: 0 auto; padding: 24px 16px; }
+    h1 { font-size: 1.5rem; margin-bottom: 4px; }
+    .subtitle { color: #666; font-size: 14px; margin-bottom: 24px; }
+    .card { background: #fff; border-radius: 12px; padding: 24px; border: 1px solid #e0e0e0; margin-bottom: 16px; }
+    .card h2 { font-size: 1rem; margin-bottom: 16px; color: #222; }
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 13px; font-weight: 600; color: #444; margin-bottom: 4px; }
+    input, textarea, select { width: 100%; padding: 10px 12px; border: 1px solid #d0d0d0; border-radius: 8px; font-size: 14px; font-family: inherit; }
+    input:focus, textarea:focus, select:focus { outline: none; border-color: #4a90d9; box-shadow: 0 0 0 3px rgba(74,144,217,0.15); }
+    textarea { resize: vertical; min-height: 100px; }
+    .row { display: flex; gap: 12px; }
+    .row > * { flex: 1; }
+    .btn-submit { display: block; width: 100%; padding: 14px; background: #4a90d9; color: #fff; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+    .btn-submit:hover { background: #357abd; }
+    .btn-submit:disabled { background: #aaa; cursor: not-allowed; }
+    .success-box { display: none; text-align: center; padding: 40px 20px; }
+    .success-box h2 { color: #2e7d32; margin-bottom: 8px; }
+    .success-box p { color: #555; font-size: 14px; }
+    .alert { padding: 10px; border-radius: 6px; margin-bottom: 12px; font-size: 13px; display: none; }
+    .alert-error { background: #fdecea; color: #d32f2f; border: 1px solid #f5c6cb; display: block; }
+    .tips { background: #f0f7ff; border-left: 3px solid #4a90d9; padding: 12px 16px; border-radius: 6px; font-size: 13px; color: #555; margin-bottom: 16px; }
+    .tips strong { color: #333; }
+
+    /* Photo manager */
+    .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 8px; }
+    .photo-item { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; border: 2px solid #e0e0e0; cursor: pointer; }
+    .photo-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .photo-item.is-cover { border-color: #4a90d9; }
+    .cover-badge { position: absolute; top: 4px; left: 4px; background: #4a90d9; color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+    .photo-remove { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; background: rgba(0,0,0,0.6); color: #fff; border: none; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .photo-remove:hover { background: #d32f2f; }
+    .photo-add { border: 2px dashed #ccc; border-radius: 8px; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all .15s; color: #888; font-size: 13px; text-align: center; padding: 8px; }
+    .photo-add:hover { border-color: #4a90d9; background: #f8fbff; color: #4a90d9; }
+    .photo-add span { font-size: 28px; margin-bottom: 4px; }
+    .photo-add input { display: none; }
+    .photo-hint { font-size: 12px; color: #888; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="formView">
+      <h1>¿Qué necesitás reparar?</h1>
+      <p class="subtitle">Contanos los detalles y un técnico se va a contactar con vos.</p>
+
+      <div class="tips">
+        <strong>💡 Tips para una mejor búsqueda:</strong><br>
+        • Incluí marca y modelo del equipo<br>
+        • Describí el problema con la mayor precisión posible<br>
+        • Cuantos más detalles, mejor podremos ayudarte
+      </div>
+
+      <form id="requestForm">
+        <div class="card">
+          <h2>Descripción del servicio</h2>
+          <div class="form-group">
+            <label for="description">Contanos qué necesitas *</label>
+            <textarea id="description" placeholder="Ej: Mi lavarropas LG no centrifuga, hace un ruido fuerte al intentar hacerlo. Modelo F4V5..." required></textarea>
+          </div>
+          <div class="form-group">
+            <label>Fotos</label>
+            <div class="photo-grid" id="photoGrid">
+              <div class="photo-add" id="photoAddBtn">
+                <span>📷</span>
+                <p>Agregar foto</p>
+                <input type="file" id="photoInput" accept="image/*" multiple>
+              </div>
+            </div>
+            <p class="photo-hint">La primera foto es la portada. Tocá una foto para marcarla como portada.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Ubicación</h2>
+          <div class="row">
+            <div class="form-group">
+              <label for="province">Provincia *</label>
+              <select id="province" required><option value="">Cargando...</option></select>
+            </div>
+            <div class="form-group">
+              <label for="city">Localidad *</label>
+              <select id="city" required><option value="">Seleccioná una provincia primero</option></select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="neighborhood">Barrio</label>
+            <input type="text" id="neighborhood" placeholder="Opcional">
+          </div>
+          <div class="form-group">
+            <label for="street">Calle</label>
+            <input type="text" id="street" placeholder="Opcional">
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Tus datos</h2>
+          <div class="form-group">
+            <label for="name">Nombre *</label>
+            <input type="text" id="name" required placeholder="Tu nombre">
+          </div>
+          <div class="row">
+            <div class="form-group">
+              <label for="phone">Teléfono *</label>
+              <input type="tel" id="phone" required placeholder="11 1234-5678">
+            </div>
+            <div class="form-group">
+              <label for="email">Email</label>
+              <input type="email" id="email" placeholder="opcional@email.com">
+            </div>
+          </div>
+          <div style="margin-top:12px;">
+            <label style="font-size:13px;font-weight:600;color:#444;margin-bottom:8px;display:block;">Medios de contacto adicionales</label>
+            <div style="display:flex;gap:16px;flex-wrap:wrap;">
+              <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;">
+                <input type="checkbox" id="contactWhatsapp" value="1"> 💬 WhatsApp
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;">
+                <input type="checkbox" id="contactTelegram" value="1"> ✈️ Telegram
+              </label>
+            </div>
+            <p style="font-size:12px;color:#888;margin-top:4px;">Si no marcás ninguna, solo podrás ser contactado por email o teléfono.</p>
+          </div>
+        </div>
+
+        <div class="alert" id="formAlert"></div>
+        <button type="submit" class="btn-submit" id="btnSubmit">Publicar aviso</button>
+      </form>
+    </div>
+
+    <div class="success-box" id="successView">
+      <h2>✅ Aviso publicado</h2>
+      <p>Tu solicitud fue publicada. Los técnicos de la zona la van a ver y se van a contactar con vos.</p>
+      <p style="margin-top:20px;font-size:13px;color:#888;">Guardá este número de referencia: <strong id="refNumber"></strong></p>
+      <button onclick="location.href='/' " style="margin-top:20px;padding:10px 24px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;">Volver al inicio</button>
+    </div>
+  </div>
+
+  <script>
+    const API = '/api/v1';
+
+    // --- Photo manager ---
+    const photos = [];
+    const grid = document.getElementById('photoGrid');
+    const addBtn = document.getElementById('photoAddBtn');
+    const fileInput = document.getElementById('photoInput');
+
+    function renderPhotos() {
+      const items = grid.querySelectorAll('.photo-item, .photo-add');
+      for (const el of items) el.remove();
+
+      photos.forEach((f, i) => {
+        const div = document.createElement('div');
+        div.className = 'photo-item' + (i === 0 ? ' is-cover' : '');
+        div.dataset.index = i;
+        const img = document.createElement('img');
+        img.src = f.url;
+        div.appendChild(img);
+        if (i === 0) {
+          const badge = document.createElement('span');
+          badge.className = 'cover-badge';
+          badge.textContent = '⭐ Portada';
+          div.appendChild(badge);
+        }
+        const rmBtn = document.createElement('button');
+        rmBtn.className = 'photo-remove';
+        rmBtn.textContent = '✕';
+        rmBtn.type = 'button';
+        rmBtn.addEventListener('click', (e) => { e.stopPropagation(); photos.splice(i, 1); renderPhotos(); });
+        div.appendChild(rmBtn);
+        div.addEventListener('click', () => {
+          if (i === 0) return;
+          const [item] = photos.splice(i, 1);
+          photos.unshift(item);
+          renderPhotos();
+        });
+        grid.appendChild(div);
+      });
+
+      if (photos.length < 6) {
+        grid.appendChild(addBtn);
+        addBtn.style.display = 'flex';
+      } else {
+        addBtn.style.display = 'none';
+      }
+    }
+
+    addBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      for (const file of e.target.files) {
+        if (photos.length >= 6) break;
+        photos.push({ file, url: URL.createObjectURL(file) });
+      }
+      fileInput.value = '';
+      renderPhotos();
+    });
+
+    // --- Location dropdowns ---
+    const provinceEl = document.getElementById('province');
+    const cityEl = document.getElementById('city');
+
+    async function loadProvinces() {
+      const res = await fetch(`${API}/locations/provinces?limit=100`);
+      const json = await res.json();
+      provinceEl.innerHTML = '<option value="">Seleccioná una provincia</option>' +
+        json.data.map(p => `<option value="${p._id}">${p.name}</option>`).join('');
+    }
+
+    provinceEl.addEventListener('change', async () => {
+      const pid = provinceEl.value;
+      cityEl.innerHTML = '<option value="">Cargando...</option>';
+      cityEl.disabled = true;
+      if (!pid) { cityEl.innerHTML = '<option value="">Seleccioná una provincia primero</option>'; cityEl.disabled = false; return; }
+      const res = await fetch(`${API}/locations/provinces/${pid}/sublocations?limit=500`);
+      const json = await res.json();
+      const items = json.data || [];
+      cityEl.innerHTML = '<option value="">Seleccioná una localidad</option>' +
+        items.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+      cityEl.disabled = false;
+    });
+
+    loadProvinces();
+
+    // --- Submit ---
+    document.getElementById('requestForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btnSubmit');
+      const alert = document.getElementById('formAlert');
+      alert.className = 'alert';
+      alert.style.display = 'none';
+
+      const description = document.getElementById('description').value.trim();
+      const name = document.getElementById('name').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const province = provinceEl.value;
+      const city = cityEl.value;
+      const neighborhood = document.getElementById('neighborhood').value.trim();
+      const street = document.getElementById('street').value.trim();
+
+      if (!description) { showError(alert, 'Contanos qué necesitas'); return; }
+      if (!name) { showError(alert, 'Decinos tu nombre'); return; }
+      if (!phone) { showError(alert, 'Dejanos tu teléfono'); return; }
+      if (!province) { showError(alert, 'Seleccioná una provincia'); return; }
+      if (!city) { showError(alert, 'Seleccioná una localidad'); return; }
+
+      btn.disabled = true;
+      btn.textContent = 'Publicando...';
+
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('phone', phone);
+      formData.append('email', email);
+      formData.append('description', description);
+      formData.append('province', province);
+      formData.append('city', city);
+      formData.append('neighborhood', neighborhood);
+      formData.append('street', street);
+      formData.append('whatsapp', document.getElementById('contactWhatsapp').checked);
+      formData.append('telegram', document.getElementById('contactTelegram').checked);
+      // Photos in order — first is cover
+      for (const p of photos) if (p.file) formData.append('photos', p.file);
+
+      try {
+        const res = await fetch(`${API}/requests`, { method: 'POST', body: formData });
+        const json = await res.json();
+        if (json.success) {
+          document.getElementById('formView').style.display = 'none';
+          document.getElementById('successView').style.display = 'block';
+          document.getElementById('refNumber').textContent = json.data._id.slice(-8).toUpperCase();
+        } else {
+          showError(alert, json.error || 'Error al publicar');
+          btn.disabled = false;
+          btn.textContent = 'Publicar aviso';
+        }
+      } catch {
+        showError(alert, 'Error de conexión');
+        btn.disabled = false;
+        btn.textContent = 'Publicar aviso';
+      }
+    });
+
+    function showError(el, msg) {
+      el.textContent = msg;
+      el.className = 'alert alert-error';
+    }
+  </script>
+</body>
+</html>

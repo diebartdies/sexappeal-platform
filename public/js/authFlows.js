@@ -47,7 +47,7 @@ export function redirectAfterLogin(user = {}) {
     if (intended) {
         window.location.replace(intended);
     } else if (user.role === 'professional') {
-        if (user.allowResubmission || user.firstApprovedLogin || needsProfessionalCategorySetup(user)) {
+        if (user.allowResubmission || needsProfessionalCategorySetup(user)) {
             window.location.replace(appPath('profDashboard.html'));
         } else if (user.professionalProfile?.alias) {
             window.location.replace('/perfil/' + encodeURIComponent(user.professionalProfile.alias));

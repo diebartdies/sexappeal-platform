@@ -118,6 +118,43 @@ exports.getAllProfessionals = async (req, res, next) => {
   }
 };
 
+// @desc    Get all registered guests (regular users, role: 'user')
+// @route   GET /api/v1/admin/guests
+// @access  Private/Admin
+exports.getAllGuests = async (req, res, next) => {
+  try {
+    const { email, page = 1, limit: limitParam = 50 } = req.query;
+    const query = { role: 'user' };
+
+    if (email) {
+      query.email = { $regex: email, $options: 'i' };
+    }
+
+    const parsedLimit = parseInt(limitParam, 10);
+    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 50;
+    const parsedPage = parseInt(page, 10);
+    const currentPage = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+    const skip = (currentPage - 1) * limit;
+
+    const guests = await User.find(query)
+      .select('name email registrationMode isEmailVerified isVerified isAnonymous createdAt')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await User.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      count: guests.length,
+      pagination: { page: currentPage, limit, total },
+      data: guests
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
 // @desc    Get a single professional with ALL photos resolved for the client.
 //          The list endpoint (getAllProfessionals) truncates photos to the
 //          cover only, so the admin edit form fetches the full record here to
@@ -578,9 +615,6 @@ exports.updateProfessionalProfile = async (req, res, next) => {
     if (req.body.verificationStatus) {
       user.verificationStatus = req.body.verificationStatus;
       user.isVerified = req.body.verificationStatus === 'approved';
-      if (req.body.verificationStatus === 'approved') {
-        user.firstApprovedLogin = true;
-      }
     }
 
     if (req.body.professionalProfile) {

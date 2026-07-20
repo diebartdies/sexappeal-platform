@@ -182,8 +182,8 @@ app.get('/favicon.ico', (req, res) => {
 // Set static folder
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders: (res, filePath) => {
-    if (filePath.match(/\.(jpg|jpeg|png|gif|webp|svg|css)$/i)) {
-      res.setHeader('Cache-Control', 'public, max-age=2592000'); // Cache images & CSS for 30 days
+    if (filePath.match(/\.(jpg|jpeg|png|gif|webp|avif|svg|css|js|mjs|woff2?|ico)$/i)) {
+      res.setHeader('Cache-Control', 'public, max-age=2592000'); // Cache images, CSS & JS for 30 days
     } else {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     }
@@ -353,11 +353,7 @@ app.put('/api/v1/professionals/updateprofile', protect, authorize('professional'
 app.delete('/api/v1/professionals/me', protect, authorize('professional'), professionalController.deleteMyProfile);
 app.post('/api/v1/professionals/resubmit-verification', protect, authorize('professional'), upload.array('verificationDocuments', 3), professionalController.resubmitVerification);
 app.put('/api/v1/professionals/acknowledge-rate', protect, authorize('professional'), professionalController.acknowledgeRateChange);
-app.post('/api/v1/professionals/acknowledge-first-login', protect, authorize('professional'), professionalController.acknowledgeFirstLogin);
 app.post('/api/v1/professionals/upload-receipt', protect, authorize('professional'), upload.single('receipt'), paymentController.uploadReceipt);
-app.post('/api/v1/professionals/send-phone-code', protect, authorize('professional'), professionalController.sendPhoneCode);
-app.post('/api/v1/professionals/verify-phone-code', protect, authorize('professional'), professionalController.verifyPhoneCode);
-app.get('/api/v1/professionals/phone-code-status', protect, authorize('professional'), professionalController.getPhoneCodeStatus);
 
 // Professional Public Routes
 app.get('/api/v1/professionals', professionalController.getProfessionals);
@@ -384,6 +380,7 @@ app.get('/api/v1/admin/logs', protect, authorize('admin'), adminController.getAc
 app.put('/api/v1/admin/professionals/:id', protect, authorize('admin'), adminController.updateProfessionalProfile);
 app.delete('/api/v1/admin/professionals/:id', protect, authorize('admin'), adminController.deleteProfessional);
 app.get('/api/v1/admin/professionals', protect, authorize('admin'), adminController.getAllProfessionals);
+app.get('/api/v1/admin/guests', protect, authorize('admin'), adminController.getAllGuests);
 app.get('/api/v1/admin/professionals/:id', protect, authorize('admin'), adminController.getProfessionalById);
 app.get('/api/v1/admin/outreach/invite-message', protect, authorize('admin'), potentialProfessionalController.getInviteMessage);
 app.post('/api/v1/admin/outreach/bulk-whatsapp', protect, authorize('admin'), outreachController.startBulkWhatsApp);

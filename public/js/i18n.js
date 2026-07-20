@@ -115,7 +115,6 @@ const translations = {
         'CP/PC': 'CP/PC',
         'Connection Info': 'Datos de contacto',
         'Password (min 6)': 'Contraseña (mín. 6)',
-        'Contact': 'Contacto',
         'Mobile phone': 'Teléfono móvil',
         'App Configuration': 'Configuración',
         'Category': 'Categoría',
@@ -1069,17 +1068,7 @@ const translations = {
         'View on map': 'Ver en mapa',
         'Mobile': 'Móvil',
         'Proxy/VPN': 'Proxy/VPN',
-        'Hosting/DC': 'Hosting/datacenter',
-        'Back to Main Dashboard': 'Volver al Panel Principal',
-        'Welcome to SexAppeal!': '¡Bienvenido a SexAppeal!',
-        'Your account has been approved. Complete your profile below — choose a category, add specialties, write your bio, and upload photos. Once you save, your public profile will be visible on the directory.': 'Su cuenta ha sido aprobada. Complete su perfil a continuación: elija una categoría, agregue especialidades, escriba su biografía y suba fotos. Una vez que guarde, su perfil público será visible en el directorio.',
-        'Phone verified': 'Teléfono verificado',
-        'Not verified': 'No verificado',
-        'Send verification code': 'Enviar código de verificación',
-        'Code sent!': '¡Código enviado!',
-        'Failed to send code': 'Error al enviar el código',
-        '6-digit code': 'Código de 6 dígitos',
-        'Enter a valid 6-digit code': 'Ingrese un código válido de 6 dígitos'
+        'Hosting/DC': 'Hosting/datacenter'
     }
 };
 

@@ -10,7 +10,6 @@ const {
 } = require('../utils/seoSitemap');
 
 const EXPORT_DIR = path.resolve(__dirname, '..', 'exports');
-const PUBLIC_DIR = path.resolve(__dirname, '..', 'public');
 
 async function writeSiteBundle(label, baseUrl) {
   const { xml, urls } = await buildSitemapForBase(baseUrl);
@@ -19,17 +18,6 @@ async function writeSiteBundle(label, baseUrl) {
   const robotsPath = path.join(EXPORT_DIR, `robots-${safeLabel}.txt`);
   fs.writeFileSync(sitemapPath, xml, 'utf8');
   fs.writeFileSync(robotsPath, buildRobotsTxt(baseUrl), 'utf8');
-
-  if (label === 'sexappeal') {
-    const publicSitemap = path.join(PUBLIC_DIR, 'sitemap.xml');
-    fs.writeFileSync(publicSitemap, xml, 'utf8');
-    const publicRobots = path.join(PUBLIC_DIR, 'robots.txt');
-    const existingRobots = fs.existsSync(publicRobots) ? fs.readFileSync(publicRobots, 'utf8') : '';
-    if (!existingRobots.includes('Sitemap:')) {
-      fs.writeFileSync(publicRobots, `${existingRobots.trim()}\n\nSitemap: ${baseUrl}/sitemap.xml\n`);
-    }
-  }
-
   return { sitemapPath, robotsPath, urlCount: urls.length, baseUrl };
 }
 
@@ -46,7 +34,6 @@ async function writeSiteBundle(label, baseUrl) {
   console.log(`SexAppeal base:   ${sexappeal.baseUrl}`);
   console.log(`  URLs:           ${sexappeal.urlCount}`);
   console.log(`  Sitemap:        ${sexappeal.sitemapPath}`);
-  console.log(`  Public (static): ${path.join(PUBLIC_DIR, 'sitemap.xml')}`);
   console.log(`  Robots:         ${sexappeal.robotsPath}`);
   console.log(`SelfAppeal base:  ${selfappeal.baseUrl}`);
   console.log(`  URLs:           ${selfappeal.urlCount}`);

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon.png?v=5">
+    <link rel="apple-touch-icon" href="/favicon.png?v=5">
+    <link rel="alternate icon" href="/favicon.ico">
+    <title>SexAppeal - Admin Registered Guests</title>
+    <style>
+        :root {
+            --primary-gold: #B8922E;
+            --dark-bg: #121212;
+            --card-bg: rgba(20, 20, 20, 0.95);
+            --accent-red: #8B0000;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--dark-bg);
+            color: #eee;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 10px;
+            border: 1px solid rgba(184, 146, 46, 0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        h1 { color: var(--primary-gold); margin-top: 0; border-bottom: 1px solid rgba(184, 146, 46, 0.2); padding-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; border: 1px solid #333; text-align: left; }
+        th { background: #222; color: var(--primary-gold); font-weight: normal; }
+        tr:nth-child(even) { background-color: rgba(255,255,255,0.02); }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; }
+        .badge-yes { background: rgba(46, 184, 92, 0.15); color: #4caf72; border: 1px solid #2e7d46; }
+        .badge-no { background: rgba(139, 0, 0, 0.15); color: #d97a7a; border: 1px solid #6b1010; }
+        .btn { padding: 8px 16px; background: transparent; color: var(--primary-gold); border: 1px solid var(--primary-gold); border-radius: 4px; cursor: pointer; transition: all 0.3s; }
+        .btn:hover { background: rgba(184, 146, 46, 0.1); }
+        .btn:disabled { color: #666; border-color: #666; cursor: not-allowed; }
+        .filters { display: flex; gap: 15px; margin-bottom: 20px; align-items: center; }
+        .filters input { padding: 8px; background: #333; color: white; border: 1px solid #555; border-radius: 4px; }
+        a { color: #66b3ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .pagination { margin-top: 20px; display: flex; align-items: center; gap: 15px; }
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            .container { padding: 16px; }
+            .filters { flex-direction: column; align-items: stretch; }
+            .filters a { margin-left: 0 !important; text-align: center; padding: 10px; }
+            .filters input, .filters .btn { width: 100%; min-height: 44px; }
+            table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            th, td { white-space: nowrap; }
+            .pagination { flex-wrap: wrap; justify-content: center; }
+        }
+    </style>
+    <link rel="stylesheet" href="/css/responsive.css?v=8.6">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#B8922E">
+    <meta name="color-scheme" content="dark">
+</head>
+<body class="admin-guests-wrap">
+    <div class="container">
+        <h1>Registered Guests</h1>
+
+        <div class="filters">
+            <input type="text" id="filterEmail" placeholder="Search by email...">
+            <button class="btn" id="btnFilter">Filter</button>
+            <a href="dashboard.html" style="margin-left: auto; color: var(--primary-gold);">Back to Dashboard</a>
+        </div>
+
+        <table id="guestsTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Registration Mode</th>
+                    <th>Email Verified</th>
+                    <th>Registered At</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td colspan="5" style="text-align: center;">Loading...</td></tr>
+            </tbody>
+        </table>
+
+        <div class="pagination">
+            <button class="btn" id="btnPrev">Previous</button>
+            <span id="pageInfo">Page 1</span>
+            <span id="pageRangeInfo" style="color: #888; font-size: 0.9rem;"></span>
+            <button class="btn" id="btnNext">Next</button>
+        </div>
+    </div>
+
+    <script type="module">
+        const API_URL = window.location.protocol === 'file:' ? 'http://localhost:5000/api/v1' : window.location.origin + '/api/v1';
+        let currentPage = 1;
+        let totalPages = 1;
+        const limit = 50;
+
+        const escapeHtml = (v) => String(v == null ? '' : v)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+
+        async function loadGuests() {
+            const email = document.getElementById('filterEmail').value.trim();
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            let url = `${API_URL}/admin/guests?page=${currentPage}&limit=${limit}`;
+            if (email) url += `&email=${encodeURIComponent(email)}`;
+
+            try {
+                const res = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    credentials: 'include'
+                });
+                const data = await res.json();
+
+                const tbody = document.querySelector('#guestsTable tbody');
+
+                if (data.success) {
+                    tbody.innerHTML = '';
+
+                    if (data.data.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">No registered guests found.</td></tr>`;
+                    }
+
+                    data.data.forEach(g => {
+                        const verified = g.isEmailVerified
+                            ? '<span class="badge badge-yes">Yes</span>'
+                            : '<span class="badge badge-no">No</span>';
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${escapeHtml(g.name) || '<em style="color:#777;">(no name)</em>'}</td>
+                            <td>${escapeHtml(g.email)}</td>
+                            <td>${escapeHtml(g.registrationMode || 'full')}</td>
+                            <td>${verified}</td>
+                            <td>${g.createdAt ? new Date(g.createdAt).toLocaleString() : '-'}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+
+                    const total = data.pagination.total || 0;
+                    totalPages = Math.ceil(total / limit) || 1;
+                    const page = data.pagination.page;
+                    document.getElementById('pageInfo').textContent = `Page ${page} of ${totalPages} (${total} total)`;
+                    const rangeEl = document.getElementById('pageRangeInfo');
+                    if (rangeEl) {
+                        if (total > 0) {
+                            const from = (page - 1) * limit + 1;
+                            const to = Math.min(page * limit, total);
+                            rangeEl.textContent = `Showing ${from}-${to} of ${total}`;
+                        } else {
+                            rangeEl.textContent = '';
+                        }
+                    }
+
+                    document.getElementById('btnPrev').disabled = page <= 1;
+                    document.getElementById('btnNext').disabled = page >= totalPages;
+                    currentPage = page;
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="5" style="color: var(--accent-red); text-align: center;">Error: ${escapeHtml(data.error)}</td></tr>`;
+                }
+            } catch (err) {
+                console.error(err);
+                document.querySelector('#guestsTable tbody').innerHTML = `<tr><td colspan="5" style="color: var(--accent-red); text-align: center;">Failed to load data. See console.</td></tr>`;
+            }
+        }
+
+        document.getElementById('btnFilter').addEventListener('click', () => {
+            currentPage = 1;
+            loadGuests();
+        });
+
+        document.getElementById('filterEmail').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                currentPage = 1;
+                loadGuests();
+            }
+        });
+
+        document.getElementById('btnPrev').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                loadGuests();
+            }
+        });
+
+        document.getElementById('btnNext').addEventListener('click', () => {
+            if (currentPage < totalPages) {
+                currentPage++;
+                loadGuests();
+            }
+        });
+
+        loadGuests();
+    </script>
+    <script src="/js/adminHome.js?v=1" defer></script>
+</body>
+</html>

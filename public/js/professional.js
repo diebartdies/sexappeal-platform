@@ -19,13 +19,6 @@ import {
     DEFAULT_PAYMENT_INSTRUCTIONS
 } from './paymentInstructions.js';
 
-import {
-    buildFullPhoneNumber,
-    splitE164Phone,
-    phonePickerHtml,
-    initPhonePicker
-} from './phoneCountryCodes.js';
-
 let currentPaymentInstructions = DEFAULT_PAYMENT_INSTRUCTIONS;
 
 const AVAILABILITY_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -168,7 +161,7 @@ export function renderProfessionalMainDashboardShell(content) {
                             <div><label>Age</label><input type="text" id="upAge" readonly></div>
                         </div>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
-                            <div><label>Mobile</label>${phonePickerHtml('upMobile', '', 'upMobilePhone')}</div>
+                            <div><label>Mobile</label><input type="text" id="upMobilePhone"></div>
                             <div><label>Street</label><input type="text" id="upStreet"></div>
                             <div><label>Number</label><input type="text" id="upStreetNumber"></div>
                             <div><label>Floor</label><input type="text" id="upFloor"></div>
@@ -557,11 +550,7 @@ export function bindProfessionalProfileForm() {
         formData.append('middleName', document.getElementById('upMiddleName')?.value || '');
         formData.append('idNumber', document.getElementById('upIdNumber')?.value || '');
         formData.append('birthDate', document.getElementById('upBirthDate')?.value || '');
-        {
-            const upDial = document.getElementById('upMobileDial')?.value || '+54';
-            const upLocal = document.getElementById('upMobilePhone')?.value || '';
-            formData.append('mobilePhone', buildFullPhoneNumber(upDial, upLocal));
-        }
+        formData.append('mobilePhone', document.getElementById('upMobilePhone')?.value || '');
         formData.append('street', document.getElementById('upStreet')?.value || '');
         formData.append('number', document.getElementById('upStreetNumber')?.value || '');
         formData.append('floor', document.getElementById('upFloor')?.value || '');
@@ -613,14 +602,9 @@ export function bindProfessionalProfileForm() {
 
         formData.append('measurements', document.getElementById('upMeasurements').value);
         formData.append('height', document.getElementById('upHeight').value);
-        {
-            const waDial = document.getElementById('upWaDial')?.value || '+54';
-            const waLocal = document.getElementById('upWaInput')?.value || '';
-            const waFull = buildFullPhoneNumber(waDial, waLocal);
-            const mobDial = document.getElementById('upMobileDial')?.value || '+54';
-            const mobLocal = document.getElementById('upMobilePhone')?.value || '';
-            formData.append('whatsappNumber', waFull || buildFullPhoneNumber(mobDial, mobLocal));
-        }
+        const mobilePhone = document.getElementById('upMobilePhone')?.value || '';
+        const whatsappNumber = (document.getElementById('upWhatsapp')?.value || '').trim() || mobilePhone.trim();
+        formData.append('whatsappNumber', whatsappNumber);
 
         formData.append('postalCode', document.getElementById('upPostCode')?.value || '');
         formData.append('instagram', document.getElementById('upInstagram')?.value || '');
@@ -1336,43 +1320,6 @@ export async function loadProfDashboard() {
                     <button type="button" id="btnResubmitVerification" style="width: 100%; padding: 12px; background: var(--primary-gold); color: #111; font-weight: bold; border: none; border-radius: 4px; cursor: pointer;">${t('Submit verification for review')}</button>
                 </div>
             ` : '';
-            if (!isApproved && !allowResubmission) {
-                formObj.style.maxWidth = '600px';
-                formObj.style.width = '100%';
-                formObj.style.margin = '0 auto';
-                formObj.innerHTML = `
-                    ${statusBannerHtml}
-                    <button type="button" id="bottomBackBtn" style="background: var(--primary-gold); color: var(--dark-bg); font-weight: bold; width: 100%; padding: 12px; border-radius: 4px; border: none; cursor: pointer;">&#8592; ${t('Back to Main Dashboard')}</button>
-                `;
-                document.getElementById('bottomBackBtn').onclick = () => navigateBack();
-                loader.classList.add('hidden');
-                layout.classList.remove('hidden');
-                finishDashboardLoad('profDashboardLayout', 'loader');
-                applyStaticTranslations(layout);
-                return;
-            }
-
-            if (user.firstApprovedLogin) {
-                fetch(`${API_URL}/professionals/acknowledge-first-login`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' }
-                }).catch(() => {});
-                if (localStorage.getItem('user')) {
-                    try {
-                        const cached = JSON.parse(localStorage.getItem('user'));
-                        cached.firstApprovedLogin = false;
-                        localStorage.setItem('user', JSON.stringify(cached));
-                    } catch (e) {}
-                }
-            }
-
-            const firstApprovedBannerHtml = user.firstApprovedLogin ? `
-                <div class="card fileteado-section" style="margin-bottom: 20px; border: 2px solid var(--primary-gold); background: rgba(212,175,55,0.12);">
-                    <h3 class="gold-text" style="margin-top: 0;">${t('Welcome to SexAppeal!')}</h3>
-                    <p style="color: #eee; line-height: 1.55; margin-bottom: 0;">${t('Your account has been approved. Complete your profile below — choose a category, add specialties, write your bio, and upload photos. Once you save, your public profile will be visible on the directory.')}</p>
-                </div>
-            ` : '';
-
             formObj.style.maxWidth = '1200px';
             formObj.style.width = '100%';
             formObj.style.margin = '0 auto';
@@ -1395,7 +1342,6 @@ export async function loadProfDashboard() {
                 </div>
 
                 ${statusBannerHtml}
-                ${firstApprovedBannerHtml}
                 ${setupBannerHtml}
                 ${resubmitSectionHtml}
                 
@@ -1412,8 +1358,10 @@ export async function loadProfDashboard() {
                 
                 <input type="hidden" id="upIdNumber" value="${prof.idNumber || ''}">
                 <input type="hidden" id="upBirthDate" value="${prof.birthDate ? new Date(prof.birthDate).toISOString().split('T')[0] : ''}">
+                <input type="hidden" id="upMobilePhone" value="${prof.mobilePhone || ''}">
                 <input type="checkbox" id="upIsExposed" style="display:none;" ${prof.isExposed !== false ? 'checked' : ''}>
                 <input type="checkbox" id="upPaysMonthly" style="display:none;" ${prof.paysMonthlyCharges !== false ? 'checked' : ''}>
+                <input type="hidden" id="upWhatsapp" value="${prof.whatsappNumber || ''}">
                 <input type="hidden" id="upInstagram" value="${prof.instagram || ''}">
                 <input type="hidden" id="upFacebook" value="${prof.facebook || ''}">
 
@@ -1474,35 +1422,6 @@ export async function loadProfDashboard() {
                     <h3 class="gold-text" style="margin-bottom: 10px;">${t('Service Description')}</h3>
                     <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 12px;">${t('Describe your services for visitors on your public profile.')}</p>
                     <textarea id="upBio" rows="6" maxlength="500" style="width: 100%; padding: 10px; background: #222; color: white; border: 1px solid #444; border-radius: 4px; resize: vertical; box-sizing: border-box; min-height: 120px;">${safeBio}</textarea>
-                </div>
-
-                <!-- Contact -->
-                <div class="card fileteado-section" style="margin-bottom: 20px; border: 1px solid var(--primary-gold);">
-                    <h3 class="gold-text" style="margin-bottom: 15px;">${t('Contact')}</h3>
-                    <div style="margin-bottom: 12px;">
-                        <label>${t('Mobile phone')}</label>
-                        ${phonePickerHtml('upMobile', prof.mobilePhone, 'upMobilePhone')}
-                        <div id="phoneVerifyContainer" style="margin-top: 8px;">
-                            <div id="phoneVerifyStatus" style="font-size: 0.85rem; margin-bottom: 6px;">
-                                ${user.phoneVerified ? `<span style="color: #25D366;">✓ ${t('Phone verified')}</span>` : `<span style="color: #aaa;">${t('Not verified')}</span>`}
-                            </div>
-                            ${!user.phoneVerified ? `
-                            <div id="phoneVerifyAction">
-                                <button type="button" id="btnSendPhoneCode" style="padding: 6px 14px; background: var(--primary-gold); color: #111; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">${t('Send verification code')}</button>
-                                <div id="phoneCodeInputRow" class="hidden" style="gap: 8px; margin-top: 8px; align-items: center;">
-                                    <input type="text" id="phoneVerificationCode" maxlength="6" placeholder="${t('6-digit code')}" style="width: 120px; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px; text-align: center; letter-spacing: 4px; font-size: 1.1rem;">
-                                    <button type="button" id="btnVerifyPhoneCode" style="padding: 6px 14px; background: #25D366; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">${t('Verify')}</button>
-                                    <span id="phoneCodeDeliveryStatus" style="font-size: 0.8rem; color: #aaa;"></span>
-                                </div>
-                                <div id="phoneCodeAlert" class="hidden" style="margin-top: 6px; font-size: 0.8rem; color: var(--accent-red);"></div>
-                            </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                    <div>
-                        <label>${t('WhatsApp Number')}</label>
-                        ${phonePickerHtml('upWa', prof.whatsappNumber, 'upWaInput')}
-                    </div>
                 </div>
 
                 <!-- 3. Address -->
@@ -1591,11 +1510,6 @@ export async function loadProfDashboard() {
             renderAvailabilityDayControls(daysContainer, prof.workingDays);
 
             setupLocationDropdowns('upProvince', 'upCity', 'upNeighborhood', false, prof.location || {});
-
-            initPhonePicker('upMobile');
-            initPhonePicker('upWa');
-
-            initPhoneVerification();
 
             injectProfessionalDashboardGuides(content, data, formObj);
 
@@ -1770,81 +1684,4 @@ export async function loadProfDashboard() {
     })();
 
     return profDashboardLoadInFlight;
-}
-
-function initPhoneVerification() {
-    const btnSend = document.getElementById('btnSendPhoneCode');
-    const codeInputRow = document.getElementById('phoneCodeInputRow');
-    const codeInput = document.getElementById('phoneVerificationCode');
-    const btnVerify = document.getElementById('btnVerifyPhoneCode');
-    const alertEl = document.getElementById('phoneCodeAlert');
-    const statusEl = document.getElementById('phoneCodeDeliveryStatus');
-    const verifyStatus = document.getElementById('phoneVerifyStatus');
-
-    if (!btnSend) return;
-
-    btnSend.addEventListener('click', async () => {
-        btnSend.disabled = true;
-        btnSend.textContent = t('Sending...');
-        if (alertEl) { alertEl.classList.add('hidden'); alertEl.textContent = ''; }
-        if (statusEl) statusEl.textContent = '';
-
-        try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${API_URL}/professionals/send-phone-code`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-            });
-            const data = await res.json();
-            if (data.success) {
-                if (codeInputRow) { codeInputRow.classList.remove('hidden'); codeInputRow.style.display = 'flex'; }
-                if (codeInput) codeInput.value = '';
-                if (statusEl) statusEl.textContent = t('Code sent!');
-                setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 4000);
-            } else {
-                if (alertEl) { alertEl.textContent = data.error || t('Failed to send code'); alertEl.classList.remove('hidden'); }
-            }
-        } catch {
-            if (alertEl) { alertEl.textContent = t('Server connection error'); alertEl.classList.remove('hidden'); }
-        } finally {
-            btnSend.disabled = false;
-            btnSend.textContent = t('Send verification code');
-        }
-    });
-
-    if (btnVerify && codeInput) {
-        btnVerify.addEventListener('click', async () => {
-            const code = codeInput.value.trim();
-            if (!code || code.length !== 6) {
-                if (alertEl) { alertEl.textContent = t('Enter a valid 6-digit code'); alertEl.classList.remove('hidden'); }
-                return;
-            }
-            btnVerify.disabled = true;
-            btnVerify.textContent = t('Verifying...');
-            if (alertEl) { alertEl.classList.add('hidden'); alertEl.textContent = ''; }
-
-            try {
-                const token = localStorage.getItem('token');
-                const res = await fetch(`${API_URL}/professionals/verify-phone-code`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    if (btnSend) btnSend.remove();
-                    if (codeInputRow) codeInputRow.remove();
-                    if (alertEl) alertEl.remove();
-                    if (verifyStatus) verifyStatus.innerHTML = '<span style="color: #25D366;">✓ ' + t('Phone verified') + '</span>';
-                } else {
-                    if (alertEl) { alertEl.textContent = data.error || t('Invalid code'); alertEl.classList.remove('hidden'); }
-                }
-            } catch {
-                if (alertEl) { alertEl.textContent = t('Server connection error'); alertEl.classList.remove('hidden'); }
-            } finally {
-                btnVerify.disabled = false;
-                btnVerify.textContent = t('Verify');
-            }
-        });
-    }
 }

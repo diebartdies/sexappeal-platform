@@ -1,46 +1,23 @@
 User-agent: *
 Allow: /
-
-# Core pages
-Allow: /index.html$
-Allow: /home.html$
-Allow: /categories.html$
-Allow: /services.html$
-Allow: /plataforma.html$
-Allow: /detalles.html$
-Allow: /conciencia-vih.html$
-Allow: /conciencia-cancer-mama.html$
-
-# SEO landing pages
+Allow: /index.html
+Allow: /categories.html
+Allow: /home.html
+Allow: /services.html
+Allow: /plataforma.html
+Allow: /detalles.html
+Allow: /conciencia-vih.html
+Allow: /conciencia-cancer-mama.html
 Allow: /acompanantes/
 Allow: /perfil/
-
-# Content pages
-Allow: /notas-interes.html$
-Allow: /nota-interes.html
-
-# Utility pages
-Allow: /login.html$
-Allow: /register.html$
-Allow: /recover.html$
-Allow: /verify.html$
-Allow: /forgot.html$
-
-# Resources
-Allow: /favicon.svg$
-Allow: /SexAppeal_logo_black.png$
-Allow: /css/
-Allow: /js/
-
-# Blocked paths
+Allow: /login.html
+Allow: /register.html
+Allow: /recover.html
+Allow: /verify.html
+Allow: /discover.html
 Disallow: /api/
 Disallow: /dashboard.html
 Disallow: /profDashboard.html
-Disallow: /admin.html
 Disallow: /admin-potentials.html
-Disallow: /discover.html
-Disallow: /whatsapp-inbox.html
-Disallow: /treasure.html
-Disallow: /design-previews.html
 
 Sitemap: https://sexappeal.drsrv.net.ar/sitemap.xml

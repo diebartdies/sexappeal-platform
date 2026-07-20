@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configurar Perfil - KuraTe</title>
+  <link rel="stylesheet" href="/css/style.css?v=8.25">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 20px; }
+    .container { max-width: 820px; margin: 0 auto; }
+    h1 { font-size: 1.5rem; margin-bottom: 8px; }
+    p.subtitle { color: #666; margin-bottom: 24px; }
+
+    .steps { display: flex; gap: 6px; margin-bottom: 24px; flex-wrap: wrap; }
+    .step-chip { font-size: 12px; padding: 6px 12px; border-radius: 20px; background: #fff; border: 1px solid #ddd; color: #777; }
+    .step-chip.active { background: #4a90d9; color: #fff; border-color: #4a90d9; font-weight: 600; }
+    .step-chip.done { background: #e6f4ea; color: #2e7d32; border-color: #b7dfc2; }
+
+    .panel { display: none; background: #fff; border-radius: 12px; padding: 24px; border: 1px solid #e0e0e0; }
+    .panel.active { display: block; }
+    .panel h2 { font-size: 1.15rem; margin-bottom: 6px; }
+    .panel .hint { color: #666; font-size: 13px; margin-bottom: 18px; }
+
+    label { display: block; font-size: 13px; font-weight: 600; color: #444; margin-bottom: 4px; margin-top: 14px; }
+    input[type="text"], input[type="email"], input[type="tel"], input[type="date"], textarea, select {
+      width: 100%; padding: 10px 12px; border: 1px solid #d0d0d0; border-radius: 8px; font-size: 14px; font-family: inherit;
+    }
+    textarea { resize: vertical; min-height: 96px; }
+    .row { display: flex; gap: 12px; }
+    .row > * { flex: 1; }
+
+    .opt-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+    .opt {
+      padding: 12px 18px; border: 2px solid #ddd; border-radius: 10px; cursor: pointer; font-size: 14px; background: #fff;
+      transition: all .15s; user-select: none;
+    }
+    .opt:hover { border-color: #4a90d9; }
+    .opt.selected { border-color: #4a90d9; background: #e8f4fd; font-weight: 600; }
+
+    .check-row { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 8px; }
+    .check-row label { display: flex; align-items: center; gap: 6px; font-weight: 500; cursor: pointer; margin: 0; }
+
+    .tree { max-height: 420px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 8px; }
+    .tree-node { margin-left: 0; }
+    .tree-node .tree-node { margin-left: 20px; }
+    .tree-node-header { display: flex; align-items: center; gap: 6px; padding: 4px 0; cursor: pointer; }
+    .tree-node-header:hover { background: #f0f0f0; }
+    .tree-toggle { width: 16px; text-align: center; font-size: 12px; color: #888; }
+    .tree-node-label { font-weight: 500; font-size: 14px; }
+    .tree-brands { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 0 6px 22px; }
+    .tree-brand, .tree-brand-select-all { display: flex; align-items: center; gap: 4px; font-size: 13px; cursor: pointer; padding: 2px 8px; border-radius: 4px; background: #fff; border: 1px solid #ddd; }
+    .tree-brand:hover, .tree-brand-select-all:hover { background: #e8f4fd; border-color: #4a90d9; }
+    .tree-brand-select-all { font-weight: 600; background: #f0f7ff; }
+
+    .selected-summary { margin-top: 16px; padding: 14px; background: #fff; border-radius: 8px; border: 1px solid #ddd; }
+    .selected-summary h3 { margin-bottom: 8px; font-size: 1rem; }
+    .selected-item { padding: 4px 0; font-size: 13px; border-bottom: 1px solid #eee; }
+    .selected-item:last-child { border-bottom: none; }
+    .selected-item .brands { color: #666; font-size: 12px; }
+
+    .nav-btns { display: flex; justify-content: space-between; margin-top: 24px; gap: 12px; }
+    .btn { padding: 12px 22px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .btn-prev { background: #eee; color: #333; }
+    .btn-prev:hover { background: #e0e0e0; }
+    .btn-next { background: #4a90d9; color: #fff; margin-left: auto; }
+    .btn-next:hover { background: #357abd; }
+    .btn-save { background: #2e7d32; color: #fff; }
+    .btn-save:hover { background: #256528; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .loading { text-align: center; padding: 40px; color: #888; }
+    .error { color: #d32f2f; padding: 8px; background: #fdecea; border-radius: 4px; margin-top: 8px; display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Configurá tu perfil de técnico</h1>
+    <p class="subtitle">Completá los datos para publicar tu aviso. Solo podés ofrecer <strong>una acción y un área</strong> por aviso.</p>
+
+    <div class="steps" id="stepsBar">
+      <div class="step-chip" data-step="1">1. Acción</div>
+      <div class="step-chip" data-step="2">2. Área</div>
+      <div class="step-chip" data-step="3">3. Servicios</div>
+      <div class="step-chip" data-step="4">4. Contacto</div>
+      <div class="step-chip" data-step="5">5. Categoría</div>
+      <div class="step-chip" data-step="6">6. Especialidad</div>
+      <div class="step-chip" data-step="7">7. Disponibilidad</div>
+      <div class="step-chip" data-step="8">8. Descripción</div>
+      <div class="step-chip" data-step="9">9. Fotos</div>
+    </div>
+
+    <!-- Step 1: Acción -->
+    <div class="panel" data-panel="1">
+      <h2>¿Qué hacés?</h2>
+      <p class="hint">Elegí la acción que describe tu aviso (una sola) y detallá las características y alcances.</p>
+      <label for="actionSelect">Acción</label>
+      <select id="actionSelect">
+        <option value="">— Seleccioná —</option>
+        <option value="Reparo">Reparo</option>
+        <option value="Instalo">Instalo</option>
+        <option value="Hago mantenimiento">Hago mantenimiento</option>
+        <option value="Vendo repuestos">Vendo repuestos</option>
+        <option value="Asesoro">Asesoro</option>
+      </select>
+      <label for="actionDetails">Características y alcances del servicio</label>
+      <textarea id="actionDetails" placeholder="Describí qué incluye tu servicio, condiciones, zonas, garantía, etc."></textarea>
+    </div>
+
+    <!-- Step 2: Área -->
+    <div class="panel" data-panel="2">
+      <h2>¿En qué ámbito trabajás?</h2>
+      <p class="hint">Elegí un solo área. Solo se desplegará el árbol correspondiente.</p>
+      <div class="opt-grid" id="areaOptions">
+        <div class="opt" data-value="hogar">Hogar</div>
+        <div class="opt" data-value="oficina">Oficina</div>
+        <div class="opt" data-value="pime">PIME</div>
+        <div class="opt" data-value="industria">Industria</div>
+      </div>
+    </div>
+
+    <!-- Step 3: Servicios (service tree filtered by area) -->
+    <div class="panel" data-panel="3">
+      <h2>Seleccioná equipos y marcas</h2>
+      <p class="hint">Marcá los equipos y, debajo de cada uno, las marcas que soportás.</p>
+      <div id="treeContainer" class="tree loading">Cargando árbol de servicios...</div>
+      <div class="selected-summary" id="selectedSummary">
+        <h3>✅ Servicios seleccionados</h3>
+        <div id="selectedList"><p style="color:#888;font-size:13px;">Todavía no seleccionaste ningún servicio.</p></div>
+      </div>
+    </div>
+
+    <!-- Step 4: Contacto -->
+    <div class="panel" data-panel="4">
+      <h2>Datos de contacto</h2>
+      <p class="hint">WhatsApp y Telegram son opcionales: si los marcás, se habilita el botón en tu tarjeta.</p>
+      <div class="row">
+        <div>
+          <label for="cFirstName">Nombre</label>
+          <input type="text" id="cFirstName" placeholder="Nombre">
+        </div>
+        <div>
+          <label for="cLastName">Apellido</label>
+          <input type="text" id="cLastName" placeholder="Apellido">
+        </div>
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <div>
+          <label for="cCompany">Razón social / Empresa</label>
+          <input type="text" id="cCompany" placeholder="Opcional">
+        </div>
+        <div>
+          <label for="cTaxId">DNI o CUIT</label>
+          <input type="text" id="cTaxId" placeholder="DNI o CUIT">
+        </div>
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <div>
+          <label for="cBirth">Fecha de nacimiento</label>
+          <input type="date" id="cBirth">
+        </div>
+        <div>
+          <label for="cActivity">Fecha inicio actividades</label>
+          <input type="date" id="cActivity">
+        </div>
+      </div>
+      <label for="cEmail">Email</label>
+      <input type="email" id="cEmail" placeholder="email@ejemplo.com">
+      <label for="cMobile">Teléfono móvil</label>
+      <input type="tel" id="cMobile" placeholder="11 1234-5678">
+      <div class="check-row">
+        <label><input type="checkbox" id="cWa"> 💬 WhatsApp</label>
+        <label><input type="checkbox" id="cTg"> ✈️ Telegram</label>
+      </div>
+      <p style="font-size:12px;color:#888;margin-top:6px;">Si no marcás ninguna, solo podrán contactarte por email o teléfono.</p>
+      <label for="cStreet">Dirección (particular o fiscal)</label>
+      <div class="row">
+        <div style="flex:2;">
+          <input type="text" id="cStreet" placeholder="Calle">
+        </div>
+        <div style="flex:1;">
+          <input type="text" id="cNumber" placeholder="Altura / Nº">
+        </div>
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <div>
+          <input type="text" id="cFloor" placeholder="Piso">
+        </div>
+        <div>
+          <input type="text" id="cApartment" placeholder="Depto">
+        </div>
+      </div>
+      <label for="cProvince">Provincia</label>
+      <select id="cProvince">
+        <option value="">— Seleccioná —</option>
+        <option value="CABA">CABA (Ciudad Autónoma de Buenos Aires)</option>
+        <option value="Buenos Aires">Buenos Aires</option>
+        <option value="Córdoba">Córdoba</option>
+        <option value="Santa Fe">Santa Fe</option>
+        <option value="Mendoza">Mendoza</option>
+        <option value="Tucumán">Tucumán</option>
+        <option value="Entre Ríos">Entre Ríos</option>
+        <option value="Salta">Salta</option>
+        <option value="Otra">Otra</option>
+      </select>
+      <label for="cCity">Ciudad / Localidad</label>
+      <select id="cCity">
+        <option value="">— Primero elegí provincia —</option>
+      </select>
+      <label for="cNeighborhood">Barrio</label>
+      <select id="cNeighborhood">
+        <option value="">— Primero elegí localidad —</option>
+      </select>
+      <label for="cPostal">Código postal</label>
+      <input type="text" id="cPostal" placeholder="Ej: C1425 / 5000">
+    </div>
+
+    <!-- Step 5: Categoría -->
+    <div class="panel" data-panel="5">
+      <h2>Tu categoría</h2>
+      <p class="hint">Indicá tu nivel de matriculación / idoneidad.</p>
+      <div class="opt-grid" id="categoryOptions">
+        <div class="opt" data-value="profesional_matriculado">Profesional matriculado</div>
+        <div class="opt" data-value="tecnico_matriculado">Técnico matriculado</div>
+        <div class="opt" data-value="tecnico_no_matriculado">Técnico no matriculado</div>
+        <div class="opt" data-value="idoneo">Idóneo</div>
+      </div>
+    </div>
+
+    <!-- Step 6: Especialidad -->
+    <div class="panel" data-panel="6">
+      <h2>Especialidad</h2>
+      <p class="hint">Breve descripción de tu especialidad principal.</p>
+      <input type="text" id="cSpecialty" placeholder="Ej: Electrónica blanca, redes, calderas...">
+    </div>
+
+    <!-- Step 7: Disponibilidad -->
+    <div class="panel" data-panel="7">
+      <h2>Disponibilidad</h2>
+      <p class="hint">¿Cuán rápido podés atender?</p>
+      <div class="opt-grid" id="availabilityOptions">
+        <div class="opt" data-value="inmediata">Inmediata — en el día</div>
+        <div class="opt" data-value="rapida">Rápida — menos de 2 días</div>
+        <div class="opt" data-value="puedo_esperar">Puedo esperar — entre 2 y 4 días</div>
+        <div class="opt" data-value="sin_apuro">No tengo apuro — más de 4 días</div>
+      </div>
+    </div>
+
+    <!-- Step 8: Descripción -->
+    <div class="panel" data-panel="8">
+      <h2>Descripción del servicio</h2>
+      <p class="hint">Contanos las características del servicio y sus alcances.</p>
+      <textarea id="cDescription" placeholder="Detallá qué hacés, qué marcas/equipos, zonas de cobertura, garantía, etc."></textarea>
+      <div class="error" id="errorMsg"></div>
+    </div>
+
+    <!-- Step 9: Fotos -->
+    <div class="panel" data-panel="9">
+      <h2>Fotos de tu trabajo</h2>
+      <p class="hint">Subí fotos de equipos reparados, tu taller o tu título (ej. certificado, degree). Hacen tu aviso más confiable.</p>
+      <label for="cPhotoFiles">Seleccionar imágenes</label>
+      <input type="file" id="cPhotoFiles" accept="image/*" multiple style="padding:10px;background:#222;color:#fff;border:1px solid #444;border-radius:4px;">
+      <div id="photoPreview" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;"></div>
+      <p style="font-size:12px;color:#888;margin-top:8px;">Podés subir varias. Se guardan en tu perfil (no en el servidor de archivos).</p>
+    </div>
+
+    <div class="nav-btns">
+      <button class="btn btn-prev" id="btnPrev" style="visibility:hidden;">← Atrás</button>
+      <button class="btn btn-next" id="btnNext">Siguiente →</button>
+      <button class="btn btn-save" id="btnSave" style="display:none;">Guardar perfil</button>
+    </div>
+  </div>
+
+  <script src="/js/hogarServiceTree.js"></script>
+  <script>
+    const state = {
+      action: '',
+      actionDetails: '',
+      area: '',
+      category: '',
+      availability: '',
+      services: [],
+      photos: []
+    };
+    let tree = null;
+    let currentStep = 1;
+    const TOTAL_STEPS = 9;
+
+    const panels = document.querySelectorAll('.panel');
+    const chips = document.querySelectorAll('.step-chip');
+    const btnPrev = document.getElementById('btnPrev');
+    const btnNext = document.getElementById('btnNext');
+    const btnSave = document.getElementById('btnSave');
+    const errorEl = document.getElementById('errorMsg');
+
+    function showStep(step) {
+      currentStep = step;
+      panels.forEach(p => p.classList.toggle('active', Number(p.dataset.panel) === step));
+      chips.forEach(c => {
+        const s = Number(c.dataset.step);
+        c.classList.toggle('active', s === step);
+        c.classList.toggle('done', s < step);
+      });
+      btnPrev.style.visibility = step === 1 ? 'hidden' : 'visible';
+      btnNext.style.display = step === TOTAL_STEPS ? 'none' : 'inline-block';
+      btnSave.style.display = step === TOTAL_STEPS ? 'inline-block' : 'none';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Single-select option groups (area, category, availability)
+    function bindOptGroup(containerId, key) {
+      const container = document.getElementById(containerId);
+      container.addEventListener('click', (e) => {
+        const opt = e.target.closest('.opt');
+        if (!opt) return;
+        container.querySelectorAll('.opt').forEach(o => o.classList.remove('selected'));
+        opt.classList.add('selected');
+        state[key] = opt.dataset.value;
+      });
+    }
+    bindOptGroup('areaOptions', 'area');
+    document.getElementById('areaOptions').addEventListener('click', (e) => {
+      const opt = e.target.closest('.opt');
+      if (opt) setTimeout(() => tree.setArea(state.area), 0);
+    });
+
+    // Address: province -> locality -> neighborhood cascading dropdowns
+    const LOCALITIES = {
+      'CABA': ['Belgrano','Caballito','Flores','Palermo','Recoleta','San Nicolás','Almagro','Villa Crespo','Núñez','Boedo'],
+      'Buenos Aires': ['La Plata','Mar del Plata','Bahía Blanca','Tandil','Lomas de Zamora','Quilmes','Lanús','Morón','San Isidro','Tigre'],
+      'Córdoba': ['Córdoba','Villa Carlos Paz','Río Cuarto','Villa María'],
+      'Santa Fe': ['Rosario','Santa Fe','Rafaela','Villa Gobernador Gálvez'],
+      'Mendoza': ['Mendoza','San Rafael','Godoy Cruz','Luján de Cuyo'],
+      'Tucumán': ['San Miguel de Tucumán','Yerba Buena','Tafí Viejo'],
+      'Entre Ríos': ['Paraná','Concordia','Gualeguaychú'],
+      'Salta': ['Salta','San Ramón de la Nueva Orán','Cafayate'],
+      'Otra': []
+    };
+    const cProvince = document.getElementById('cProvince');
+    const cCity = document.getElementById('cCity');
+    const cNeighborhood = document.getElementById('cNeighborhood');
+
+    function fillCityOptions(prov) {
+      cCity.innerHTML = '';
+      const opts = LOCALITIES[prov] || [];
+      if (opts.length === 0) {
+        cCity.innerHTML = '<option value="">— Escribí tu localidad —</option>';
+        cCity.disabled = false;
+      } else {
+        cCity.innerHTML = '<option value="">— Seleccioná localidad —</option>' +
+          opts.map(o => `<option value="${o}">${o}</option>`).join('');
+        cCity.disabled = false;
+      }
+      cNeighborhood.innerHTML = '<option value="">— Primero elegí localidad —</option>';
+      cNeighborhood.disabled = true;
+    }
+    function fillNeighborhoodOptions(city) {
+      cNeighborhood.disabled = false;
+      cNeighborhood.innerHTML = `<option value="">— Barrio (opcional) —</option><option value="${city} Centro">${city} Centro</option>`;
+    }
+    cProvince.addEventListener('change', () => fillCityOptions(cProvince.value));
+    cCity.addEventListener('change', () => { if (cCity.value) fillNeighborhoodOptions(cCity.value); });
+
+    // Photos: read selected files as base64 data URIs (stored in DB, not filesystem)
+    function renderPhotoPreview() {
+      const wrap = document.getElementById('photoPreview');
+      wrap.innerHTML = '';
+      state.photos.forEach((src, i) => {
+        const box = document.createElement('div');
+        box.style.position = 'relative';
+        const img = document.createElement('img');
+        img.src = src;
+        img.style.width = '90px';
+        img.style.height = '90px';
+        img.style.objectFit = 'cover';
+        img.style.borderRadius = '6px';
+        img.style.border = '1px solid #ddd';
+        const rm = document.createElement('button');
+        rm.type = 'button';
+        rm.textContent = '×';
+        rm.title = 'Quitar';
+        rm.style.cssText = 'position:absolute;top:-6px;right:-6px;background:#d32f2f;color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;line-height:1;';
+        rm.onclick = () => { state.photos.splice(i, 1); renderPhotoPreview(); };
+        box.appendChild(img);
+        box.appendChild(rm);
+        wrap.appendChild(box);
+      });
+    }
+    const photoInput = document.getElementById('cPhotoFiles');
+    photoInput.addEventListener('change', () => {
+      const files = Array.from(photoInput.files || []);
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = () => { state.photos.push(reader.result); renderPhotoPreview(); };
+        reader.readAsDataURL(file);
+      });
+      photoInput.value = '';
+    });
+
+    bindOptGroup('categoryOptions', 'category');
+    bindOptGroup('availabilityOptions', 'availability');
+
+    // Action: dropdown + details
+    const actionSelect = document.getElementById('actionSelect');
+    actionSelect.addEventListener('change', () => { state.action = actionSelect.value; });
+    const actionDetails = document.getElementById('actionDetails');
+    actionDetails.addEventListener('input', () => { state.actionDetails = actionDetails.value.trim(); });
+
+    // Load service tree + restore if already saved
+    async function init() {
+      tree = new HogarServiceTree('treeContainer', {
+        onChange: (services) => {
+          state.services = services;
+          updateSummary(services);
+          document.getElementById('btnNext').disabled = services.length === 0;
+        }
+      });
+      await tree.load();
+      const loader = document.querySelector('.loading');
+      if (loader) loader.style.display = 'none';
+      if (state.area) tree.setArea(state.area);
+
+      // Prefill from saved profile
+      try {
+        const res = await fetch('/api/v1/professionals/me', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+        const json = await res.json();
+        const hp = json.data?.hogarProfile;
+        if (hp) {
+          if (hp.action) { state.action = hp.action; actionSelect.value = hp.action; }
+          if (hp.actionDetails) { state.actionDetails = hp.actionDetails; actionDetails.value = hp.actionDetails; }
+          if (hp.area) { state.area = hp.area; selectOpt('areaOptions', hp.area); }
+          if (hp.category) { state.category = hp.category; selectOpt('categoryOptions', hp.category); }
+          if (hp.availability) { state.availability = hp.availability; selectOpt('availabilityOptions', hp.availability); }
+          if (hp.specialty) document.getElementById('cSpecialty').value = hp.specialty;
+          if (hp.description) document.getElementById('cDescription').value = hp.description;
+          if (hp.services?.length) { state.services = hp.services; tree.setValue(hp.services); }
+          if (hp.photos?.length) { state.photos = hp.photos; renderPhotoPreview(); }
+          const c = hp.contact || {};
+          if (hp.firstName) document.getElementById('cFirstName').value = hp.firstName;
+          if (hp.lastName) document.getElementById('cLastName').value = hp.lastName;
+          if (hp.companyName) document.getElementById('cCompany').value = hp.companyName;
+          if (hp.taxId) document.getElementById('cTaxId').value = hp.taxId;
+          if (hp.birthDate) document.getElementById('cBirth').value = (hp.birthDate || '').slice(0,10);
+          if (hp.activityStartDate) document.getElementById('cActivity').value = (hp.activityStartDate || '').slice(0,10);
+          if (c.email) document.getElementById('cEmail').value = c.email;
+          if (c.mobilePhone) document.getElementById('cMobile').value = c.mobilePhone;
+          if (c.whatsapp) document.getElementById('cWa').checked = true;
+          if (c.telegram) document.getElementById('cTg').checked = true;
+          const a = hp.address || {};
+          document.getElementById('cStreet').value = a.street || '';
+          document.getElementById('cNumber').value = a.number || '';
+          document.getElementById('cFloor').value = a.floor || '';
+          document.getElementById('cApartment').value = a.apartment || '';
+          if (a.province) {
+            document.getElementById('cProvince').value = a.province;
+            fillCityOptions(a.province);
+          }
+          if (a.city) {
+            document.getElementById('cCity').value = a.city;
+            fillNeighborhoodOptions(a.city);
+          }
+          document.getElementById('cNeighborhood').value = a.neighborhood || '';
+          document.getElementById('cPostal').value = a.postalCode || '';
+          updateSummary(state.services);
+          document.getElementById('btnNext').disabled = state.services.length === 0;
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    function selectOpt(containerId, value) {
+      const container = document.getElementById(containerId);
+      container.querySelectorAll('.opt').forEach(o => {
+        o.classList.toggle('selected', o.dataset.value === value);
+      });
+    }
+
+    function updateSummary(services) {
+      const list = document.getElementById('selectedList');
+      if (!services || services.length === 0) {
+        list.innerHTML = '<p style="color:#888;font-size:13px;">Todavía no seleccionaste ningún servicio.</p>';
+        return;
+      }
+      list.innerHTML = services.map(s =>
+        `<div class="selected-item">🔧 ${s.name} <span class="brands">${s.brands.join(', ')}</span></div>`
+      ).join('');
+    }
+
+    btnNext.addEventListener('click', () => {
+      errorEl.style.display = 'none';
+      if (currentStep === 1 && !state.action) return showError('Elegí una acción.');
+      if (currentStep === 2 && !state.area) return showError('Elegí un área.');
+      if (currentStep === 3 && state.services.length === 0) return showError('Seleccioná al menos un servicio y marca.');
+      if (currentStep === 4) {
+        if (!document.getElementById('cEmail').value.trim() && !document.getElementById('cMobile').value.trim())
+          return showError('Dejá al menos un email o teléfono.');
+      }
+      if (currentStep === 5 && !state.category) return showError('Elegí una categoría.');
+      if (currentStep === 7 && !state.availability) return showError('Elegí tu disponibilidad.');
+      if (currentStep < TOTAL_STEPS) showStep(currentStep + 1);
+    });
+
+    btnPrev.addEventListener('click', () => {
+      errorEl.style.display = 'none';
+      if (currentStep > 1) showStep(currentStep - 1);
+    });
+
+    btnSave.addEventListener('click', async () => {
+      errorEl.style.display = 'none';
+      const payload = {
+        action: state.action,
+        actionDetails: state.actionDetails,
+        area: state.area,
+        services: state.services,
+        photos: state.photos,
+        category: state.category,
+        specialty: document.getElementById('cSpecialty').value.trim(),
+        availability: state.availability,
+        description: document.getElementById('cDescription').value.trim(),
+        firstName: document.getElementById('cFirstName').value.trim(),
+        lastName: document.getElementById('cLastName').value.trim(),
+        companyName: document.getElementById('cCompany').value.trim(),
+        taxId: document.getElementById('cTaxId').value.trim(),
+        birthDate: document.getElementById('cBirth').value,
+        activityStartDate: document.getElementById('cActivity').value,
+        contact: {
+          email: document.getElementById('cEmail').value.trim(),
+          mobilePhone: document.getElementById('cMobile').value.trim(),
+          whatsapp: document.getElementById('cWa').checked,
+          telegram: document.getElementById('cTg').checked
+        },
+        address: {
+          street: document.getElementById('cStreet').value.trim(),
+          number: document.getElementById('cNumber').value.trim(),
+          floor: document.getElementById('cFloor').value.trim(),
+          apartment: document.getElementById('cApartment').value.trim(),
+          neighborhood: document.getElementById('cNeighborhood').value.trim(),
+          city: document.getElementById('cCity').value.trim(),
+          province: document.getElementById('cProvince').value.trim(),
+          postalCode: document.getElementById('cPostal').value.trim()
+        }
+      };
+
+      btnSave.disabled = true;
+      btnSave.textContent = 'Guardando...';
+      try {
+        const res = await fetch('/api/v1/professionals/hogar/services', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (json.success) {
+          window.location.href = '/profDashboard.html';
+        } else {
+          showError(json.error || 'Error al guardar');
+          btnSave.disabled = false;
+          btnSave.textContent = 'Guardar perfil';
+        }
+      } catch {
+        showError('Error de conexión');
+        btnSave.disabled = false;
+        btnSave.textContent = 'Guardar perfil';
+      }
+    });
+
+    function showError(msg) {
+      errorEl.textContent = msg;
+      errorEl.style.display = 'block';
+    }
+
+    showStep(1);
+    init();
+  </script>
+</body>
+</html>

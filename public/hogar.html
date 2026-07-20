@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon.png?v=5">
+    <link rel="apple-touch-icon" href="/favicon.png?v=5">
+    <link rel="alternate icon" href="/favicon.ico">
+<title>Técnicos Hogar / Oficina</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css?v=8.25">
+  <link rel="stylesheet" href="/css/responsive.css?v=8.25">
+  <link rel="stylesheet" href="/css/blueprint.css?v=1">
+  <meta name="theme-color" content="#B8922E">
+  <meta name="color-scheme" content="dark">
+  <meta name="robots" content="noindex, nofollow">
+</head>
+<body class="categories-page blueprint-theme">
+  <div class="container categories-container">
+    <div class="categories-shell" role="main" id="main-content">
+
+      <!-- LEFT FRAME: filters -->
+      <aside class="categories-frame categories-frame-side categories-frame-left" aria-label="Filtros">
+        <a href="index.html" class="categories-brand-logo logo brand-logo-block">
+          <img src="/SexAppeal_logo_black.png" alt="Logo" class="page-logo">
+          <p class="brand-services-tagline">Técnicos Hogar · Oficina · PIME · Industria</p>
+        </a>
+
+        <div class="card" id="hogarFilters" style="margin-top: 18px;">
+          <h2 class="gold-text" style="font-size:1.1rem;margin-bottom:14px;">Filtros</h2>
+          <div class="filter-group">
+            <label>Área</label>
+            <select id="fArea">
+              <option value="">Todas</option>
+              <option value="hogar">Hogar</option>
+              <option value="oficina">Oficina</option>
+              <option value="pime">PIME</option>
+              <option value="industria">Industria</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Acción</label>
+            <select id="fAction">
+              <option value="">Todas</option>
+              <option value="Reparo">Reparo</option>
+              <option value="Instalo">Instalo</option>
+              <option value="Hago mantenimiento">Hago mantenimiento</option>
+              <option value="Vendo repuestos">Vendo repuestos</option>
+              <option value="Asesoro">Asesoro</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Categoría</label>
+            <select id="fCategory">
+              <option value="">Todas</option>
+              <option value="profesional_matriculado">Profesional matriculado</option>
+              <option value="tecnico_matriculado">Técnico matriculado</option>
+              <option value="tecnico_no_matriculado">Técnico no matriculado</option>
+              <option value="idoneo">Idóneo</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Disponibilidad</label>
+            <select id="fAvailability">
+              <option value="">Todas</option>
+              <option value="inmediata">Inmediata</option>
+              <option value="rapida">Rápida (&lt;2 días)</option>
+              <option value="puedo_esperar">2–4 días</option>
+              <option value="sin_apuro">&gt;4 días</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Provincia</label>
+            <select id="fProvince">
+              <option value="">Todas</option>
+              <option value="CABA">CABA</option>
+              <option value="Buenos Aires">Buenos Aires</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Localidad</label>
+            <input type="text" id="fCity" placeholder="Localidad">
+          </div>
+          <div class="filter-group">
+            <label>Servicio / Equipo</label>
+            <input type="text" id="fService" placeholder="Ej: lavarropas, aire, impresoras">
+          </div>
+          <div class="filter-group">
+            <label>Marca</label>
+            <input type="text" id="fBrand" placeholder="Ej: Samsung, HP, LG">
+          </div>
+          <div style="display:flex; gap:10px; margin-top:14px;">
+            <button id="btnApply" class="sa-btn sa-btn--active" style="flex:1;">Aplicar</button>
+            <button id="btnClear" class="sa-btn sa-btn--ghost" style="flex:1;">Limpiar</button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- CENTER FRAME: results grid -->
+      <section class="categories-frame categories-frame-center" data-module="DIR-01">
+        <h2 class="gold-text">Técnicos disponibles</h2>
+        <div class="treasure-grid-slot">
+          <div id="hogarLoader"><p>Preparando el directorio...</p></div>
+          <div id="hogarGrid" class="grid hidden"></div>
+        </div>
+      </section>
+
+      <!-- RIGHT FRAME: area quick filters + contact legend -->
+      <aside class="categories-frame categories-frame-side categories-frame-right" aria-label="Áreas">
+        <div class="card" style="margin-top: 18px; position: sticky; top: 18px;">
+          <h3 class="gold-text" style="font-size:1rem;margin-bottom:12px;">Áreas</h3>
+          <div id="areaChips" style="display:flex;flex-direction:column;gap:8px;"></div>
+          <hr style="border-color:rgba(184,146,46,0.2);margin:16px 0;">
+          <h3 class="gold-text" style="font-size:1rem;margin-bottom:10px;">Contacto</h3>
+          <p style="font-size:0.85rem;color:#ccc;line-height:1.6;">
+            💬 WhatsApp disponible<br>
+            ✈️ Telegram disponible<br>
+            Si no muestra ninguno, usá email o teléfono.
+          </p>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+
+  <script src="/js/hogarResults.js"></script>
+</body>
+</html>

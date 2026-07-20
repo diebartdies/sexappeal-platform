@@ -6,12 +6,6 @@ import { beginDashboardLoad, finishDashboardLoad, failDashboardLoad } from './da
 import { renderSpecialtyDropdown, setupLocationDropdowns } from './helpers.js';
 import { addPhotoToGrid, openPendingConnectionsModal, bindProfessionalProfileForm, hideProfessionalPaymentOverlays, renderProfessionalMainDashboardShell, injectProfessionalDashboardGuides, renderAvailabilityDayControls } from './professional.js';
 import { buildCategoryQueue, resetLazyCategoryLoader, startLazyCategoryLoader } from './lazyCategoryLoader.js';
-
-import {
-    buildFullPhoneNumber,
-    phonePickerHtml,
-    initPhonePicker
-} from './phoneCountryCodes.js';
 import { beginModalSession, endModalSession, navigateWithReturn } from './navReturn.js';
 import { saveLaunchCurtainEnabled, saveLaunchCurtainOpeningAt, loadLaunchCurtainAdminState } from './launchCurtain.js';
 
@@ -577,8 +571,6 @@ export async function loadDashboard() {
 
             renderProfessionalMainDashboardShell(content);
             bindProfessionalProfileForm();
-            initPhonePicker('upMobile');
-            initPhonePicker('upWa');
 
             const prof = user.professionalProfile || {};
             const isApproved = user.verificationStatus === 'approved';
@@ -3928,7 +3920,7 @@ export function renderEditForm(prof) {
                 <div style="flex:1;"><label>Birth Date</label><input type="date" id="adminEditBirthDate" value="${profile.birthDate ? profile.birthDate.substring(0,10) : ''}" style="width:100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
             </div>
             <div style="display:flex; gap:10px; flex-wrap: wrap; margin-bottom: 15px;">
-                <div style="flex:1; min-width:220px;"><label>${t('Mobile phone')}</label>${phonePickerHtml('adminEditMobile', profile.mobilePhone, 'adminEditMobilePhone')}</div>
+                <div style="flex:1;"><label>Mobile Phone</label><input type="text" id="adminEditMobilePhone" value="${profile.mobilePhone || ''}" style="width:100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
                 <div style="flex:1;"><label>Street</label><input type="text" id="adminEditStreet" value="${profile.location?.street || ''}" style="width:100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
                 <div style="flex:1;"><label>Number</label><input type="text" id="adminEditStreetNumber" value="${profile.location?.number || ''}" style="width:100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
                 <div style="flex:1;"><label>Floor</label><input type="text" id="adminEditFloor" value="${profile.location?.floor || ''}" style="width:100%; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;"></div>
@@ -3984,8 +3976,8 @@ export function renderEditForm(prof) {
             <label>Services</label>
             <div id="adminEditServices"></div>
 
-            <label>${t('WhatsApp Number')}</label>
-            ${phonePickerHtml('adminEditWa', profile.whatsappNumber, 'adminEditWhatsapp')}
+            <label>WhatsApp Number</label>
+            <input type="text" id="adminEditWhatsapp" value="${profile.whatsappNumber || ''}" style="padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
 
             <label>Measurements</label>
             <input type="text" id="adminEditMeasurements" value="${profile.measurements || ''}" style="padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px;">
@@ -4011,9 +4003,6 @@ export function renderEditForm(prof) {
 
     setupLocationDropdowns('adminEditProvince', 'adminEditCity', 'adminEditNeigh', false, profile.location || {});
     renderSpecialtyDropdown('adminEditServices', profile.services || []);
-
-    initPhonePicker('adminEditMobile');
-    initPhonePicker('adminEditWa');
 
     // Photo carousel — reuse the professional dashboard helper (addPhotoToGrid)
     // so the admin gets the exact same add / view / reorder / set-first / delete
@@ -4116,15 +4105,6 @@ export function renderEditForm(prof) {
             }
         }
 
-        const adminMobPhone = buildFullPhoneNumber(
-            document.getElementById('adminEditMobileDial')?.value || '+54',
-            document.getElementById('adminEditMobilePhone')?.value || ''
-        );
-        const adminWaPhone = buildFullPhoneNumber(
-            document.getElementById('adminEditWaDial')?.value || '+54',
-            document.getElementById('adminEditWhatsapp')?.value || ''
-        );
-
         const payload = {
             email: document.getElementById('adminEditEmail').value,
             verificationStatus: document.getElementById('adminEditStatus').value,
@@ -4134,7 +4114,7 @@ export function renderEditForm(prof) {
                     idNumber: document.getElementById('adminEditIdNumber').value,
                     birthDate: document.getElementById('adminEditBirthDate').value ? new Date(document.getElementById('adminEditBirthDate').value).toISOString() : undefined,
                     age: document.getElementById('adminEditBirthDate').value ? Math.abs(new Date(Date.now() - new Date(document.getElementById('adminEditBirthDate').value).getTime()).getUTCFullYear() - 1970) : undefined,
-                    mobilePhone: adminMobPhone,
+                    mobilePhone: document.getElementById('adminEditMobilePhone').value,
                     instagram: document.getElementById('adminEditInstagram')?.value || '',
                     facebook: document.getElementById('adminEditFacebook')?.value || '',
                 alias: document.getElementById('adminEditAlias').value,
@@ -4143,7 +4123,8 @@ export function renderEditForm(prof) {
                 services: document.getElementById('adminEditServices').tagName === 'SELECT'
                     ? Array.from(document.getElementById('adminEditServices').selectedOptions).map(opt => opt.value)
                     : document.getElementById('adminEditServices').value.split(','),
-                whatsappNumber: adminWaPhone || adminMobPhone,
+                whatsappNumber: document.getElementById('adminEditWhatsapp').value.trim()
+                    || document.getElementById('adminEditMobilePhone').value.trim(),
                 workingHours: {
                     start: document.getElementById('adminEditWStart').value,
                     end: document.getElementById('adminEditWEnd').value

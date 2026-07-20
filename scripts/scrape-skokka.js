@@ -24,11 +24,12 @@
  *      ( /escorts/capitalfederal/ and its barrio sub-listings, plus other AR
  *      cities ) and collect profile links matching /anuncio/<slug>-ar<id>/ ,
  *      deduped by the trailing ad id.
- *   3. REAL CONTACT EXTRACTION = on each /anuncio/ page:
+ *   3. REAL CONTACT EXTRACTION = on each /anuncio/ page we read the SPECIFIC
+ *      contact element, not the whole page:
  *        - primary:  schema.org Person JSON-LD -> "telephone" (+ "name",
  *                    address.addressRegion / addressLocality / addressCountry)
- *        - fallback: click #phone-button, wait for the toast that reveals the
- *                    number, read it from the toast's text content
+ *        - fallback: the phone button  <button id="phone-button" class="btn-phone">
+ *                    whose text is the number (e.g. "011\u200b1540306697")
  *        - fallback: the <title>, which is prefixed with the number
  *      alias = JSON-LD name / <h1>, province = addressRegion, city = locality.
  *
@@ -127,15 +128,9 @@ const SEED_LISTINGS = [
 // --- selectors / patterns discovered by inspecting the live DOM ---
 const SEL_PROFILE_LINK = 'a[href*="/anuncio/"]'; // listing card -> profile URL
 const SEL_LISTING_LINK = 'a[href*="/escorts/"]'; // city / barrio sub-listings
+const SEL_PHONE_BTN = '#phone-button, button.btn-phone'; // text is the number
 // Profile slugs end with -ar<id>, e.g. /anuncio/lulita-vip-ar1h2aukx/ .
 const RE_AD_ID = /-(ar[a-z0-9]+)\/?$/i;
-const MAX_PAGES_PER_LISTING = 20; // max listing pagination pages per listing
-const PHONE_TOAST_SELECTORS = [
-  '.PhoneToast', '.phone-toast', '[class*="PhoneToast"]', '[class*="phone-toast"]',
-  '[class*="phone_number"]', '[class*="phoneNumber"]',
-  '#phone-number', '.phone-number', '.phone', '.toast', '[role="alert"]',
-  '.toast-message', '#toast', '[id*="toast" i]', '.snackbar', '.notification'
-];
 
 function parseArgs(argv) {
   const args = {
@@ -218,151 +213,6 @@ async function dismissBanners(page) {
   } catch (_) {}
 }
 
-// Click the phone button (#phone-button) and wait for the image/overlay that
-// reveals the hidden phone number. Uses OCR to read the number from the image.
-// Returns the raw digit string or null.
-async function clickPhoneReveal(page) {
-  try {
-    const btnSel = '#phone-button, button.btn-phone, [id*="phone" i][id*="button" i]';
-    const hasBtn = await page.$(btnSel);
-    if (!hasBtn) return null;
-
-    // Try data attributes first (some sites stash the number there)
-    const dataPhone = await page.evaluate(() => {
-      const btn = document.querySelector('#phone-button, button.btn-phone');
-      if (!btn) return null;
-      for (const attr of ['data-phone', 'data-number', 'data-telephone', 'data-value']) {
-        const val = btn.getAttribute(attr);
-        if (val) {
-          const d = val.replace(/[^0-9]/g, '');
-          if (d.length >= 8) return d;
-        }
-      }
-      return null;
-    });
-    if (dataPhone) return dataPhone;
-
-    // Click the button (Puppeteer auto-scrolls to it)
-    await page.click(btnSel);
-
-    // Wait for the image/toast/animation to appear
-    await sleep(3000);
-
-    // 1) Try known toast selectors (text-based)
-    for (const sel of PHONE_TOAST_SELECTORS) {
-      const el = await page.$(sel);
-      if (el) {
-        const text = await page.evaluate((e) => e.textContent, el);
-        const digits = text.replace(/[^0-9]/g, '');
-        if (digits.length >= 8 && digits.length <= 16) return digits;
-      }
-    }
-
-    // 2) Check for newly appeared <a> links with phone hrefs
-    const linkPhone = await page.evaluate(() => {
-      for (const a of Array.from(document.querySelectorAll('a[href*="tel:"], a[href*="wa.me/"]'))) {
-        const d = (a.getAttribute('href') || '').replace(/[^0-9]/g, '');
-        if (d.length >= 8 && d.length <= 16) return d;
-        const d2 = (a.textContent || '').replace(/[^0-9]/g, '');
-        if (d2.length >= 8 && d2.length <= 16) return d2;
-      }
-      for (const a of Array.from(document.querySelectorAll('a'))) {
-        const d = (a.textContent || '').replace(/[^0-9]/g, '');
-        if (d.length >= 8 && d.length <= 16) return d;
-      }
-      return null;
-    });
-    if (linkPhone) return linkPhone;
-
-    // 3) OCR — the primary path: the phone is displayed as an image
-    const ocrResult = await (async () => {
-      try {
-        const Tesseract = require('tesseract.js');
-        const sharp = require('sharp');
-
-        // Collect candidate visible elements that may contain the phone image.
-        // Prioritise images inside toast containers, then data-URL images,
-        // then anything with "phone" in its attributes, then all visible images,
-        // then canvases.
-        const candidates = await page.evaluate(() => {
-          const els = [];
-          const add = (el, priority) => {
-            const rect = el.getBoundingClientRect();
-            if (rect.width < 20 || rect.height < 20) return;
-            els.push({ priority, rect: { x: rect.x, y: rect.y, w: rect.width, h: rect.height } });
-          };
-          // Priority 0: images inside known toast containers
-          for (const sel of ['.PhoneToast', '.phone-toast', '[class*="PhoneToast"]', '[class*="phone-toast"]', '.toast', '[role="alert"]', '.snackbar', '.notification', '.overlay']) {
-            const c = document.querySelector(sel);
-            if (c) c.querySelectorAll('img').forEach((img) => add(img, 0));
-          }
-          // Priority 1: data-URI images
-          document.querySelectorAll('img[src^="data:"]').forEach((img) => add(img, 1));
-          // Priority 2: images with phone/tel in attributes
-          document.querySelectorAll('img').forEach((img) => {
-            const attrs = ((img.getAttribute('src') || '') + ' ' + (img.className || '') + ' ' + (img.id || '') + ' ' + (img.getAttribute('alt') || '')).toLowerCase();
-            if (/phone|number|tel/i.test(attrs)) add(img, 2);
-          });
-          // Priority 3: all visible images (broader fallback)
-          document.querySelectorAll('img:not([src^="data:"])').forEach((img) => add(img, 3));
-          // Priority 4: canvases
-          document.querySelectorAll('canvas').forEach((c) => add(c, 4));
-          return els.sort((a, b) => a.priority - b.priority);
-        });
-
-        for (const { rect } of candidates) {
-          const clip = { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.w), height: Math.round(rect.h) };
-          if (clip.width < 10 || clip.height < 10) continue;
-          const buf = await page.screenshot({ clip });
-          if (!buf || buf.length < 200) continue;
-          const processed = await sharp(buf).resize(1600, null, { fit: 'contain' }).grayscale().normalize().png().toBuffer();
-          const { data: { text } } = await Tesseract.recognize(processed, 'eng', {
-            tessedit_char_whitelist: '0123456789+-() ',
-            logger: () => {} // silence progress
-          });
-          const digits = (text || '').replace(/[^0-9]/g, '');
-          if (digits.length >= 8 && digits.length <= 16) return digits;
-        }
-
-        // Fallback: screenshot the bottom 250px of viewport (where toasts land)
-        const vp = page.viewport();
-        if (vp) {
-          const clip = { x: 0, y: Math.max(0, vp.height - 250), width: vp.width, height: 250 };
-          const buf = await page.screenshot({ clip });
-          if (buf && buf.length > 200) {
-            const processed = await sharp(buf).resize(1600, null, { fit: 'contain' }).grayscale().normalize().png().toBuffer();
-            const { data: { text } } = await Tesseract.recognize(processed, 'eng', {
-              tessedit_char_whitelist: '0123456789+-() ',
-              logger: () => {}
-            });
-            const digits = (text || '').replace(/[^0-9]/g, '');
-            if (digits.length >= 8 && digits.length <= 16) return digits;
-          }
-        }
-      } catch (_) {}
-      return null;
-    })();
-    if (ocrResult) return ocrResult;
-
-    // 4) Final fallback: scan all text nodes for phone-like digit sequences
-    const found = await page.evaluate(() => {
-      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
-      let node;
-      while ((node = walker.nextNode())) {
-        const text = node.textContent.trim();
-        const m = text.match(/(\d[\d\s\-().]{7,}\d)/);
-        if (m) {
-          const d = m[1].replace(/[^0-9]/g, '');
-          if (d.length >= 8 && d.length <= 16) return d;
-        }
-      }
-      return null;
-    });
-    if (found) return found;
-  } catch (_) {}
-  return null;
-}
-
 // From the Capital Federal listing page, collect the barrio sub-listing URLs
 // (e.g. /escorts/capitalfederal/palermo/) to broaden discovery. Same-origin so
 // we inherit the page's cookies/headers.
@@ -390,34 +240,27 @@ async function discoverListingUrls(page, max) {
   return [...new Set(urls)].slice(0, Math.max(max, SEED_LISTINGS.length));
 }
 
-async function collectProfileUrls(page, listingPath, seenAdIds, maxProfiles) {
+async function collectProfileUrls(page, listingPath, seenAdIds) {
   const found = [];
-  const baseUrl = ORIGIN + listingPath;
-  for (let pageNum = 1; pageNum <= MAX_PAGES_PER_LISTING && found.length < maxProfiles; pageNum++) {
-    const url = pageNum === 1 ? baseUrl : baseUrl + '?p=' + pageNum;
-    try {
-      const resp = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
-      if (!resp || resp.status() >= 400) break;
-      await waitForCloudflare(page);
-      await dismissBanners(page);
-      await sleep(800);
-      const hrefs = await page.evaluate((sel) => {
-        return Array.from(document.querySelectorAll(sel)).map((a) => a.href);
-      }, SEL_PROFILE_LINK);
-      if (hrefs.length === 0) break;
-      let added = 0;
-      for (const href of hrefs) {
-        const id = adIdFromUrl(href);
-        if (!id || seenAdIds.has(id)) continue;
-        seenAdIds.add(id);
-        found.push(href.split('#')[0].split('?')[0]);
-        added++;
-        if (found.length >= maxProfiles) break;
-      }
-      if (added === 0) break;
-    } catch (_) { break; }
-    await sleep(600);
-  }
+  try {
+    const resp = await page.goto(ORIGIN + listingPath, {
+      waitUntil: 'domcontentloaded',
+      timeout: 45000
+    });
+    if (!resp || resp.status() >= 400) return found;
+    await waitForCloudflare(page);
+    await dismissBanners(page);
+    await sleep(800);
+    const hrefs = await page.evaluate((sel) => {
+      return Array.from(document.querySelectorAll(sel)).map((a) => a.href);
+    }, SEL_PROFILE_LINK);
+    for (const href of hrefs) {
+      const id = adIdFromUrl(href);
+      if (!id || seenAdIds.has(id)) continue;
+      seenAdIds.add(id);
+      found.push(href.split('#')[0].split('?')[0]);
+    }
+  } catch (_) {}
   return found;
 }
 
@@ -443,7 +286,7 @@ async function extractProfile(page, profileUrl) {
     }
     await waitForCloudflare(page);
     await dismissBanners(page);
-    const data = await page.evaluate(() => {
+    const data = await page.evaluate((phoneSel) => {
       const out = {};
       const clean = (s) => (s || '').replace(/\s+/g, ' ').trim();
       out.title = document.title || '';
@@ -458,11 +301,14 @@ async function extractProfile(page, profileUrl) {
           break;
         }
       }
+      // fallback: the dedicated phone button, whose text IS the number
+      const pb = document.querySelector(phoneSel);
+      out.phoneBtn = pb ? pb.textContent || '' : '';
       // fallback: tel: link if any
       const tel = document.querySelector('a[href^="tel:"]');
       out.tel = tel ? tel.getAttribute('href') || '' : '';
       return out;
-    });
+    }, SEL_PHONE_BTN);
 
     // Parse the structured source (most reliable first).
     let ld = null;
@@ -495,10 +341,13 @@ async function extractProfile(page, profileUrl) {
     if (!entry.city) entry.city = ldRegion || null;
 
     // Resolve the raw contact number from the most reliable source available:
-    // JSON-LD telephone -> click phone button + read toast -> tel: -> <title> prefix.
+    // JSON-LD telephone -> phone button text -> tel: -> <title> prefix.
     let raw = null;
     if (ld && ld.telephone) raw = String(ld.telephone).replace(/[^0-9]/g, '');
-    if (!raw) raw = await clickPhoneReveal(page);
+    if (!raw && data.phoneBtn) {
+      const d = data.phoneBtn.replace(/[^0-9]/g, '');
+      if (d.length >= 8) raw = d;
+    }
     if (!raw && data.tel) raw = data.tel.replace(/[^0-9]/g, '');
     if (!raw && data.title) {
       const mTitle = data.title.match(/(\d{8,})/);
@@ -631,8 +480,7 @@ async function saveToDb(rows) {
     const profileUrls = [];
     for (const listing of listingUrls) {
       if (profileUrls.length >= args.limit) break;
-      const remaining = args.limit - profileUrls.length;
-      const found = await collectProfileUrls(page, listing, seenAdIds, remaining);
+      const found = await collectProfileUrls(page, listing, seenAdIds);
       if (found.length) {
         console.log(`[skokka]   ${listing} -> +${found.length} new ads (total ${profileUrls.length + found.length})`);
       }

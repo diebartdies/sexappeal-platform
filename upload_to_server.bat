@@ -20,7 +20,7 @@ powershell -NoProfile -Command "$paths=@('%~dp0scripts\deploy-extract.sh','%~dp0
 if errorlevel 1 goto line_endings_failed
 
 echo [2/7] Compressing project files locally (ignoring heavy cache files)...
-tar -czf upload_package.tar.gz --exclude=node_modules --exclude=.git --exclude=.cache --exclude=.wwebjs_auth --exclude=upload_package.tar.gz --exclude=docker-compose.override.yml --exclude=.env --exclude=*.archive --exclude=*.tar.gz --exclude=*.tar.gz.enc --exclude=certbot --exclude=app_bak.js --exclude=sexappeal_local_after_embed.archive .
+tar -czf upload_package.tar.gz --exclude=node_modules --exclude=.git --exclude=.cache --exclude=.wwebjs_auth --exclude=upload_package.tar.gz --exclude=docker-compose.override.yml --exclude=.env --exclude=*.archive --exclude=*.tar.gz --exclude=certbot --exclude=app_bak.js --exclude=sexappeal_local_after_embed.archive .
 if errorlevel 1 goto archive_failed
 
 echo.
@@ -41,17 +41,17 @@ if errorlevel 1 goto upload_archive_failed
 ssh %SSH_OPTS% %SERVER_USER%@%SERVER_IP% "mkdir -p %SERVER_PATH%/scripts"
 if errorlevel 1 goto upload_scripts_failed
 
-scp %SSH_OPTS% "%~dp0scripts\deploy-extract.sh" "%~dp0scripts\deploy-restart.sh" "%~dp0scripts\disk-housekeeping.sh" "%~dp0scripts\install-housekeeping-cron.sh" "%~dp0scripts\git-backup-push.sh" "%~dp0scripts\install-git-backup-cron.sh" "%~dp0scripts\install-daily-backup-cron.sh" "%~dp0scripts\nginx-write-selfappeal-conf.sh" "%~dp0scripts\fix-nginx-now.sh" "%~dp0scripts\capture-server-state.sh" %SERVER_USER%@%SERVER_IP%:%SERVER_PATH%/scripts/
+scp %SSH_OPTS% "%~dp0scripts\deploy-extract.sh" "%~dp0scripts\deploy-restart.sh" "%~dp0scripts\disk-housekeeping.sh" "%~dp0scripts\install-housekeeping-cron.sh" "%~dp0scripts\git-backup-push.sh" "%~dp0scripts\install-git-backup-cron.sh" "%~dp0scripts\install-daily-backup-cron.sh" "%~dp0scripts\nginx-write-selfappeal-conf.sh" "%~dp0scripts\fix-nginx-now.sh" %SERVER_USER%@%SERVER_IP%:%SERVER_PATH%/scripts/
 if errorlevel 1 goto upload_scripts_failed
 
-ssh %SSH_OPTS% %SERVER_USER%@%SERVER_IP% "sed -i 's/\r$//' %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%/scripts/disk-housekeeping.sh %SERVER_PATH%/scripts/install-housekeeping-cron.sh %SERVER_PATH%/scripts/git-backup-push.sh %SERVER_PATH%/scripts/install-git-backup-cron.sh %SERVER_PATH%/scripts/install-daily-backup-cron.sh %SERVER_PATH%/scripts/nginx-write-selfappeal-conf.sh %SERVER_PATH%/scripts/capture-server-state.sh"
+ssh %SSH_OPTS% %SERVER_USER%@%SERVER_IP% "sed -i 's/\r$//' %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%/scripts/disk-housekeeping.sh %SERVER_PATH%/scripts/install-housekeeping-cron.sh %SERVER_PATH%/scripts/git-backup-push.sh %SERVER_PATH%/scripts/install-git-backup-cron.sh %SERVER_PATH%/scripts/install-daily-backup-cron.sh %SERVER_PATH%/scripts/nginx-write-selfappeal-conf.sh"
 
 echo.
 echo [5/7] Verifying integrity and extracting on server...
-ssh %SSH_OPTS% %SERVER_USER%@%SERVER_IP% "chmod +x %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%/scripts/disk-housekeeping.sh %SERVER_PATH%/scripts/install-housekeeping-cron.sh %SERVER_PATH%/scripts/git-backup-push.sh %SERVER_PATH%/scripts/install-git-backup-cron.sh %SERVER_PATH%/scripts/install-daily-backup-cron.sh %SERVER_PATH%/scripts/nginx-write-selfappeal-conf.sh %SERVER_PATH%/scripts/capture-server-state.sh && bash %SERVER_PATH%/scripts/deploy-extract.sh !LOCAL_CHECKSUM! %SERVER_PATH%"
+ssh %SSH_OPTS% %SERVER_USER%@%SERVER_IP% "chmod +x %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%/scripts/disk-housekeeping.sh %SERVER_PATH%/scripts/install-housekeeping-cron.sh %SERVER_PATH%/scripts/git-backup-push.sh %SERVER_PATH%/scripts/install-git-backup-cron.sh %SERVER_PATH%/scripts/install-daily-backup-cron.sh %SERVER_PATH%/scripts/nginx-write-selfappeal-conf.sh && bash %SERVER_PATH%/scripts/deploy-extract.sh !LOCAL_CHECKSUM! %SERVER_PATH%"
 if errorlevel 1 goto extract_failed
 
-ssh %SSH_OPTS% %SERVER_USER%@%SERVER_IP% "sed -i 's/\r$//' %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%/scripts/disk-housekeeping.sh %SERVER_PATH%/scripts/install-housekeeping-cron.sh %SERVER_PATH%/scripts/git-backup-push.sh %SERVER_PATH%/scripts/install-git-backup-cron.sh %SERVER_PATH%/scripts/install-daily-backup-cron.sh %SERVER_PATH%/scripts/nginx-write-selfappeal-conf.sh %SERVER_PATH%/scripts/capture-server-state.sh && chmod +x %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%/scripts/disk-housekeeping.sh %SERVER_PATH%/scripts/install-housekeeping-cron.sh %SERVER_PATH%/scripts/git-backup-push.sh %SERVER_PATH%/scripts/install-git-backup-cron.sh %SERVER_PATH%/scripts/install-daily-backup-cron.sh %SERVER_PATH%/scripts/nginx-write-selfappeal-conf.sh %SERVER_PATH%/scripts/capture-server-state.sh"
+ssh %SSH_OPTS% %SERVER_USER%@%SERVER_IP% "sed -i 's/\r$//' %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%/scripts/disk-housekeeping.sh %SERVER_PATH%/scripts/install-housekeeping-cron.sh %SERVER_PATH%/scripts/git-backup-push.sh %SERVER_PATH%/scripts/install-git-backup-cron.sh %SERVER_PATH%/scripts/install-daily-backup-cron.sh %SERVER_PATH%/scripts/nginx-write-selfappeal-conf.sh && chmod +x %SERVER_PATH%/scripts/deploy-extract.sh %SERVER_PATH%/scripts/deploy-restart.sh %SERVER_PATH%/scripts/disk-housekeeping.sh %SERVER_PATH%/scripts/install-housekeeping-cron.sh %SERVER_PATH%/scripts/git-backup-push.sh %SERVER_PATH%/scripts/install-git-backup-cron.sh %SERVER_PATH%/scripts/install-daily-backup-cron.sh %SERVER_PATH%/scripts/nginx-write-selfappeal-conf.sh"
 
 echo.
 echo [5b/7] Server disk housekeeping - before Docker build...
