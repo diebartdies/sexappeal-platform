@@ -1,4 +1,4 @@
-/* Activity logs modal — list + detail side-by-side, page scroll, sticky detail panel */
+/* Activity logs modal — list + detail side-by-side, each pane independently scrollable */
 
 .logs-modal-overlay {
     position: fixed;
@@ -8,9 +8,7 @@
     flex-direction: column;
     align-items: stretch;
     padding: 12px 16px 24px;
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow: hidden;
     background: rgba(0, 0, 0, 0.92);
     box-sizing: border-box;
 }
@@ -24,15 +22,20 @@
     max-width: min(1400px, 98vw);
     margin: 0 auto;
     border-radius: 10px;
-    overflow: visible;
+    overflow: hidden;
     border: 1px solid var(--wa-border, #2a3942);
     background: var(--wa-bg, #0b141a);
     color: var(--wa-text, #e9edef);
     font-family: 'Segoe UI', system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
 }
 
 .logs-modal-panel .wa-inbox-header {
     border-radius: 0;
+    flex-shrink: 0;
 }
 
 .logs-modal-panel .wa-inbox-header h2 {
@@ -42,28 +45,30 @@
     font-family: inherit;
 }
 
+.logs-modal-panel .wa-inbox-alert,
+.logs-modal-panel .wa-inbox-meta,
+.logs-modal-panel .wa-inbox-toolbar {
+    flex-shrink: 0;
+}
+
 .logs-inbox-layout {
     display: grid;
     grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
-    align-items: start;
+    min-height: 0;
+    flex: 1;
+    overflow: hidden;
 }
 
-/* List grows with all records; page scrolls via overlay */
+/* Each pane scrolls independently */
 .logs-modal-panel .logs-inbox-layout .wa-thread-list {
-    max-height: none !important;
-    height: auto !important;
-    overflow: visible !important;
+    overflow-y: auto !important;
+    overflow-x: hidden;
     border-right: 1px solid var(--wa-border, #2a3942);
 }
 
-/* Detail stays visible beside the list while scrolling (row 300 fix) */
 .logs-modal-panel .logs-inbox-layout .logs-detail-panel {
-    position: sticky;
-    top: 12px;
-    align-self: start;
-    max-height: none !important;
-    height: auto !important;
-    overflow: visible !important;
+    overflow-y: auto !important;
+    overflow-x: hidden;
     padding: 16px 20px;
     background: #0a1014;
     background-image: radial-gradient(circle at 20% 20%, rgba(37, 211, 102, 0.04), transparent 40%);
@@ -220,6 +225,7 @@
 
     .logs-inbox-layout {
         grid-template-columns: 1fr;
+        grid-template-rows: 1fr 1fr;
     }
 
     .logs-modal-panel .logs-inbox-layout .wa-thread-list {
@@ -228,8 +234,6 @@
     }
 
     .logs-modal-panel .logs-inbox-layout .logs-detail-panel {
-        position: sticky;
-        top: 0;
         border-left: none;
         border-top: 1px solid var(--wa-border, #2a3942);
     }

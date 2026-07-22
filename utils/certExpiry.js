@@ -1,7 +1,6 @@
-const https = require('https');
-const { X509Certificate } = require('crypto');
+const tls = require('tls');
 
-// Checks nginx internal Docker service (Docker DNS: nginx). Works on any VM without
+// Connects to nginx internal Docker service (Docker DNS: nginx). Works on any VM without
 // depending on external DNS resolution. In production, nginx serves the real cert for the domain.
 const CERT_DOMAINS = [
   {
@@ -29,15 +28,14 @@ function computeDaysRemaining(notAfterValue) {
 
 function fetchCertFromServer(certDef) {
   return new Promise((resolve) => {
-    const req = https.get({
-      hostname: certDef.hostname,
+    const socket = tls.connect({
+      host: certDef.hostname,
       port: certDef.port,
-      path: '/',
-      method: 'HEAD',
       rejectUnauthorized: false,
       timeout: 10000
-    }, (res) => {
-      const peerCert = res.socket.getPeerCertificate(true);
+    }, () => {
+      const peerCert = socket.getPeerCertificate();
+      socket.end();
       if (!peerCert || !peerCert.valid_to) {
         resolve({
           id: certDef.id,
@@ -60,9 +58,8 @@ function fetchCertFromServer(certDef) {
         daysRemaining,
         renewalHint: certDef.renewalHint
       });
-      res.resume();
     });
-    req.on('error', (err) => {
+    socket.on('error', (err) => {
       resolve({
         id: certDef.id,
         domain: certDef.domain,
@@ -71,8 +68,8 @@ function fetchCertFromServer(certDef) {
         renewalHint: certDef.renewalHint
       });
     });
-    req.on('timeout', () => {
-      req.destroy();
+    socket.on('timeout', () => {
+      socket.destroy();
       resolve({
         id: certDef.id,
         domain: certDef.domain,
