@@ -50,7 +50,9 @@ services:
         condition: service_healthy
 
   nginx:
-    image: nginx:alpine
+    build:
+      context: .
+      dockerfile: nginx.Dockerfile
     container_name: sexappeal_nginx
     restart: unless-stopped
     ports:
