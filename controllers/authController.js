@@ -724,7 +724,7 @@ exports.login = async (req, res, next) => {
     let certExpiryWarnings = [];
     if (user.role === 'admin') {
       try {
-        certExpiryWarnings = getCertificateExpiryWarnings(10).warnings;
+        certExpiryWarnings = (await getCertificateExpiryWarnings(10)).warnings;
       } catch (err) {
         certExpiryWarnings = [{
           id: 'cert-check',

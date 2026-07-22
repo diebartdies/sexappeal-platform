@@ -92,6 +92,21 @@ if [ -d "$STAGING/certbot-renewal-hooks" ]; then
     cp -a "$STAGING/certbot-renewal-hooks/"* "$PROJECT_DIR/certbot/conf/renewal-hooks/" 2>/dev/null || true
 fi
 
+# 6b. Restore systemd overrides (certbot timer + service dependencies)
+log "Step 6b/10: Systemd overrides"
+if [ -d "$STAGING/systemd" ]; then
+    for dir in certbot.service.d certbot.timer.d; do
+        if [ -d "$STAGING/systemd/$dir" ]; then
+            mkdir -p "/etc/systemd/system/$dir"
+            cp -a "$STAGING/systemd/$dir/"* "/etc/systemd/system/$dir/" 2>/dev/null || true
+            log "  Restored $dir"
+        fi
+    done
+    systemctl daemon-reload 2>/dev/null || true
+    systemctl enable certbot.timer 2>/dev/null || true
+    systemctl start certbot.timer 2>/dev/null || true
+fi
+
 # 7. Restore volumes
 log "Step 7/10: Volumes"
 for vol_tar in "$STAGING/volumes/"*.tar.gz; do

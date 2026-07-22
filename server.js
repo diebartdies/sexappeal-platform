@@ -182,8 +182,8 @@ app.get('/favicon.ico', (req, res) => {
 // Set static folder
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders: (res, filePath) => {
-    if (filePath.match(/\.(jpg|jpeg|png|gif|webp|avif|svg|css|js|mjs|woff2?|ico)$/i)) {
-      res.setHeader('Cache-Control', 'public, max-age=2592000'); // Cache images, CSS & JS for 30 days
+    if (filePath.match(/\.(jpg|jpeg|png|gif|webp|svg|css)$/i)) {
+      res.setHeader('Cache-Control', 'public, max-age=2592000'); // Cache images & CSS for 30 days
     } else {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     }
@@ -380,7 +380,6 @@ app.get('/api/v1/admin/logs', protect, authorize('admin'), adminController.getAc
 app.put('/api/v1/admin/professionals/:id', protect, authorize('admin'), adminController.updateProfessionalProfile);
 app.delete('/api/v1/admin/professionals/:id', protect, authorize('admin'), adminController.deleteProfessional);
 app.get('/api/v1/admin/professionals', protect, authorize('admin'), adminController.getAllProfessionals);
-app.get('/api/v1/admin/guests', protect, authorize('admin'), adminController.getAllGuests);
 app.get('/api/v1/admin/professionals/:id', protect, authorize('admin'), adminController.getProfessionalById);
 app.get('/api/v1/admin/outreach/invite-message', protect, authorize('admin'), potentialProfessionalController.getInviteMessage);
 app.post('/api/v1/admin/outreach/bulk-whatsapp', protect, authorize('admin'), outreachController.startBulkWhatsApp);
