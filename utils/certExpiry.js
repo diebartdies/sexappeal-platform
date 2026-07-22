@@ -1,18 +1,20 @@
 const https = require('https');
 const { X509Certificate } = require('crypto');
 
+// Checks nginx internal Docker service (Docker DNS: nginx). Works on any VM without
+// depending on external DNS resolution. In production, nginx serves the real cert for the domain.
 const CERT_DOMAINS = [
   {
     id: 'sexappeal.drsrv.net.ar',
     domain: 'sexappeal.drsrv.net.ar',
-    hostname: 'sexappeal.drsrv.net.ar',
+    hostname: 'nginx',
     port: 443,
     renewalHint: 'Renovación automática en VPS (Certbot, timer 1x/día). Reemitir: scripts/certbot/issue-domain.sh sexappeal.drsrv.net.ar'
   },
   {
     id: 'selfappeal.drsrv.net.ar',
     domain: 'selfappeal.drsrv.net.ar',
-    hostname: 'sexappeal.drsrv.net.ar',
+    hostname: 'nginx',
     port: 443,
     renewalHint: 'Renovar en el VPS con: certbot renew (timer 1x/día) o scripts/certbot/issue-selfappeal.sh si hace falta reemitir'
   }
