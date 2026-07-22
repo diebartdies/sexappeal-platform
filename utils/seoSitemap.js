@@ -201,6 +201,8 @@ function buildRobotsTxt(baseUrl) {
     'Allow: /detalles.html',
     'Allow: /conciencia-vih.html',
     'Allow: /conciencia-cancer-mama.html',
+    'Allow: /notas-interes.html',
+    'Allow: /hogar.html',
     'Allow: /acompanantes/',
     'Allow: /perfil/',
     'Disallow: /api/',

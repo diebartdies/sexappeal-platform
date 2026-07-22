@@ -960,6 +960,7 @@ const translations = {
         'Could not send your request. Please try again later.': 'No se pudo enviar su solicitud. Inténtelo de nuevo más tarde.',
 
         'Support messages': 'Mensajes de soporte',
+        'Registered Guests': 'Invitados Registrados',
         'Notes of Interest': 'Notas de Interés',
         'Back to dashboard': 'Volver al panel',
         'Back to Notes of Interest': 'Volver a Notas de Interés',

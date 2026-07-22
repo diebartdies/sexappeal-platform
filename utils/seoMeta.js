@@ -22,6 +22,8 @@ const STATIC_SITEMAP_PAGES = [
   { path: '/detalles.html', priority: '0.65', changefreq: 'monthly', sites: ['sexappeal'] },
   { path: '/conciencia-vih.html', priority: '0.5', changefreq: 'yearly', sites: ['sexappeal'] },
   { path: '/conciencia-cancer-mama.html', priority: '0.5', changefreq: 'yearly', sites: ['sexappeal'] },
+  { path: '/notas-interes.html', priority: '0.6', changefreq: 'weekly', sites: ['sexappeal'] },
+  { path: '/hogar.html', priority: '0.7', changefreq: 'daily', sites: ['sexappeal'] },
   { path: '/para-modelos.html', priority: '0.85', changefreq: 'weekly', sites: ['selfappeal'] }
 ];
 

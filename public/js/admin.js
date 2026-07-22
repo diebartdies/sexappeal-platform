@@ -481,6 +481,7 @@ export async function loadDashboard() {
                             <h4 style="color: #888; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; padding-left: 10px;">Core Management</h4>
                             <div style="display: flex; flex-direction: column; gap: 5px;">
                                 <button id="btnProfProfileAdmin" class="admin-nav-btn">👥 Professional Profiles</button>
+                                <button id="btnAdminGuests" class="admin-nav-btn">👤 ${t('Registered Guests')}</button>
                                 <button id="btnPendingApprovals" class="admin-nav-btn active-nav">✅ Pending Approvals</button>
                                 <button id="btnPaymentVerifications" class="admin-nav-btn">💳 Payment Verifications</button>
                                 <button id="btnSupportMessages" class="admin-nav-btn">📩 ${t('Support messages')}</button>
@@ -548,6 +549,10 @@ export async function loadDashboard() {
                 
                 document.getElementById('btnProfProfileAdmin').addEventListener('click', () => {
                     document.getElementById('adminGridContainer').scrollIntoView({ behavior: 'smooth' });
+                });
+
+                document.getElementById('btnAdminGuests').addEventListener('click', () => {
+                    window.location.href = appPath('admin-guests.html');
                 });
 
                 ['btnDashboardConfig'].forEach(id => {
